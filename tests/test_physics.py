@@ -63,3 +63,18 @@ def test_wet_bulb_normal_not_flagged(settings):
 def test_physics_layer_can_be_switched_off(settings):
     settings["layers"]["physics"] = False
     assert check_physics(make_reading(t=999.0), settings) == []
+
+
+def test_formulas_never_crash_on_absurd_values(settings):
+    """Found by fuzzing: T = -243.12 divided by zero in the dew point, RH = 1e308 overflowed the wet-bulb."""
+    for t, rh in ((-243.12, 50.0), (1e308, 50.0), (20.0, 1e308), (-1e308, 1e-300), (20.0, 5e-324), (1e308, 1e308)):
+        r = make_reading(t=t, rh=rh)
+        check_dew_point(r, settings)
+        check_wet_bulb(r, settings)
+        check_physics(r, settings)
+
+
+def test_a_value_the_formula_cannot_handle_is_reported_not_flagged_and_the_range_check_flags_it(settings):
+    r = make_reading(t=-243.12)
+    assert "not checked" in check_dew_point(r, settings).reason and not check_dew_point(r, settings).flagged
+    assert by_name(check_physics(r, settings), "range:temperature_c").flagged

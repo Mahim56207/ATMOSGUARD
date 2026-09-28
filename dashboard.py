@@ -145,7 +145,13 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
         st.info("No readings for this station yet.")
         return
     newest = records[-1]
-    report = fetch(api_url, "/health", {"station_id": station})["stations"][station]
+    try:
+        report = fetch(api_url, "/health", {"station_id": station})["stations"][station]
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code != 404:
+            raise
+        report = {"score": None, "service_date": None, "ticket": None, "channels": {},
+                  "note": "No health report yet: the checks have not processed this station since the API started."}
 
     c1, c2, c3 = st.columns([2, 1, 1])
     v = newest.verdict

@@ -80,3 +80,69 @@ def test_dropout_response_carries_an_estimate_when_there_is_history():
     est = body["verdict"]["imputation"]["channels"]["pressure_hpa"]
     assert body["reading"]["pressure_hpa"] is None and est["lower"] < est["value"] < est["upper"]
     assert body["verdict"]["imputed_pressure_hpa"] == est["value"]
+
+
+def test_mixed_time_zones_no_longer_break_a_station():
+    """Found by fuzzing: a zone-aware timestamp after a naive one crashed every later reading."""
+    c = _client()
+    for stamp in ("2026-01-01T00:00:00", "2026-01-01T00:01:00Z", "2026-01-01T02:02:00+02:00", "2026-01-01T00:03:00"):
+        assert c.post("/ingest", json={**PAYLOAD, "timestamp": stamp}).status_code == 200
+    stored = c.get("/latest", params={"limit": 10}).json()
+    assert all(r["reading"]["timestamp"].endswith(("00:00", "01:00", "02:00", "03:00")) for r in stored)
+
+
+def test_absurd_numbers_get_a_fault_verdict_not_a_server_error():
+    r = _client().post("/ingest", json={**PAYLOAD, "temperature_c": -243.12, "pressure_hpa": 1e308, "humidity_pct": 1e308})
+    assert r.status_code == 200 and r.json()["verdict"]["verdict"] == "FAULT"
+
+
+def test_nan_and_infinity_in_the_json_are_stored_as_missing_not_lost_silently():
+    c = _client()
+    r = c.post("/ingest", content='{"station_id":"S1","timestamp":"2026-01-01T00:00:00","temperature_c":NaN,'
+                                  '"pressure_hpa":Infinity,"humidity_pct":50}', headers={"content-type": "application/json"})
+    body = r.json()
+    assert r.status_code == 200 and body["reading"]["temperature_c"] is None and body["reading"]["pressure_hpa"] is None
+    assert body["verdict"]["verdict"] == "FAULT" and "temperature_c" in body["verdict"]["reason"]
+
+
+def test_a_timestamp_ahead_of_the_server_clock_is_flagged():
+    """The server clock is now passed to the health checks (it was never passed before)."""
+    from datetime import datetime
+    c = TestClient(create_app(store=SQLiteStore(), settings=load_settings(), clock=lambda: datetime(2026, 1, 1, 12, 0)))
+    ok = c.post("/ingest", json={**PAYLOAD, "timestamp": "2026-01-01T11:59:00"}).json()
+    future = c.post("/ingest", json={**PAYLOAD, "timestamp": "2026-01-01T13:00:00"}).json()
+    assert not any(k["check"] == "timestamp" and k["flagged"] for k in ok["verdict"]["checks"])
+    assert future["verdict"]["verdict"] == "SUSPECT" and "ahead of the server clock" in future["verdict"]["reason"]
+
+
+def test_an_internal_error_becomes_a_visible_alert_and_the_raw_reading_is_kept(monkeypatch):
+    from atmos.fusion import Pipeline
+    pipe = Pipeline(load_settings())
+    monkeypatch.setattr(pipe, "process", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    c = TestClient(create_app(store=SQLiteStore(), settings=load_settings(), pipeline=pipe))
+    body = c.post("/ingest", json=PAYLOAD).json()
+    assert body["reading"]["temperature_c"] == 20.0
+    assert body["verdict"]["verdict"] == "SUSPECT" and "internal error: RuntimeError" in body["verdict"]["reason"]
+    assert [k["check"] for k in body["verdict"]["checks"]] == ["pipeline_error"]
+    assert len(c.get("/alerts").json()) == 1
+
+
+def test_after_a_restart_the_history_and_stations_come_back_from_the_database(tmp_path):
+    path = str(tmp_path / "db.sqlite")
+    first = TestClient(create_app(store=SQLiteStore(path), settings=load_settings()))
+    for r in synthetic_readings(days=1, cadence=15, noise_t=0.1)[:60]:
+        first.post("/ingest", json={**r.model_dump(mode="json"), "temperature_c": 20.0})     # temperature stuck
+    second = TestClient(create_app(store=SQLiteStore(path), settings=load_settings()))     # "restart"
+    assert second.get("/status").json()["stations_seen"] == ["S1"]
+    assert second.get("/health", params={"station_id": "S1"}).status_code == 200
+    nxt = synthetic_readings(days=1, cadence=15, noise_t=0.1)[60]
+    v = second.post("/ingest", json={**nxt.model_dump(mode="json"), "temperature_c": 20.0}).json()["verdict"]
+    assert v["verdict"] == "FAULT" and "not changed" in v["reason"]                          # it remembered the history
+    assert len(second.get("/latest", params={"limit": 1000}).json()) == 61                   # warm-up wrote nothing
+
+
+def test_replay_request_is_validated():
+    c = _client()
+    for body in ({"csv_path": "data/x.csv", "limit": -5}, {"csv_path": "data/x.csv", "limit": 0},
+                 {"csv_path": "data/x.csv", "speed": -1}, {"csv_path": "data/x.csv", "station_id": ""}):
+        assert c.post("/replay", json=body).status_code == 422

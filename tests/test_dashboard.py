@@ -153,3 +153,20 @@ def test_streamlit_app_shows_the_estimate_for_a_missing_value(cfg, monkeypatch):
     assert not at.exception
     text = " ".join(c.value for c in at.caption)
     assert "Estimated for the missing or faulty value" in text and "Pressure (hPa)" in text and "band" in text
+
+
+def test_streamlit_app_copes_with_a_station_that_has_no_health_report_yet(records, monkeypatch):
+    status = {"status": "ok", "stations_seen": ["S1"], "models_loaded": {"normality": [], "isolation_forest": []},
+              "replay": {"state": "idle", "sent": 0, "total": 0}}
+    good = _fake_get(records, {}, status)
+
+    def get(url, params=None, timeout=None):
+        if url.endswith("/health"):
+            return httpx.Response(404, json={"detail": "none"}, request=httpx.Request("GET", url))
+        return good(url, params, timeout)
+
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, timeout=None: (
+        lambda r: (r.raise_for_status(), r)[1])(get(url, params, timeout)))
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    assert not at.exception and not at.error
+    assert any("No health report yet" in c.value for c in at.caption)

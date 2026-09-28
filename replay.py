@@ -58,7 +58,7 @@ def read_readings(path: Path, settings: dict, station_id: Optional[str] = None,
                   must_be_in_data_dir: bool = False, allow_holdout: bool = False) -> list[Reading]:
     path = check_path(path, settings, must_be_in_data_dir, allow_holdout)
     out: list[Reading] = []
-    with open(path, newline="", encoding="utf-8") as f:
+    with open(path, newline="", encoding="utf-8-sig") as f:      # utf-8-sig: tolerate an Excel byte-order mark
         reader = csv.DictReader(f)
         needed = {"timestamp", *CHANNELS}
         missing = needed - set(reader.fieldnames or [])

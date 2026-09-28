@@ -1,4 +1,7 @@
 """Shared test helpers. Tests use the real config/settings.yaml so the config is tested too."""
+import os
+
+os.environ["ATMOS_SQLITE_PATH"] = ":memory:"     # importing api builds an app: never let tests touch a real database
 import copy
 from datetime import datetime, timedelta
 

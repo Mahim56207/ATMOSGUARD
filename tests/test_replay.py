@@ -162,3 +162,17 @@ def test_only_one_replay_at_a_time_and_it_can_be_stopped(cfg, tmp_path):
     assert c.delete("/replay").json() == {"stopping": True}
     stopped = _wait(c, "stopped")
     assert 0 < stopped["sent"] < 200
+
+
+def test_csv_saved_by_excel_with_a_byte_order_mark_is_read(cfg, tmp_path):
+    f = tmp_path / "data/clean/bom.csv"
+    f.parent.mkdir(parents=True)
+    f.write_bytes(b"\xef\xbb\xbf" + b"timestamp,temperature_c,pressure_hpa,humidity_pct\n2026-01-01T00:00:00Z,20,1000,50\n")
+    r = rp.read_readings(f, cfg, "S1")[0]
+    assert r.temperature_c == 20.0 and r.timestamp.tzinfo is None            # BOM tolerated, "Z" converted to UTC
+
+
+def test_csv_values_that_are_not_numbers_are_missing(cfg, tmp_path):
+    f = write_csv(tmp_path / "data/clean/a.csv", [["2026-01-01T00:00:00", "nan", "inf", "1e999"]])
+    r = rp.read_readings(f, cfg, "S1")[0]
+    assert (r.temperature_c, r.pressure_hpa, r.humidity_pct) == (None, None, None)

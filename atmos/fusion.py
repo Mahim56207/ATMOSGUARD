@@ -169,45 +169,69 @@ class Pipeline:
         return math.ceil(minutes / cadence) + max(h["frozen"]["min_samples"], h["noise"]["min_samples"]) + 2
 
     def process(self, reading: Reading, now: Optional[datetime] = None) -> VerdictResult:
-        """Run all enabled layers on a new reading and return the fused verdict."""
+        """Run all enabled layers on a new reading and return the fused verdict.
+        If anything fails, the reading is taken back out of the history before the error is raised, so one bad
+        reading can never break the readings after it."""
         with self._lock:
             sid = reading.station_id
             hist = self._history.setdefault(sid, deque())
-            hist.append(reading)
-            cadence = self.cadence_minutes(sid)
-            while len(hist) > self._history_length(cadence, with_clock_window=True):
-                hist.popleft()
-            full_history = list(hist)
-            history = full_history[-self._history_length(cadence):]      # what the health checks need
-            table, model = self.tables.get(sid), self.models.get(sid)
-
-            use_table = table is not None and layer_enabled(self.settings, "normality")
-            expected = table.expected_series(history) if use_table else None
-            sigma = table.sigma_series(history) if use_table else None
-            checks = [*physics.check_physics(reading, self.settings),
-                      *health.check_health(history, self.settings, cadence, now=now, expected=expected,
-                                           sigma=sigma)]
-            if layer_enabled(self.settings, "timing"):
-                checks += [self._clock_check(sid, full_history, table), timing.check_cojump(history, self.settings, cadence)]
-            if table:
-                checks += normality.check_normality(reading, table, self.settings)
-            if model:
-                checks += mlmodel.check_ml(history, model, self.settings)
-            verdict = fuse(checks, history, self.settings, cadence)
-
             records = self._records.setdefault(sid, deque())
-            verdict = impute.apply_imputation(verdict, impute.impute_reading(reading, verdict, list(records), table,
-                                                                             self.settings))
-            records.append(healthscore.to_health_record(reading, verdict, self.settings))
-            max_records = math.ceil(self.settings["healthscore"]["window_minutes"] / cadence) + 1
-            while len(records) > max_records:
-                records.popleft()
-            report = self._health.get(sid)
-            every = timedelta(minutes=self.settings["healthscore"]["recompute_every_minutes"])
-            if report is None or reading.timestamp - report.computed_at >= every:
-                report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings)
-                self._health[sid] = report
-            return verdict.model_copy(update={"health_score": report.score, "service_date": report.service_date})
+            hist.append(reading)
+            n_records = len(records)
+            try:
+                return self._process(reading, now, sid, hist, records)
+            except Exception:
+                if hist and hist[-1] is reading:
+                    hist.pop()
+                while len(records) > n_records and records:
+                    records.pop()
+                raise
+
+    def _process(self, reading: Reading, now: Optional[datetime], sid: str, hist: deque, records: deque) -> VerdictResult:
+        cadence = self.cadence_minutes(sid)
+        while len(hist) > self._history_length(cadence, with_clock_window=True):
+            hist.popleft()
+        full_history = list(hist)
+        history = full_history[-self._history_length(cadence):]      # what the health checks need
+        table, model = self.tables.get(sid), self.models.get(sid)
+
+        use_table = table is not None and layer_enabled(self.settings, "normality")
+        expected = table.expected_series(history) if use_table else None
+        sigma = table.sigma_series(history) if use_table else None
+        checks = [*physics.check_physics(reading, self.settings),
+                  *health.check_health(history, self.settings, cadence, now=now, expected=expected, sigma=sigma)]
+        if layer_enabled(self.settings, "timing"):
+            checks += [self._clock_check(sid, full_history, table), timing.check_cojump(history, self.settings, cadence)]
+        if table:
+            checks += normality.check_normality(reading, table, self.settings)
+        if model:
+            checks += mlmodel.check_ml(history, model, self.settings)
+        verdict = fuse(checks, history, self.settings, cadence)
+        verdict = impute.apply_imputation(verdict, impute.impute_reading(reading, verdict, list(records), table,
+                                                                         self.settings))
+
+        records.append(healthscore.to_health_record(reading, verdict, self.settings))
+        max_records = math.ceil(self.settings["healthscore"]["window_minutes"] / cadence) + 1
+        while len(records) > max_records:
+            records.popleft()
+        report = self._health.get(sid)
+        every = timedelta(minutes=self.settings["healthscore"]["recompute_every_minutes"])
+        if report is None or reading.timestamp - report.computed_at >= every:
+            report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings)
+            self._health[sid] = report
+        return verdict.model_copy(update={"health_score": report.score, "service_date": report.service_date})
+
+    def warm_up(self, readings: Sequence[Reading]) -> int:
+        """Feed stored readings through the layers to rebuild the history after a restart. Nothing is stored
+        and the verdicts are thrown away. A reading that fails is skipped. Returns how many were used."""
+        used = 0
+        for r in readings:
+            try:
+                self.process(r)
+                used += 1
+            except Exception:
+                continue
+        return used
 
     def _clock_check(self, sid: str, full_history: list, table) -> CheckResult:
         """T1 result, recomputed once per hour of data time (the normal pattern has one cell per hour)."""
@@ -228,4 +252,5 @@ class Pipeline:
                                               now or records[-1].timestamp, self.settings)
 
     def stations_seen(self) -> list[str]:
-        return sorted(self._records)
+        with self._lock:                        # another thread may be adding a station
+            return sorted(self._records)

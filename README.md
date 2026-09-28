@@ -47,13 +47,21 @@ Put your station in `config/stations.yaml` (with `cadence_minutes`). Without it 
 - `docker compose up --build` starts the API (8000) and the dashboard (8501). **The Docker files have not been built here.**
 - Estimates for missing or faulty values (`impute.py`) are stored beside the raw value with an uncertainty band. The raw value is never replaced.
 
+## Input rules
+- Timestamps are UTC. A timestamp with a zone (`...Z`, `+02:00`) is converted to UTC and stored without a zone.
+- A value that is NaN or infinite is not a measurement: it is stored as missing (null) and judged as a dropout.
+- Absurd but finite numbers (for example 1e308) are stored as they are and get a FAULT verdict.
+- If the checks ever fail on a reading, the reading is still stored raw and gets a SUSPECT verdict with a `pipeline_error` check, so the failure is visible.
+
 ## Known limits (current state)
 - Nothing has been run on real station data yet. All tests use seeded synthetic data.
 - The weather signatures in `settings.yaml` (`fusion.weather.signatures`) are an assumption and must be reviewed on real events.
 - The CUSUM drift check is a soft flag. Real weather anomalies last hours and look like drift, so its alarm level is set high. Slow drift is measured by Theil-Sen in `healthscore.py`.
 - A bad raw reading stays in the health windows (noise, frozen) for a while, so it can lower the verdict of the readings after it (for example FAULT to SUSPECT).
 - The Isolation Forest is weak on a gross error in a single channel. The physics, health and normality layers catch those.
-- Pipeline state (history, health records) is in memory and starts empty after a restart.
+- The pipeline keeps its state in memory. After a restart it is rebuilt from the newest stored readings
+  (`pipeline.warmup_max_readings`), so history-based checks work again at once, but the 7-day health-score window is only
+  as long as that many readings.
 - No injected fault targets the timing checks (clock shift, co-jump), so the evaluation cannot yet measure their detection rate.
 - The imputation band is conservative on synthetic data (about 98 % coverage for a nominal 95 %).
 

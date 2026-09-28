@@ -83,3 +83,18 @@ def test_the_api_uses_the_database_path_from_the_environment(tmp_path, monkeypat
     c.post("/ingest", json={"station_id": "S1", "timestamp": "2026-01-01T00:00:00", "temperature_c": 20.0,
                             "pressure_hpa": 1000.0, "humidity_pct": 50.0})
     assert path.exists() and path.stat().st_size > 0
+
+
+def test_database_path_rules(monkeypatch):
+    import api
+    monkeypatch.delenv("ATMOS_SQLITE_PATH", raising=False)
+    assert api.database_path({"store": {"sqlite_path": "x.sqlite"}}) == str(api.REPO_ROOT / "x.sqlite")   # not the cwd
+    assert api.database_path({"store": {"sqlite_path": "/data/x.sqlite"}}) == "/data/x.sqlite"
+    assert api.database_path({"store": {"sqlite_path": ":memory:"}}) == ":memory:"
+    monkeypatch.setenv("ATMOS_SQLITE_PATH", "/state/y.sqlite")
+    assert api.database_path({"store": {"sqlite_path": "x.sqlite"}}) == "/state/y.sqlite"                 # env wins
+
+
+def test_tests_never_touch_a_real_database_file():
+    import os
+    assert os.environ["ATMOS_SQLITE_PATH"] == ":memory:"

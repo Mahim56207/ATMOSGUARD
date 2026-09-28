@@ -57,7 +57,12 @@ def check_dew_point(reading: Reading, settings: dict) -> CheckResult:
         return CheckResult(check="dew_point", flagged=False,
                            reason="Dew point not checked: temperature or humidity is missing or not above 0.")
     tol = settings["physics"]["dew_point_tolerance_c"]
-    td = dew_point_c(t, rh)
+    try:
+        td = dew_point_c(t, rh)
+    except (ArithmeticError, ValueError):
+        return CheckResult(check="dew_point", flagged=False,
+                           reason="Dew point not checked: the values are outside the range the formula works for "
+                                  "(the range check reports them).")
     if td > t + tol:
         return CheckResult(check="dew_point", flagged=True,
                            reason=f"Dew point {td:.1f} C is above air temperature {t} C (tolerance {tol} C). "
@@ -72,7 +77,12 @@ def check_wet_bulb(reading: Reading, settings: dict) -> CheckResult:
         return CheckResult(check="wet_bulb", flagged=False, severity="soft",
                            reason="Wet-bulb not checked: temperature or humidity is missing or not above 0.")
     limit = settings["physics"]["wet_bulb"]["soft_flag_c"]
-    tw = wet_bulb_c(t, rh)
+    try:
+        tw = wet_bulb_c(t, rh)
+    except (ArithmeticError, ValueError):
+        return CheckResult(check="wet_bulb", flagged=False, severity="soft",
+                           reason="Wet-bulb not checked: the values are outside the range the formula works for "
+                                  "(the range check reports them).")
     if tw >= limit:
         return CheckResult(check="wet_bulb", flagged=True, severity="soft",
                            reason=f"Wet-bulb {tw:.1f} C is at or above {limit} C. Very rare, so treat as "
