@@ -41,7 +41,7 @@ from atmos.fusion import Pipeline
 from atmos.injector import ALL_FAULT_TYPES, InjectionResult, inject, make_plan
 from atmos import healthscore
 from atmos.limits import StationLimits, fit_limits
-from atmos.mlmodel import IsolationModel, build_features
+from atmos.mlmodel import IsolationModel, MahalanobisModel, build_features
 from atmos.normality import NormalityTable
 from atmos.schema import CHANNELS, Reading
 
@@ -160,10 +160,11 @@ Predictor = Callable[[list[Reading]], list[Pred]]
 
 
 def pipeline_predictor(settings: dict, table: NormalityTable, model: IsolationModel, limits: StationLimits,
-                       sid: str, cadence: float) -> Predictor:
+                       sid: str, cadence: float, mahal: Optional[MahalanobisModel] = None) -> Predictor:
     def predict(readings: list[Reading]) -> list[Pred]:
         pipe = Pipeline(settings, {sid: {"cadence_minutes": cadence}}, {sid: table},
-                        {sid: ev._PrecomputedModel(model, readings)}, {sid: limits})
+                        {sid: ev._PrecomputedModel(model, readings)}, {sid: limits},
+                        {sid: mahal} if mahal is not None else None)
         out = []
         for r in readings:
             v = pipe.process(r)
@@ -244,13 +245,14 @@ def baseline_mahalanobis(train: list[Reading], quantile: float = 0.995) -> Predi
 
 
 def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, limits: StationLimits,
-                  train: list[Reading], sid: str, cadence: float) -> list[tuple[str, str, Predictor]]:
+                  train: list[Reading], sid: str, cadence: float,
+                  mahal: Optional[MahalanobisModel] = None) -> list[tuple[str, str, Predictor]]:
     cfgs: list[tuple[str, str, Predictor]] = [
-        ("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence))]
-    for layer in ("physics", "health", "normality", "mlmodel", "timing", "limits"):
+        ("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
+    for layer in ("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits"):
         variant = copy.deepcopy(settings)
         variant["layers"][layer] = False
-        cfgs.append((f"no_{layer}", "ablation", pipeline_predictor(variant, table, model, limits, sid, cadence)))
+        cfgs.append((f"no_{layer}", "ablation", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
     cfgs += [("baseline_range", "baseline", baseline_range(settings)),
              ("baseline_rules", "baseline", baseline_rules(settings, cadence)),
              ("baseline_climatology", "baseline", baseline_climatology(table, settings)),
@@ -417,8 +419,8 @@ def noaa_agreement(df_raw: pd.DataFrame, predict: Predictor, cadence: float, max
     starts = [0, *[i for i in range(1, len(df_raw))
                    if (df_raw["timestamp"].iloc[i] - df_raw["timestamp"].iloc[i - 1]).total_seconds() / 60 > 24 * 60 * 20]]
     segs = [df_raw.iloc[a:b].reset_index(drop=True) for a, b in zip(starts, [*starts[1:], len(df_raw)])]
-    out = {"flagged": 0, "flagged_caught": 0, "erroneous": 0, "erroneous_caught": 0, "unflagged": 0,
-           "unflagged_alarm": 0, "examples": []}
+    out = {"flagged": 0, "flagged_caught": 0, "flagged_escalated": 0, "erroneous": 0, "erroneous_caught": 0,
+           "unflagged": 0, "unflagged_alarm": 0, "unflagged_escalated": 0, "examples": []}
     for seg in segs:
         if len(seg) < 10:
             continue
@@ -428,6 +430,7 @@ def noaa_agreement(df_raw: pd.DataFrame, predict: Predictor, cadence: float, max
             if flag > 0:
                 out["flagged"] += 1
                 out["flagged_caught"] += is_alarm(p)
+                out["flagged_escalated"] += p.verdict != "VALID"
                 if flag == 2:
                     out["erroneous"] += 1
                     out["erroneous_caught"] += is_alarm(p)
@@ -439,6 +442,7 @@ def noaa_agreement(df_raw: pd.DataFrame, predict: Predictor, cadence: float, max
             else:
                 out["unflagged"] += 1
                 out["unflagged_alarm"] += is_alarm(p)
+                out["unflagged_escalated"] += p.verdict != "VALID"
     return out
 
 
@@ -472,6 +476,7 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     table = NormalityTable.fit(train, s)
     model = IsolationModel.fit(train, s)
     limits = fit_limits(train, s, cadence)
+    mahal = MahalanobisModel.fit(train, s, table)
     fit_seconds = time.time() - t0
 
     # ---- the evaluation period
@@ -487,7 +492,7 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     rounds = 1 if quick else s["evaluate"]["injection_rounds"]
     faulted = make_faulted(clean, s, rounds, min_len=int(30 * 1440 / cadence))
 
-    configs = build_configs(s, table, model, limits, train, sid, cadence)
+    configs = build_configs(s, table, model, limits, train, sid, cadence, mahal)
     results = {}
     if parts & {"detect", "events"}:
         for name, kind, predict in configs:
@@ -504,7 +509,7 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     sample = clean[0][: 2000] if (clean and "latency" in parts) else []
     lat = []
     if sample:
-        pipe = Pipeline(s, {sid: {"cadence_minutes": cadence}}, {sid: table}, {sid: model}, {sid: limits})
+        pipe = Pipeline(s, {sid: {"cadence_minutes": cadence}}, {sid: table}, {sid: model}, {sid: limits}, {sid: mahal})
         for r in sample:
             a = time.perf_counter()
             pipe.process(r)
@@ -653,6 +658,8 @@ def format_phase(agg: dict, title: str) -> str:
           f"   NOAA-flagged values: {n.get('flagged', 0)}  (erroneous: {n.get('erroneous', 0)})",
           f"   AtmosGuard alarmed on {_pct(n.get('flagged_caught', 0), n.get('flagged', 0))} of them, "
           f"and on {_pct(n.get('erroneous_caught', 0), n.get('erroneous', 0))} of the erroneous ones",
+          f"   escalated at all (FAULT, SUSPECT or WEATHER) on {_pct(n.get('flagged_escalated', 0), n.get('flagged', 0))} of the flagged values, "
+          f"and on {_pct(n.get('unflagged_escalated', 0), n.get('unflagged', 0))} of the values NOAA did not flag",
           f"   AtmosGuard alarmed on {_pct(n.get('unflagged_alarm', 0), n.get('unflagged', 0))} of the {n.get('unflagged', 0)} values NOAA did not flag"]
     d = agg["drift"]
     L += ["", "5) Slow drift, judged by the health score  (daily-mean Theil-Sen, autocorrelation-aware test)",

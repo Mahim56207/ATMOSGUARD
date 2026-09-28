@@ -19,7 +19,7 @@ import pandas as pd
 import evaluate_real as er
 from atmos.config import load_settings, model_path
 from atmos.limits import fit_limits
-from atmos.mlmodel import IsolationModel
+from atmos.mlmodel import IsolationModel, MahalanobisModel
 from atmos.normality import NormalityTable
 
 
@@ -32,6 +32,8 @@ def train_station(station: str, settings: dict, events: list[dict]) -> dict:
     table = NormalityTable.fit(train, s)
     model = IsolationModel.fit(train, s)
     limits = fit_limits(train, s, cadence)
+    mahal = MahalanobisModel.fit(train, s, table)
+    mahal.save(model_path(settings, station, "mahalanobis", ".joblib"))
     table.save(model_path(settings, station, "normality", ".json"))
     model.save(model_path(settings, station, "iforest", ".joblib"))
     limits.save(model_path(settings, station, "limits", ".json"))

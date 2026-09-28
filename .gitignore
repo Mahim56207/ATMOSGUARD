@@ -19,6 +19,7 @@ models/*
 !models/*_normality.json
 !models/*_limits.json
 !models/*_iforest.joblib
+!models/*_mahalanobis.joblib
 !**/.gitkeep
 
 # Node secrets (WiFi password etc.)

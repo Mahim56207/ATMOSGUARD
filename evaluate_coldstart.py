@@ -30,7 +30,7 @@ from atmos import coldstart
 from atmos.config import CONFIG_DIR, load_settings, model_path
 from atmos.fusion import Pipeline
 from atmos.limits import StationLimits, fit_limits
-from atmos.mlmodel import IsolationModel
+from atmos.mlmodel import IsolationModel, MahalanobisModel
 from atmos.normality import NormalityTable
 
 DAYS = (0, 7, 30, 90, 180, 365, 1460)
@@ -39,14 +39,15 @@ TYPES = ("frozen", "spike", "step")
 REPO = er.REPO
 
 
-def _predict(settings, table, model, limits, sid, cadence):
+def _predict(settings, table, model, limits, sid, cadence, mahal=None):
     s = copy.deepcopy(settings)
     if model is None:
         s["layers"]["mlmodel"] = False
 
     def predict(readings):
         pipe = Pipeline(s, {sid: {"cadence_minutes": cadence}}, {sid: table} if table else {},
-                        {sid: model} if model else {}, {sid: limits} if limits else {})
+                        {sid: model} if model else {}, {sid: limits} if limits else {},
+                        {sid: mahal} if mahal else None)
         return [er.Pred(v.verdict.value, frozenset(c.check.split(":")[0] for c in v.checks if c.flagged))
                 for v in (pipe.process(r) for r in readings)]
     return predict
@@ -95,7 +96,9 @@ def one_station(args) -> dict:
                 limits = coldstart.blend_limits(starter_l, own_lim, own_days, sid, cadence, s)
             else:
                 table, limits = own_table, own_lim
-            pred = _predict(s, table, model, limits, sid, cadence)
+            mahal = (MahalanobisModel.fit(own, s, table)
+                     if (table is not None and D >= ML_FROM_DAYS and len(own) > 200) else None)
+            pred = _predict(s, table, model, limits, sid, cadence, mahal)
             c = er.count_clean(clean, pred)
             ev_ = er.count_events(event_series, pred)
             det = er.count_detection(faulted, pred, s, cadence)

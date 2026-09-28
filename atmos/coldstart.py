@@ -78,8 +78,10 @@ def blend_limits(starter: Sequence[StationLimits], own: Optional[StationLimits],
         srcs = [s.channels[ch] for s in starter if ch in s.channels]
         frozen = [c.frozen_minutes for c in srcs if c.frozen_minutes]
         noise = [c.noise_std for c in srcs if c.noise_std]
+        steps = [c.typical_step for c in srcs if c.typical_step]
         base_frozen = sum(frozen) / len(frozen) if frozen else None
         base_noise = sum(noise) / len(noise) if noise else None
+        base_step = sum(steps) / len(steps) if steps else None
         o = own.channels.get(ch) if own else None
 
         def mix(own_v: Optional[float], base: Optional[float]) -> Optional[float]:
@@ -92,6 +94,7 @@ def blend_limits(starter: Sequence[StationLimits], own: Optional[StationLimits],
         out.channels[ch] = ChannelLimits(resolution=(o.resolution if o and o.resolution else res),
                                          frozen_minutes=mix(o.frozen_minutes if o else None, base_frozen),
                                          noise_std=mix(o.noise_std if o else None, base_noise),
+                                         typical_step=mix(o.typical_step if o else None, base_step),
                                          n_runs=o.n_runs if o else 0)
     return out
 

@@ -85,8 +85,9 @@ def phase_tables(agg: dict) -> dict:
          "answer": "; ".join(f"{TYPE_NAMES[t]} {pct(det[t]['detected'], det[t]['injected'], 0)}"
                               for t in er.REAL_TYPES if det[t]["injected"])},
         {"question": "Agreement with NOAA's own quality flags (another automated system, not ground truth)",
-         "answer": f"alarmed on {pct(n.get('flagged_caught', 0), n.get('flagged', 0))} of {n.get('flagged', 0)} NOAA-flagged values; "
-                   f"alarmed on {pct(n.get('unflagged_alarm', 0), n.get('unflagged', 0))} of the {n.get('unflagged', 0)} values NOAA left alone"},
+         "answer": f"escalated (FAULT, SUSPECT or WEATHER) on {pct(n.get('flagged_escalated', 0), n.get('flagged', 0))} of {n.get('flagged', 0)} NOAA-flagged values "
+                   f"(FAULT or SUSPECT alone: {pct(n.get('flagged_caught', 0), n.get('flagged', 0))}); "
+                   f"escalated on {pct(n.get('unflagged_escalated', 0), n.get('unflagged', 0))} of the {n.get('unflagged', 0)} values NOAA left alone"},
         {"question": "Slow drift (health monitor, single station, no reference)",
          "answer": f"false drift claims on {pct(fa.get('days_with_significant', 0), fa.get('days', 0))} of {fa.get('days', 0)} station-days; "
                    f"an injected ramp reaching 8x the service limit was found in "
@@ -132,10 +133,12 @@ def phase_tables(agg: dict) -> dict:
     noaa_rows = [
         {"measure": "NOAA-flagged values (suspect or erroneous)", "value": n.get("flagged", 0)},
         {"measure": "  of which erroneous", "value": n.get("erroneous", 0)},
-        {"measure": "AtmosGuard alarmed on flagged values", "value": pct(n.get("flagged_caught", 0), n.get("flagged", 0))},
+        {"measure": "AtmosGuard alarmed (FAULT or SUSPECT) on flagged values", "value": pct(n.get("flagged_caught", 0), n.get("flagged", 0))},
+        {"measure": "AtmosGuard escalated at all (also WEATHER) on flagged values", "value": pct(n.get("flagged_escalated", 0), n.get("flagged", 0))},
         {"measure": "AtmosGuard alarmed on erroneous values", "value": pct(n.get("erroneous_caught", 0), n.get("erroneous", 0))},
         {"measure": "values NOAA did not flag", "value": n.get("unflagged", 0)},
         {"measure": "AtmosGuard alarmed on those (extra flags)", "value": pct(n.get("unflagged_alarm", 0), n.get("unflagged", 0))},
+        {"measure": "AtmosGuard escalated at all on those", "value": pct(n.get("unflagged_escalated", 0), n.get("unflagged", 0))},
     ]
     drift_rows = []
     for sev in (0.0, *er.DRIFT_SEVERITIES):
