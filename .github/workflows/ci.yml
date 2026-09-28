@@ -15,13 +15,13 @@ jobs:
           cache: pip
       - name: Install
         run: pip install -r requirements.txt
-      - name: Tests (includes the C++ edge-parity tests: g++ is on the runner)
+      - name: "Tests (includes the C++ edge-parity tests; g++ is on the runner)"
         run: python -m pytest -q
-      - name: The ESP32 limits header is in sync with settings.yaml
+      - name: "The ESP32 limits header is in sync with settings.yaml"
         run: python firmware/node/gen_config.py --check
-      - name: Plumbing check of the evaluation (synthetic data: proves the code runs, says nothing about weather)
+      - name: "Plumbing check of the evaluation (synthetic data; proves the code runs, says nothing about weather)"
         run: python evaluate.py --synthetic > /dev/null
-      - name: Research self-test (the tau_RH bench analysis recovers a known answer)
+      - name: "Research self-test (the tau_RH bench analysis recovers a known answer)"
         run: python research/tau_rh.py selftest
       - name: The committed models load and the demo API starts
         run: |
