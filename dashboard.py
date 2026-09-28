@@ -41,6 +41,10 @@ def fetch(api_url: str, path: str, params: Optional[dict] = None):
     return r.json()
 
 
+def db_label(ch: str) -> str:
+    return CHANNEL_LABELS[ch]
+
+
 def parse_records(raw: list[dict]) -> list[StoredRecord]:
     """API returns newest first; the charts want oldest first."""
     return sorted((StoredRecord.model_validate(x) for x in raw), key=lambda r: (r.reading.timestamp, r.id))
@@ -148,6 +152,9 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
     c1.metric("Latest verdict", v.verdict.value if v else "pending")
     if v:
         c1.caption(f"Confidence {v.confidence:.2f}. {v.reason}")
+        if v.imputation:
+            c1.caption("Estimated for the missing or faulty value (raw value kept): " + "; ".join(
+                f"{db_label(ch)} {e.value:.2f} (band {e.lower:.2f} to {e.upper:.2f})" for ch, e in v.imputation.channels.items()))
     c2.metric("Health score", "n/a" if report["score"] is None else f"{report['score']:.0f} / 100")
     c3.metric("Projected service date", report["service_date"] or "none")
     c3.caption("No drift trend needing service." if not report["service_date"] and report["score"] is not None else "")

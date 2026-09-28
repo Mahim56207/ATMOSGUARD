@@ -9,6 +9,7 @@ date and ticket per station. POST /replay starts a CSV replay in the background 
 """
 from __future__ import annotations
 
+import os
 import threading
 from pathlib import Path
 from typing import Optional
@@ -35,7 +36,8 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
     settings = settings if settings is not None else load_settings()
     stations = load_stations()
     if store is None:
-        store = SQLiteStore(settings.get("store", {}).get("sqlite_path", ":memory:"))
+        # ATMOS_SQLITE_PATH lets a container keep the database in a volume
+        store = SQLiteStore(os.environ.get("ATMOS_SQLITE_PATH") or settings.get("store", {}).get("sqlite_path", ":memory:"))
     if pipeline is None:
         pipeline = Pipeline(settings, stations)
         for station_id in stations:

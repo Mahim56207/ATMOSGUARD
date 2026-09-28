@@ -13,3 +13,6 @@ data/events/*
 data/holdout/*
 models/*
 !**/.gitkeep
+
+# Node secrets (WiFi password etc.)
+firmware/node/secrets.h

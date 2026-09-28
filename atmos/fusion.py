@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import healthscore, health, mlmodel, normality, physics
+from . import health, healthscore, impute, mlmodel, normality, physics, timing
 from .config import layer_enabled, model_path
 from .schema import CHANNELS, CheckResult, Reading, Verdict, VerdictResult
 
@@ -136,6 +136,7 @@ class Pipeline:
         self._history: dict[str, deque] = {}
         self._records: dict[str, deque] = {}
         self._health: dict[str, healthscore.HealthReport] = {}
+        self._clock: dict[str, tuple] = {}
         self._lock = threading.Lock()
 
     def load_models(self, station_id: str) -> None:
@@ -158,10 +159,13 @@ class Pipeline:
             return statistics.median(gaps)
         return float(self.settings["pipeline"]["default_cadence_minutes"])
 
-    def _history_length(self, cadence: float) -> int:
+    def _history_length(self, cadence: float, with_clock_window: bool = False) -> int:
+        """Samples to keep. The health checks need a few hours; the clock check (T1) needs a full day."""
         h, w = self.settings["health"], self.settings["fusion"]["weather"]
         minutes = max(*h["frozen"]["window_minutes"].values(), h["noise"]["window_minutes"],
                       h["cusum"]["window_minutes"], w["direction_window_minutes"])
+        if with_clock_window and layer_enabled(self.settings, "timing"):
+            minutes = max(minutes, self.settings["timing"]["clock"]["window_minutes"])
         return math.ceil(minutes / cadence) + max(h["frozen"]["min_samples"], h["noise"]["min_samples"]) + 2
 
     def process(self, reading: Reading, now: Optional[datetime] = None) -> VerdictResult:
@@ -171,9 +175,10 @@ class Pipeline:
             hist = self._history.setdefault(sid, deque())
             hist.append(reading)
             cadence = self.cadence_minutes(sid)
-            while len(hist) > self._history_length(cadence):
+            while len(hist) > self._history_length(cadence, with_clock_window=True):
                 hist.popleft()
-            history = list(hist)
+            full_history = list(hist)
+            history = full_history[-self._history_length(cadence):]      # what the health checks need
             table, model = self.tables.get(sid), self.models.get(sid)
 
             use_table = table is not None and layer_enabled(self.settings, "normality")
@@ -182,6 +187,8 @@ class Pipeline:
             checks = [*physics.check_physics(reading, self.settings),
                       *health.check_health(history, self.settings, cadence, now=now, expected=expected,
                                            sigma=sigma)]
+            if layer_enabled(self.settings, "timing"):
+                checks += [self._clock_check(sid, full_history, table), timing.check_cojump(history, self.settings, cadence)]
             if table:
                 checks += normality.check_normality(reading, table, self.settings)
             if model:
@@ -189,6 +196,8 @@ class Pipeline:
             verdict = fuse(checks, history, self.settings, cadence)
 
             records = self._records.setdefault(sid, deque())
+            verdict = impute.apply_imputation(verdict, impute.impute_reading(reading, verdict, list(records), table,
+                                                                             self.settings))
             records.append(healthscore.to_health_record(reading, verdict, self.settings))
             max_records = math.ceil(self.settings["healthscore"]["window_minutes"] / cadence) + 1
             while len(records) > max_records:
@@ -199,6 +208,15 @@ class Pipeline:
                 report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings)
                 self._health[sid] = report
             return verdict.model_copy(update={"health_score": report.score, "service_date": report.service_date})
+
+    def _clock_check(self, sid: str, full_history: list, table) -> CheckResult:
+        """T1 result, recomputed once per hour of data time (the normal pattern has one cell per hour)."""
+        hour = full_history[-1].timestamp.replace(minute=0, second=0, microsecond=0)
+        cached = self._clock.get(sid)
+        if cached is None or cached[0] != hour:
+            cached = (hour, timing.check_clock(full_history, table, self.settings))
+            self._clock[sid] = cached
+        return cached[1]
 
     def health_report(self, station_id: str, now: Optional[datetime] = None) -> Optional[healthscore.HealthReport]:
         """Fresh health report for a station (None if the station has no readings yet)."""

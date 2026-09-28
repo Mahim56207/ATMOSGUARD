@@ -138,3 +138,18 @@ def test_streamlit_app_shows_a_hint_when_there_are_no_readings(monkeypatch):
     monkeypatch.setattr(httpx, "get", _fake_get([], {}, status))
     at = AppTest.from_file(SCRIPT, default_timeout=30).run()
     assert any("replay.py" in i.value for i in at.info)
+
+
+def test_streamlit_app_shows_the_estimate_for_a_missing_value(cfg, monkeypatch):
+    from tests.conftest import make_history, make_reading
+    pipe = Pipeline(cfg, {"S1": {"cadence_minutes": 15}})
+    rows = [StoredRecord(id=i + 1, reading=r, verdict=pipe.process(r)) for i, r in enumerate(make_history(30, cadence=15))]
+    last = make_reading(30 * 15, p=None)
+    rows.append(StoredRecord(id=31, reading=last, verdict=pipe.process(last)))
+    status = {"status": "ok", "stations_seen": ["S1"], "models_loaded": {"normality": [], "isolation_forest": []},
+              "replay": {"state": "idle", "sent": 0, "total": 0}}
+    monkeypatch.setattr(httpx, "get", _fake_get(rows, _report(cfg, rows), status))
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    assert not at.exception
+    text = " ".join(c.value for c in at.caption)
+    assert "Estimated for the missing or faulty value" in text and "Pressure (hPa)" in text and "band" in text

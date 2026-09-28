@@ -104,9 +104,9 @@ def test_precomputed_model_gives_the_same_scores_as_the_model(small, outcome):
 def test_configs_are_full_then_one_layer_off_then_baselines(small, outcome):
     data, results = outcome
     assert [r.name for r in results["DEV"]] == [
-        "full", "no_physics", "no_health", "no_normality", "no_mlmodel",
+        "full", "no_physics", "no_health", "no_normality", "no_mlmodel", "no_timing",
         "baseline_range", "baseline_range_persistence", "baseline_isolation_forest"]
-    assert [r.kind for r in results["DEV"]][:5] == ["full", "ablation", "ablation", "ablation", "ablation"]
+    assert [r.kind for r in results["DEV"]][:6] == ["full"] + ["ablation"] * 5
 
 
 def test_ablation_actually_switches_the_layer_off(outcome):

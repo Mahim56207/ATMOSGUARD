@@ -5,12 +5,13 @@ Raw columns are written once and never updated or deleted.
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from abc import ABC, abstractmethod
 from datetime import date, datetime
 from typing import Optional
 
-from .schema import CheckResult, Reading, StoredRecord, Verdict, VerdictResult
+from .schema import CheckResult, Imputation, Reading, StoredRecord, Verdict, VerdictResult
 
 
 class Store(ABC):
@@ -49,7 +50,9 @@ CREATE TABLE IF NOT EXISTS records (
     imputed_temperature_c REAL,
     imputed_pressure_hpa REAL,
     imputed_humidity_pct REAL,
-    checks_json TEXT
+    checks_json TEXT,
+    imputation_json TEXT,
+    raw_device_flags TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_records_station_ts ON records (station_id, timestamp);
 """
@@ -61,13 +64,23 @@ class SQLiteStore(Store):
         self._db = sqlite3.connect(path, check_same_thread=False)
         self._db.row_factory = sqlite3.Row
         self._db.executescript(_SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Databases made by an older version get the columns added. Existing rows are kept as they are."""
+        have = {r["name"] for r in self._db.execute("PRAGMA table_info(records)").fetchall()}
+        for column in ("imputation_json", "raw_device_flags"):
+            if column not in have:
+                self._db.execute(f"ALTER TABLE records ADD COLUMN {column} TEXT")
+        self._db.commit()
 
     def add_reading(self, reading: Reading) -> int:
         cur = self._db.execute(
-            "INSERT INTO records (station_id, timestamp, raw_temperature_c, raw_pressure_hpa, raw_humidity_pct)"
-            " VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO records (station_id, timestamp, raw_temperature_c, raw_pressure_hpa, raw_humidity_pct,"
+            " raw_device_flags) VALUES (?, ?, ?, ?, ?, ?)",
             (reading.station_id, reading.timestamp.isoformat(),
-             reading.temperature_c, reading.pressure_hpa, reading.humidity_pct),
+             reading.temperature_c, reading.pressure_hpa, reading.humidity_pct,
+             None if reading.device_flags is None else json.dumps(reading.device_flags)),
         )
         self._db.commit()
         return int(cur.lastrowid)
@@ -76,12 +89,13 @@ class SQLiteStore(Store):
         """Writes verdict and imputed columns only. Raw columns are never touched."""
         self._db.execute(
             "UPDATE records SET verdict=?, confidence=?, reason=?, health_score=?, service_date=?,"
-            " imputed_temperature_c=?, imputed_pressure_hpa=?, imputed_humidity_pct=?, checks_json=?"
-            " WHERE id=?",
+            " imputed_temperature_c=?, imputed_pressure_hpa=?, imputed_humidity_pct=?, checks_json=?,"
+            " imputation_json=? WHERE id=?",
             (result.verdict.value, result.confidence, result.reason, result.health_score,
              result.service_date.isoformat() if result.service_date else None,
              result.imputed_temperature_c, result.imputed_pressure_hpa, result.imputed_humidity_pct,
-             _dump_checks(result.checks), record_id),
+             _dump_checks(result.checks),
+             None if result.imputation is None else result.imputation.model_dump_json(), record_id),
         )
         self._db.commit()
 
@@ -115,16 +129,15 @@ class SQLiteStore(Store):
 
 
 def _dump_checks(checks: list[CheckResult]) -> str:
-    import json
     return json.dumps([c.model_dump() for c in checks])
 
 
 def _row_to_record(r: sqlite3.Row) -> StoredRecord:
-    import json
     reading = Reading(
         station_id=r["station_id"], timestamp=datetime.fromisoformat(r["timestamp"]),
         temperature_c=r["raw_temperature_c"], pressure_hpa=r["raw_pressure_hpa"],
         humidity_pct=r["raw_humidity_pct"],
+        device_flags=None if r["raw_device_flags"] is None else json.loads(r["raw_device_flags"]),
     )
     verdict = None
     if r["verdict"] is not None:
@@ -135,6 +148,7 @@ def _row_to_record(r: sqlite3.Row) -> StoredRecord:
             imputed_temperature_c=r["imputed_temperature_c"],
             imputed_pressure_hpa=r["imputed_pressure_hpa"],
             imputed_humidity_pct=r["imputed_humidity_pct"],
+            imputation=None if r["imputation_json"] is None else Imputation.model_validate_json(r["imputation_json"]),
             checks=[CheckResult(**c) for c in json.loads(r["checks_json"] or "[]")],
         )
     return StoredRecord(id=r["id"], reading=reading, verdict=verdict)

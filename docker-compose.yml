@@ -1,2 +1,39 @@
-# STUB - build step 7. Services (API, dashboard) to be defined.
-services: {}
+# AtmosGuard: the API and the dashboard, built from one image.
+#   docker compose up --build
+#   API       http://localhost:8000   (docs at /docs)
+#   Dashboard http://localhost:8501
+# config/, data/ and models/ are mounted from this folder, so you can change settings and add CSV files
+# without rebuilding. The database lives in the `state` volume.
+services:
+  api:
+    build: .
+    command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      ATMOS_SQLITE_PATH: /app/state/atmosguard.sqlite
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./models:/app/models
+      - state:/app/state
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/status')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dashboard:
+    build: .
+    command: ["streamlit", "run", "dashboard.py", "--server.port", "8501", "--server.address", "0.0.0.0",
+              "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    ports:
+      - "8501:8501"
+    environment:
+      ATMOS_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  state:
