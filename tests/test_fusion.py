@@ -199,3 +199,11 @@ def test_pipeline_cadence_is_inferred_when_station_unknown():
     for r in make_history(10, cadence=15):
         pipe.process(r)
     assert pipe.cadence_minutes("S1") == 15
+
+
+def test_unknown_station_second_reading_is_not_a_gap():
+    from atmos.config import load_settings
+    pipe = Pipeline(load_settings())
+    first, second = make_history(2, cadence=15)
+    pipe.process(first)
+    assert not [c for c in pipe.process(second).checks if c.check == "gap" and c.flagged]
