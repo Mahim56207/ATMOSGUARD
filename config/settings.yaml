@@ -8,6 +8,8 @@ seed: 42           # one fixed seed, used everywhere
 store:
   sqlite_path: atmosguard.sqlite
 
+models_dir: models   # one normality table + one IsolationForest per station
+
 layers:            # every layer is toggleable so the ablation study needs no code edits
   physics: true        # L0
   health: true         # L1
@@ -66,8 +68,32 @@ health:            # L1  (all windows in minutes; starting points)
       pressure_hpa: 0.5
       humidity_pct: 5.0
 
-normality: {}      # TODO
-mlmodel: {}        # TODO
+normality:         # L2: station x month x hour statistics  (starting points)
+  min_samples_per_cell: 10       # cells with fewer samples are left out ("not enough data")
+  z_flag: 4.0                    # soft flag when |z| is above this
+  min_std:                       # floor for the std-dev, so a near-constant cell cannot give huge z
+    temperature_c: 0.1
+    pressure_hpa: 0.1
+    humidity_pct: 1.0
+
+mlmodel:           # L3  (starting points)
+  n_estimators: 100
+  threshold_quantile: 0.005      # flag scores below this quantile of the clean training scores
+
+injector:          # fault injection for evaluation (starting points). Fault types come from the L1 checks.
+  events_per_type: 3             # used by make_plan
+  min_separation_minutes: 120    # empty time kept between two injected faults
+  duration_minutes:              # spike always lasts one sample
+    frozen: 120
+    step: 60
+    drift: 360
+    noise: 60
+    dropout: 30
+  magnitude:
+    step:    {temperature_c: 5.0, pressure_hpa: 5.0, humidity_pct: 20.0}   # level shift
+    spike:   {temperature_c: 8.0, pressure_hpa: 8.0, humidity_pct: 30.0}   # one-sample offset
+    drift:   {temperature_c: 3.0, pressure_hpa: 3.0, humidity_pct: 15.0}   # total ramp over the duration
+    noise:   {temperature_c: 1.5, pressure_hpa: 1.0, humidity_pct: 8.0}    # added noise std-dev
 timing: {}         # TODO
 fusion: {}         # TODO
 healthscore: {}    # TODO

@@ -1,7 +1,9 @@
-# Step 1 only. Later steps add: numpy, pandas, scikit-learn, scipy, streamlit, plotly, shap.
+# Later steps add: streamlit, plotly, shap (and pandas/scipy if needed).
 fastapi
 uvicorn
 pydantic
 pyyaml
 httpx
 pytest
+numpy
+scikit-learn
