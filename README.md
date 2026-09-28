@@ -16,9 +16,23 @@ Built one module at a time (build order in `CLAUDE_CODE_SETUP.md`).
 | 2 | `physics`, `health` + tests | done |
 | 3 | `injector`, `normality`, `mlmodel` + tests | done (tested on synthetic data only; no real station data yet) |
 | 4 | `fusion`, `healthscore`, full pipeline behind `/ingest` and `/health` | done (synthetic data only) |
-| 5-7 | `replay`, `dashboard`, `evaluate`, `timing`, `impute`, firmware, Docker | not started |
+| 5 | `replay`, `dashboard` | done |
+| 6-7 | `evaluate`, `timing`, `impute`, firmware, Docker | not started |
 
 All thresholds in `config/settings.yaml` are starting points, not tuned.
+
+## Run it
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn api:app --port 8000                       # the API
+.venv/bin/python replay.py data/clean/your.csv --station S1 --speed 60   # stream a CSV into /ingest
+.venv/bin/streamlit run dashboard.py                        # the dashboard (reads the API)
+.venv/bin/python -m pytest                                  # tests
+```
+CSV columns: `timestamp, temperature_c, pressure_hpa, humidity_pct` (+ optional `station_id`). An empty cell is a missing value.
+Speed 1 is real time, 60 is one hour per minute, 0 is as fast as possible. `POST /replay` does the same inside the API,
+for files in `data/` only. Both refuse `data/holdout/`, which only `evaluate.py` may read.
+Put your station in `config/stations.yaml` (with `cadence_minutes`). Without it the cadence is guessed from the data.
 
 ## Known limits (current state)
 - Nothing has been run on real station data yet. All tests use seeded synthetic data.

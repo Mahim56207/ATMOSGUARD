@@ -42,7 +42,9 @@ def test_status_health_and_placeholders():
     s = c.get("/status").json()
     assert s["status"] == "ok" and s["pipeline"] == "full" and s["verdict_counts"] == {"VALID": 1}
     assert "S1" in c.get("/health").json()["stations"]
-    assert c.post("/replay").status_code == 501 and c.get("/metrics").status_code == 501
+    assert c.post("/replay").status_code == 422                       # needs a body now: it is a real route
+    assert c.get("/replay").json()["state"] == "idle"
+    assert c.post("/inject").status_code == 501 and c.get("/metrics").status_code == 501
 
 
 def test_health_report_gets_a_score_after_enough_readings_and_opens_a_ticket_for_a_dead_sensor():

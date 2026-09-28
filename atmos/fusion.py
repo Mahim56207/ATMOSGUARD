@@ -154,7 +154,7 @@ class Pipeline:
         h = list(self._history.get(station_id, []))
         gaps = [(b.timestamp - a.timestamp).total_seconds() / 60.0 for a, b in zip(h, h[1:])]
         gaps = [g for g in gaps if g > 0]
-        if len(gaps) >= 2:
+        if gaps:                                   # one gap is enough: better than a blind default
             return statistics.median(gaps)
         return float(self.settings["pipeline"]["default_cadence_minutes"])
 

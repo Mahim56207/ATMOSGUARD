@@ -152,3 +152,14 @@ healthscore:       # (starting points)
     recent_minutes: 60           # "sensor is broken right now" test
     recent_fault_fraction: 0.5
 impute: {}         # TODO
+
+replay:
+  data_dir: data                 # /replay only reads CSV files inside this folder (relative to the repo root)
+  max_sleep_seconds: 5.0         # cap on the wait between two readings, so a data gap does not stall a replay
+  progress_every: 500            # CLI prints a line every this many readings
+
+dashboard:
+  api_url: http://localhost:8000   # env var ATMOS_API_URL overrides this
+  refresh_seconds: 5
+  points: 300                      # newest readings drawn on the charts
+  alerts_shown: 50
