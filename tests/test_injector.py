@@ -110,3 +110,10 @@ def test_log_is_written_as_json(clean, settings, tmp_path):
     write_log(res, tmp_path / "log.json")
     data = json.loads((tmp_path / "log.json").read_text())
     assert data[0]["fault_type"] == "step" and data[0]["channel"] == "temperature_c"
+
+
+def test_bad_start_index_and_channel_are_rejected(clean, settings):
+    with pytest.raises(ValueError):
+        inject(clean, settings, [FaultSpec("step", "temperature_c", len(clean) + 5)])
+    with pytest.raises(ValueError):
+        inject(clean, settings, [FaultSpec("step", "wind_speed", 10)])

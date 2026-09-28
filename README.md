@@ -15,9 +15,18 @@ Built one module at a time (build order in `CLAUDE_CODE_SETUP.md`).
 | 1 | `schema`, `store`, `config/`, `api` (`/ingest` stub) | done |
 | 2 | `physics`, `health` + tests | done |
 | 3 | `injector`, `normality`, `mlmodel` + tests | done (tested on synthetic data only; no real station data yet) |
-| 4-7 | `fusion`, `healthscore`, `replay`, `dashboard`, `evaluate`, `timing`, `impute`, firmware, Docker | not started |
+| 4 | `fusion`, `healthscore`, full pipeline behind `/ingest` and `/health` | done (synthetic data only) |
+| 5-7 | `replay`, `dashboard`, `evaluate`, `timing`, `impute`, firmware, Docker | not started |
 
 All thresholds in `config/settings.yaml` are starting points, not tuned.
+
+## Known limits (current state)
+- Nothing has been run on real station data yet. All tests use seeded synthetic data.
+- The weather signatures in `settings.yaml` (`fusion.weather.signatures`) are an assumption and must be reviewed on real events.
+- The CUSUM drift check is a soft flag. Real weather anomalies last hours and look like drift, so its alarm level is set high. Slow drift is measured by Theil-Sen in `healthscore.py`.
+- A bad raw reading stays in the health windows (noise, frozen) for a while, so it can lower the verdict of the readings after it (for example FAULT to SUSPECT).
+- The Isolation Forest is weak on a gross error in a single channel. The physics, health and normality layers catch those.
+- Pipeline state (history, health records) is in memory and starts empty after a restart.
 
 ## Standard practice (not our invention)
 Physics checks, persistence (frozen-value) checks, CUSUM, Isolation Forest, SHAP.

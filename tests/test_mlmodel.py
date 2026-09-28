@@ -30,12 +30,22 @@ def test_rate_feature_is_per_minute():
     assert X[1, FEATURE_NAMES.index("d_temperature_c_per_min")] == pytest.approx(0.1)
 
 
-def test_unusual_reading_is_flagged_with_reason(train, model, settings):
-    history = train[-5:] + [make_reading(0, t=train[-1].temperature_c + 25.0, p=train[-1].pressure_hpa,
-                                         rh=train[-1].humidity_pct)]
-    history[-1] = history[-1].model_copy(update={"timestamp": train[-1].timestamp + (train[-1].timestamp - train[-2].timestamp)})
-    res = check_ml(history, model, settings)[0]
+def _next_reading(train, **changes):
+    last = train[-1]
+    return last.model_copy(update={"timestamp": last.timestamp + (last.timestamp - train[-2].timestamp), **changes})
+
+
+def test_unusual_mix_of_values_is_flagged_with_reason(train, model, settings):
+    last = train[-1]
+    odd = _next_reading(train, temperature_c=last.temperature_c + 25.0, pressure_hpa=last.pressure_hpa + 30.0,
+                        humidity_pct=last.humidity_pct + 40.0)
+    res = check_ml(train[-5:] + [odd], model, settings)[0]
     assert res.flagged and res.severity == "soft" and "unusual" in res.reason
+
+
+def test_normal_next_reading_is_not_flagged(train, model, settings):
+    res = check_ml(train[-5:] + [_next_reading(train)], model, settings)[0]
+    assert not res.flagged and "inside" in res.reason
 
 
 def test_false_alarm_rate_on_fresh_clean_data_is_low(model):

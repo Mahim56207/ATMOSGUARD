@@ -61,9 +61,10 @@ health:            # L1  (all windows in minutes; starting points)
     future_tolerance_minutes: 5  # reading may be this far ahead of the server clock
   cusum:           # drift; runs on (reading - expected). Expected values come from L2 normality (step 3)
     window_minutes: 360
-    k_sigma: 0.5                 # slack, in sigma units
-    h_sigma: 5.0                 # alarm level, in sigma units
-    sigma:
+    k_sigma: 1.5                 # slack, in sigma units. Well above the textbook 0.5 because weather anomalies
+    h_sigma: 40.0                # alarm level, in sigma units.  last hours (autocorrelated). Picked from a
+                                 # synthetic sweep, NOT evidence. Tune on DEV; slow drift is measured by Theil-Sen.
+    sigma:                       # FALLBACK only. Normally sigma = the usual spread from the L2 table
       temperature_c: 1.0
       pressure_hpa: 0.5
       humidity_pct: 5.0
@@ -95,6 +96,59 @@ injector:          # fault injection for evaluation (starting points). Fault typ
     drift:   {temperature_c: 3.0, pressure_hpa: 3.0, humidity_pct: 15.0}   # total ramp over the duration
     noise:   {temperature_c: 1.5, pressure_hpa: 1.0, humidity_pct: 8.0}    # added noise std-dev
 timing: {}         # TODO
-fusion: {}         # TODO
-healthscore: {}    # TODO
+pipeline:
+  default_cadence_minutes: 1     # used only if the station is not in stations.yaml and cadence cannot be inferred
+
+fusion:            # verdict logic (starting points). Rules run in the order given in the guide.
+  fault_checks: [range, dew_point, frozen, dropout]   # rule 1: a HARD flag from these -> FAULT
+  jump_checks: [step, spike]                          # rule 2: a jump on ONE channel, others quiet -> FAULT
+  weather:                                            # rule 3: needs 2+ channels moving, smoothly, matching a signature
+    direction_window_minutes: 60
+    min_move:                    # change over the window needed to count a channel as "moving"
+      temperature_c: 1.0
+      pressure_hpa: 1.0
+      humidity_pct: 5.0
+    signatures:                  # sign of the change per channel: 1 = rising, -1 = falling. ASSUMPTION: review on real events.
+      - {name: cooling_and_moistening, temperature_c: -1, humidity_pct: 1,
+         description: "temperature falling while humidity rises (rain, cold outflow or a front)"}
+      - {name: warming_and_drying, temperature_c: 1, humidity_pct: -1,
+         description: "temperature rising while humidity falls (sun, dry air or downslope wind)"}
+      - {name: low_pressure_moistening, pressure_hpa: -1, humidity_pct: 1,
+         description: "pressure falling while humidity rises (an approaching low)"}
+      - {name: high_pressure_drying, pressure_hpa: 1, humidity_pct: -1,
+         description: "pressure rising while humidity falls (a building high)"}
+  confidence:                    # heuristic score from 0 to 1. NOT a calibrated probability.
+    valid: 0.9
+    fault_rule1: 0.95
+    fault_rule2: 0.8
+    weather: 0.7
+    suspect: 0.5
+    bonus_per_supporting_flag: 0.05   # added for each extra soft flag that agrees
+    max: 0.99
+
+healthscore:       # (starting points)
+  window_minutes: 10080          # 7 days
+  min_records: 30                # no score before this many records
+  recompute_every_minutes: 60    # data time, not wall-clock time
+  weights:                       # score = 100 - w_fault*fault_fraction - w_suspect*suspect_fraction - w_drift*drift_ratio
+    fault: 100
+    suspect: 50
+    drift: 40
+  check_channels:                # checks whose name has no ":channel" part
+    dew_point: [temperature_c, humidity_pct]
+  drift:                         # Theil-Sen line through (reading - expected)
+    min_samples: 30
+    max_points: 2000             # evenly thinned above this, to keep Theil-Sen fast
+    alpha: 0.95                  # confidence level of the slope interval
+    service_limit:               # offset at which the sensor needs service
+      temperature_c: 0.5
+      pressure_hpa: 1.0
+      humidity_pct: 3.0
+    max_projection_days: 3650    # no service date if further away than this
+  ticket:
+    score_below: 60
+    high_below: 30
+    service_within_days: 30
+    recent_minutes: 60           # "sensor is broken right now" test
+    recent_fault_fraction: 0.5
 impute: {}         # TODO

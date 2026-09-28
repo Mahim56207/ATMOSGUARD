@@ -64,6 +64,14 @@ class NormalityTable:
         """Expected value for each reading in `history`. Feeds the CUSUM drift check in health.py."""
         return {ch: [self.expected(r.timestamp, ch) for r in history] for ch in CHANNELS}
 
+    def sigma_series(self, history: Sequence[Reading]) -> dict[str, list[Optional[float]]]:
+        """Usual spread (std, floored by min_std) for each reading in `history`. Scales the CUSUM."""
+        out: dict[str, list[Optional[float]]] = {}
+        for ch in CHANNELS:
+            cells = [self.cell(r.timestamp, ch) for r in history]
+            out[ch] = [None if c is None else max(c["std"], self._min_std[ch]) for c in cells]
+        return out
+
     def save(self, path: Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         Path(path).write_text(json.dumps({"station_id": self.station_id, "cells": self.cells}), encoding="utf-8")
