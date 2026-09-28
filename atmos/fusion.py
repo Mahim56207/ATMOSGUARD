@@ -162,7 +162,7 @@ class Pipeline:
         h, w = self.settings["health"], self.settings["fusion"]["weather"]
         minutes = max(*h["frozen"]["window_minutes"].values(), h["noise"]["window_minutes"],
                       h["cusum"]["window_minutes"], w["direction_window_minutes"])
-        return math.ceil(minutes / cadence) + max(h["frozen"]["min_samples"], h["noise"]["min_diffs"]) + 2
+        return math.ceil(minutes / cadence) + max(h["frozen"]["min_samples"], h["noise"]["min_samples"]) + 2
 
     def process(self, reading: Reading, now: Optional[datetime] = None) -> VerdictResult:
         """Run all enabled layers on a new reading and return the fused verdict."""

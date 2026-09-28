@@ -68,6 +68,7 @@ def test_normality_layer_can_be_switched_off(table, settings):
 
 
 def test_expected_series_lets_health_detect_injected_drift(clean, table, settings):
+    settings["injector"]["duration_minutes"]["drift"] = 720           # a slow ramp: 3 C over 12 h
     res = inject(clean, settings, [FaultSpec("drift", "temperature_c", 500)])
     end = res.events[0].end_index
     history = res.readings[: end + 1]
