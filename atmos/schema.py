@@ -12,6 +12,9 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+CHANNELS = ("temperature_c", "pressure_hpa", "humidity_pct")
+
+
 class Verdict(str, Enum):
     VALID = "VALID"
     WEATHER = "WEATHER"
@@ -32,6 +35,7 @@ class CheckResult(BaseModel):
     check: str
     flagged: bool
     reason: str
+    severity: str = "hard"   # "hard" or "soft". Soft flags (e.g. wet-bulb) can only lead to SUSPECT.
 
 
 class VerdictResult(BaseModel):

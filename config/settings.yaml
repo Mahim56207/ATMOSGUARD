@@ -1,6 +1,7 @@
 # All thresholds, tolerances, windows and layer flags live here. No magic numbers in code.
 # Windows are in MINUTES (not samples) so the same code runs on 1-min, 15-min and hourly data.
 # Fill values in as each module is built.
+# Values marked 'starting point' are proposals, NOT tuned. Tune on DEV data only.
 
 seed: 42           # one fixed seed, used everywhere
 
@@ -16,8 +17,55 @@ layers:            # every layer is toggleable so the ablation study needs no co
   timing: true         # T1, T2
   impute: true
 
-physics: {}        # TODO: ranges, dew point tolerance, wet-bulb soft-flag level
-health: {}         # TODO: frozen / step / spike / CUSUM / noise / gap windows (minutes)
+physics:           # L0
+  ranges:          # hard physical limits [min, max]  (starting point)
+    temperature_c: [-90.0, 60.0]
+    pressure_hpa: [300.0, 1100.0]
+    humidity_pct: [0.0, 100.0]
+  dew_point_tolerance_c: 0.5     # flag if dew point > T + this  (starting point)
+  wet_bulb:
+    soft_flag_c: 35.0            # SOFT flag only (SUSPECT). Never a hard "impossible" rule.
+
+health:            # L1  (all windows in minutes; starting points)
+  frozen:          # value does not change at all over the window
+    min_samples: 3               # window is stretched to hold at least this many samples
+    window_minutes:
+      temperature_c: 60
+      pressure_hpa: 180
+      humidity_pct: 120
+    epsilon:                     # max - min at or below this counts as "no change"
+      temperature_c: 0.0
+      pressure_hpa: 0.0
+      humidity_pct: 0.0
+  step:            # allowed change between two samples = min(rate_per_min * minutes_apart, cap)
+    rate_per_min:
+      temperature_c: 1.0
+      pressure_hpa: 0.5
+      humidity_pct: 5.0
+    cap:
+      temperature_c: 10.0
+      pressure_hpa: 10.0
+      humidity_pct: 40.0
+  noise:           # std-dev of sample-to-sample differences
+    window_minutes: 30
+    min_diffs: 5                 # window is stretched to hold at least this many differences
+    max_diff_std:
+      temperature_c: 0.5
+      pressure_hpa: 0.3
+      humidity_pct: 3.0
+  gaps:
+    gap_cadence_multiplier: 3    # gap if time since last sample > this x station cadence
+  timestamps:
+    future_tolerance_minutes: 5  # reading may be this far ahead of the server clock
+  cusum:           # drift; runs on (reading - expected). Expected values come from L2 normality (step 3)
+    window_minutes: 360
+    k_sigma: 0.5                 # slack, in sigma units
+    h_sigma: 5.0                 # alarm level, in sigma units
+    sigma:
+      temperature_c: 1.0
+      pressure_hpa: 0.5
+      humidity_pct: 5.0
+
 normality: {}      # TODO
 mlmodel: {}        # TODO
 timing: {}         # TODO
