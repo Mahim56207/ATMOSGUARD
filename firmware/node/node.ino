@@ -176,6 +176,9 @@ bool postReport(const Report &r) {
   HTTPClient http;
   http.begin(API_URL);
   http.addHeader("Content-Type", "application/json");
+#ifdef API_KEY
+  http.addHeader("X-API-Key", API_KEY);              // only if the API was started with ATMOS_API_KEY
+#endif
   http.setTimeout(POST_TIMEOUT_MS);
   int code = http.POST((uint8_t *)body, strlen(body));
   http.end();

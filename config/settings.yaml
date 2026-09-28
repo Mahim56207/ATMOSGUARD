@@ -204,6 +204,12 @@ impute:            # gap fill + uncertainty band  (starting points)
     humidity_pct: 5.0
   max_fill_samples: 10           # fill_gaps() never invents more than this many samples per gap
 
+api:               # operational settings for the service (api.py)
+  api_key_env: ATMOS_API_KEY     # name of the environment variable that holds the key. If it is set, POST and DELETE need the header X-API-Key
+  rate_limit_per_minute: 0       # POST /ingest per client address, per minute (0 = off)
+  retention_days: 0              # 0 keeps everything. Otherwise whole records older than this are deleted (raw values are otherwise never deleted)
+  purge_every: 1000              # readings between retention checks
+
 replay:
   data_dir: data                 # /replay only reads CSV files inside this folder (relative to the repo root)
   max_sleep_seconds: 5.0         # cap on the wait between two readings, so a data gap does not stall a replay

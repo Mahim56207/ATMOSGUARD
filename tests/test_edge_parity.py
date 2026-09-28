@@ -51,6 +51,13 @@ def test_the_sketch_type_checks_against_arduino_stand_ins(tmp_path):
     assert r.returncode == 0, r.stderr
 
 
+def test_the_sketch_also_type_checks_with_the_api_key_switched_on(tmp_path):
+    shutil.copy(NODE / "secrets.example.h", tmp_path / "secrets.h")
+    r = subprocess.run([GXX, "-std=gnu++11", "-fsyntax-only", "-x", "c++", "-Wall", "-Wno-unused-variable", '-DAPI_KEY="k"',
+                        f"-I{TESTS / 'stubs'}", f"-I{tmp_path}", f"-I{NODE}", str(NODE / "node.ino")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+
 def test_dew_point_matches_python(parity_bin):
     rng = np.random.default_rng(1)
     cases = [(float(t), float(rh)) for t, rh in zip(rng.uniform(-40, 55, 4000), rng.uniform(0.5, 100, 4000))]
