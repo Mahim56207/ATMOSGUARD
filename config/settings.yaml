@@ -97,7 +97,16 @@ injector:          # fault injection for evaluation (starting points). Fault typ
     spike:   {temperature_c: 8.0, pressure_hpa: 8.0, humidity_pct: 30.0}   # one-sample offset
     drift:   {temperature_c: 3.0, pressure_hpa: 3.0, humidity_pct: 15.0}   # total ramp over the duration
     noise:   {temperature_c: 1.5, pressure_hpa: 1.0, humidity_pct: 8.0}    # added noise std-dev
-timing: {}         # TODO
+timing:            # T1 clock / diurnal-phase check, T2 cross-channel co-jump check  (starting points)
+  clock:                         # T1: does the daily cycle match this station's normal cycle, or is it shifted?
+    window_minutes: 1440         # needs a full day of history
+    channels: [temperature_c, humidity_pct]   # the channels with a clear daily cycle
+    max_shift_hours: 6           # shifts tried: -6 ... +6 hours (the L2 table has one cell per hour)
+    min_shift_hours: 1
+    min_bins: 18                 # hourly bins with data needed before judging
+    min_improvement: 0.5         # the best shift must cut the mean squared z-score by at least this fraction
+  cojump:                        # T2: two or more channels jumping in the same sample
+    min_channels: 2
 pipeline:
   default_cadence_minutes: 1     # used only if the station is not in stations.yaml and cadence cannot be inferred
 
@@ -153,7 +162,15 @@ healthscore:       # (starting points)
     service_within_days: 30
     recent_minutes: 60           # "sensor is broken right now" test
     recent_fault_fraction: 0.5
-impute: {}         # TODO
+impute:            # gap fill + uncertainty band  (starting points)
+  lookback_minutes: 180          # newest trusted value must be at most this old
+  residual_halflife_minutes: 120 # how fast the last known departure from normal fades back to normal
+  band_z: 1.96                   # band = +/- this many predictive std-devs (about 95 %)
+  fallback_sigma:                # used only when there is no L2 table: std-dev the value can wander by
+    temperature_c: 1.0
+    pressure_hpa: 1.0
+    humidity_pct: 5.0
+  max_fill_samples: 10           # fill_gaps() never invents more than this many samples per gap
 
 replay:
   data_dir: data                 # /replay only reads CSV files inside this folder (relative to the repo root)
@@ -185,3 +202,10 @@ evaluate:          # evaluate.py (starting points)
     temperature: {mean: 15.0, daily_amp: 6.0, noise: 0.1}
     pressure: {mean: 1010.0, reversion: 0.02, noise: 0.05}
     humidity: {mean: 60.0, daily_amp: 15.0, noise: 1.0}
+
+node:              # firmware/node (ESP32 + BME280). firmware/node/gen_config.py turns this and `physics` into config.h
+  sample_interval_seconds: 1
+  aggregate_seconds: 60
+  min_valid_samples: 30          # fewer valid samples than this in a minute -> that channel is sent as missing
+  buffer_slots: 30               # unsent minutes kept on the device while the network is down
+  post_timeout_seconds: 10

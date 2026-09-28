@@ -28,6 +28,7 @@ class Reading(BaseModel):
     temperature_c: Optional[float] = None
     pressure_hpa: Optional[float] = None
     humidity_pct: Optional[float] = None
+    device_flags: Optional[list[str]] = None   # L0 flags raised on the node itself (firmware / simnode)
 
 
 class CheckResult(BaseModel):
@@ -36,6 +37,20 @@ class CheckResult(BaseModel):
     flagged: bool
     reason: str
     severity: str = "hard"   # "hard" or "soft". Soft flags (e.g. wet-bulb) can only lead to SUSPECT.
+
+
+class ImputedValue(BaseModel):
+    """An estimate for a missing or faulty value, with an uncertainty band. The raw value is never replaced."""
+    value: float
+    lower: float
+    upper: float
+    age_minutes: float               # time since the newest trusted value it is based on
+    method: str
+    reason: str
+
+
+class Imputation(BaseModel):
+    channels: dict[str, ImputedValue]
 
 
 class VerdictResult(BaseModel):
@@ -47,6 +62,7 @@ class VerdictResult(BaseModel):
     imputed_temperature_c: Optional[float] = None
     imputed_pressure_hpa: Optional[float] = None
     imputed_humidity_pct: Optional[float] = None
+    imputation: Optional[Imputation] = None  # the same estimates with their bands and reasons
     checks: list[CheckResult] = []
 
 

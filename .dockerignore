@@ -1,0 +1,8 @@
+.venv
+.git
+__pycache__
+.pytest_cache
+*.sqlite
+data
+models
+firmware/node/secrets.h

@@ -45,8 +45,10 @@ inside a window, cut it out and note that in the run log.
 
 ## Ablation
 The full pipeline, then the full pipeline with one layer switched off by its config flag:
-`no_physics`, `no_health`, `no_normality`, `no_mlmodel`.
-(`timing`, `impute` and `lstm_ae` are not built yet, so they are not ablated.)
+`no_physics`, `no_health`, `no_normality`, `no_mlmodel`, `no_timing`.
+(`impute` does not change any verdict, so it is not ablated. `lstm_ae` is not built.)
+The fault types above contain no timing fault (clock shift, co-jump), so `no_timing` only shows the effect of the
+timing layer on false alarms, not on detection.
 
 ## Order of work
 1. Tune thresholds on DEV only (`python evaluate.py`).

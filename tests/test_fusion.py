@@ -187,9 +187,9 @@ def test_pipeline_works_without_trained_models():
 
 def test_pipeline_layers_can_be_switched_off(trained):
     pipe, s = _pipeline(trained)
-    s["layers"].update({"physics": False, "health": False, "normality": False, "mlmodel": False})
+    s["layers"].update({"physics": False, "health": False, "normality": False, "mlmodel": False, "timing": False})
     v = pipe.process(make_reading(0, t=999.0))
-    s["layers"].update({"physics": True, "health": True, "normality": True, "mlmodel": True})
+    s["layers"].update({"physics": True, "health": True, "normality": True, "mlmodel": True, "timing": True})
     assert v.verdict == Verdict.VALID and v.checks == []
 
 

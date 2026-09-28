@@ -37,7 +37,7 @@ from atmos.schema import CHANNELS, Reading
 
 REPO_ROOT = CONFIG_DIR.parent
 ALARM_VERDICTS = ("FAULT", "SUSPECT")          # an alarm. WEATHER is a correct answer on weather, not an alarm.
-ABLATED_LAYERS = ("physics", "health", "normality", "mlmodel")
+ABLATED_LAYERS = ("physics", "health", "normality", "mlmodel", "timing")
 LOCK_NAME = ".holdout_used"
 
 Prediction = tuple[bool, bool]                 # (alarm, weather verdict)
@@ -359,7 +359,8 @@ def format_report(results: dict[str, list[ConfigResult]], synthetic: bool, holdo
                 lines.append(f"   {r.name:<{w}}{pct(a, n):>9}{f'{a}/{n}':>18}{(pct(wx, n) if r.kind != 'baseline' else '-'):>20}")
     if holdout_note:
         lines += ["", holdout_note]
-    lines += ["", "Not built yet, so not ablated: timing, impute, lstm_ae."]
+    lines += ["", "Not ablated: impute (it does not change any verdict), lstm_ae (not built).",
+              "No injected fault targets the timing layer yet, so no_timing only shows its effect on false alarms."]
     return "\n".join(lines)
 
 
