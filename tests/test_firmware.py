@@ -78,3 +78,11 @@ def test_secrets_are_not_committed_but_an_example_exists():
         assert f"#define {macro} " in example and macro in INO
     assert not (NODE / "secrets.h").exists() or "secrets.h" in (NODE.parent.parent / ".gitignore").read_text()
     assert "firmware/node/secrets.h" in (NODE.parent.parent / ".gitignore").read_text().splitlines()
+
+
+def test_sampling_is_not_blocked_by_the_network():
+    """Found in review: a blocking Wi-Fi retry inside loop() froze sampling, then fired a burst of samples."""
+    loop = INO[INO.index("void loop()"):]
+    assert "connectWifi(" not in loop and "retryWifiWithoutWaiting()" in loop
+    assert "ticks" not in INO and "minuteStart" in INO and "AGGREGATE_SECONDS * 1000UL" in loop
+    assert "skip the missed seconds" in loop

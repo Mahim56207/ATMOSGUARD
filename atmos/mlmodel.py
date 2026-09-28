@@ -18,6 +18,8 @@ from sklearn.ensemble import IsolationForest
 from .config import layer_enabled
 from .schema import CHANNELS, CheckResult, Reading
 
+_FLOAT32_MAX = float(np.finfo(np.float32).max)
+
 FEATURE_NAMES = (*CHANNELS, *(f"d_{c}_per_min" for c in CHANNELS), "hour_sin", "hour_cos")
 
 
@@ -34,8 +36,10 @@ def build_features(readings: Sequence[Reading]) -> tuple[np.ndarray, np.ndarray]
         if dt <= 0 or None in vals or None in pvals:
             continue
         angle = 2 * math.pi * (cur.timestamp.hour + cur.timestamp.minute / 60.0) / 24.0
-        X[i] = [*vals, *((v - p) / dt for v, p in zip(vals, pvals)), math.sin(angle), math.cos(angle)]
-        usable[i] = True
+        row = [*vals, *((v - p) / dt for v, p in zip(vals, pvals)), math.sin(angle), math.cos(angle)]
+        if all(abs(x) < _FLOAT32_MAX for x in row):          # the forest works in float32: absurd values are skipped
+            X[i] = row
+            usable[i] = True
     return X, usable
 
 

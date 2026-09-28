@@ -9,39 +9,59 @@ date and ticket per station. POST /replay starts a CSV replay in the background 
 """
 from __future__ import annotations
 
+import logging
 import os
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import replay as replay_module
-from atmos.config import load_settings, load_stations
+from atmos.config import CONFIG_DIR, load_settings, load_stations
 from atmos.fusion import Pipeline
-from atmos.schema import Reading, StoredRecord
+from atmos.schema import CheckResult, Reading, StoredRecord, Verdict, VerdictResult
 from atmos.store import SQLiteStore, Store
+
+
+log = logging.getLogger("atmosguard")
+REPO_ROOT = CONFIG_DIR.parent
+
+
+def utc_now() -> datetime:
+    """Server clock as UTC without a zone, the same form the readings use."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def database_path(settings: dict) -> str:
+    """ATMOS_SQLITE_PATH (a container keeps the database in a volume) wins; otherwise settings.yaml. A relative
+    path is relative to the repo folder, not to wherever the server was started. ":memory:" is kept as it is."""
+    path = os.environ.get("ATMOS_SQLITE_PATH") or settings.get("store", {}).get("sqlite_path", ":memory:")
+    return path if path == ":memory:" or Path(path).is_absolute() else str(REPO_ROOT / path)
 
 
 class ReplayRequest(BaseModel):
     csv_path: str                       # must be inside the data folder, never data/holdout
-    station_id: Optional[str] = None    # needed if the CSV has no station_id column
-    speed: float = 0.0                  # 1 = real time, 0 = fastest
-    limit: Optional[int] = None
+    station_id: Optional[str] = Field(default=None, min_length=1, max_length=64)   # needed if the CSV has no station_id column
+    speed: float = Field(default=0.0, ge=0)   # 1 = real time, 0 = fastest
+    limit: Optional[int] = Field(default=None, ge=1)
 
 
 def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
-               pipeline: Optional[Pipeline] = None) -> FastAPI:
+               pipeline: Optional[Pipeline] = None, clock: Callable[[], datetime] = utc_now) -> FastAPI:
     settings = settings if settings is not None else load_settings()
     stations = load_stations()
     if store is None:
-        # ATMOS_SQLITE_PATH lets a container keep the database in a volume
-        store = SQLiteStore(os.environ.get("ATMOS_SQLITE_PATH") or settings.get("store", {}).get("sqlite_path", ":memory:"))
+        store = SQLiteStore(database_path(settings))
     if pipeline is None:
         pipeline = Pipeline(settings, stations)
         for station_id in stations:
             pipeline.load_models(station_id)
+        # after a restart, rebuild each station's history from the stored raw readings (nothing is written)
+        for station_id in store.stations():
+            pipeline.warm_up(store.recent_readings(station_id, settings["pipeline"]["warmup_max_readings"]))
     lock = threading.Lock()          # one reading at a time through store + pipeline
     replay_state: dict = {"state": "idle", "sent": 0, "total": 0, "verdicts": {}, "error": None}
     replay_stop = threading.Event()
@@ -49,7 +69,14 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
     def ingest_reading(reading: Reading) -> StoredRecord:
         with lock:
             record_id = store.add_reading(reading)      # raw reading is stored first, unchanged
-            store.set_verdict(record_id, pipeline.process(reading))
+            try:
+                verdict = pipeline.process(reading, now=clock())
+            except Exception as e:                      # a bug must show up as an alert, never as a lost verdict
+                log.exception("pipeline failed on a reading of station %s", reading.station_id)
+                reason = f"The checks could not run on this reading (internal error: {type(e).__name__}). The raw reading is stored."
+                verdict = VerdictResult(verdict=Verdict.SUSPECT, confidence=0.0, reason=reason,
+                                        checks=[CheckResult(check="pipeline_error", flagged=True, severity="soft", reason=reason)])
+            store.set_verdict(record_id, verdict)
             return store.get(record_id)
 
     app = FastAPI(title="AtmosGuard")
@@ -69,7 +96,7 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
     @app.get("/health")
     def health(station_id: Optional[str] = None):
         """Sensor health: score 0-100, projected service date, ticket."""
-        ids = [station_id] if station_id else pipeline.stations_seen()
+        ids = [station_id] if station_id else sorted(set(pipeline.stations_seen()) | set(store.stations()))
         reports = {sid: pipeline.health_report(sid) for sid in ids}
         if station_id and reports[station_id] is None:
             raise HTTPException(404, f"No readings yet for station {station_id}.")
@@ -80,7 +107,7 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
         return {
             "status": "ok",
             "stations_configured": sorted(stations),
-            "stations_seen": pipeline.stations_seen(),
+            "stations_seen": sorted(set(pipeline.stations_seen()) | set(store.stations())),
             "models_loaded": {"normality": sorted(pipeline.tables), "isolation_forest": sorted(pipeline.models)},
             "layers": settings.get("layers", {}),
             "verdict_counts": store.counts(),

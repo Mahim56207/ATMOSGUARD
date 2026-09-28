@@ -109,6 +109,7 @@ timing:            # T1 clock / diurnal-phase check, T2 cross-channel co-jump ch
     min_channels: 2
 pipeline:
   default_cadence_minutes: 1     # used only if the station is not in stations.yaml and cadence cannot be inferred
+  warmup_max_readings: 2000      # on start, this many stored readings per station are replayed to rebuild the history
 
 fusion:            # verdict logic (starting points). Rules run in the order given in the guide.
   fault_checks: [range, dew_point, frozen, dropout]   # rule 1: a HARD flag from these -> FAULT

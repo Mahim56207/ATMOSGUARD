@@ -207,3 +207,67 @@ def test_unknown_station_second_reading_is_not_a_gap():
     first, second = make_history(2, cadence=15)
     pipe.process(first)
     assert not [c for c in pipe.process(second).checks if c.check == "gap" and c.flagged]
+
+
+def test_a_failing_reading_does_not_poison_the_history_for_the_readings_after_it(monkeypatch):
+    """Found by fuzzing: one crash left the bad reading in the history, so every later reading crashed too."""
+    import atmos.fusion as fusion
+    from atmos.config import load_settings
+    pipe = Pipeline(load_settings(), {"S1": {"cadence_minutes": 1}})
+    hist = make_history(10)
+    for r in hist[:5]:
+        pipe.process(r)
+    real = fusion.physics.check_physics
+    monkeypatch.setattr(fusion.physics, "check_physics", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    with pytest.raises(RuntimeError):
+        pipe.process(hist[5])
+    monkeypatch.setattr(fusion.physics, "check_physics", real)
+    assert len(pipe._history["S1"]) == 5 and len(pipe._records["S1"]) == 5      # rolled back
+    for r in hist[5:]:
+        pipe.process(r)                                                          # carries on normally
+    assert len(pipe._history["S1"]) == 10
+
+
+def test_pipeline_survives_mixed_time_zones_and_extreme_numbers():
+    from atmos.config import load_settings
+    from atmos.schema import Reading
+    pipe = Pipeline(load_settings(), {"S1": {"cadence_minutes": 1}})
+    pipe.process(Reading(station_id="S1", timestamp="2026-01-01T00:00:00", temperature_c=20, pressure_hpa=1000, humidity_pct=50))
+    v = pipe.process(Reading(station_id="S1", timestamp="2026-01-01T00:01:00Z", temperature_c=-243.12,
+                             pressure_hpa=1e308, humidity_pct=1e308))
+    assert v.verdict == Verdict.FAULT
+
+
+def test_warm_up_rebuilds_the_history_and_skips_readings_that_fail():
+    from atmos.config import load_settings
+    pipe = Pipeline(load_settings(), {"S1": {"cadence_minutes": 1}})
+    assert pipe.warm_up(make_history(80, t=lambda i: 20.0)) == 80                # stored readings, temperature stuck
+    v = pipe.process(make_reading(80, t=20.0))
+    assert v.verdict == Verdict.FAULT and "not changed" in v.reason            # the frozen window was already full
+
+
+def test_listing_stations_while_another_thread_adds_them_does_not_fail():
+    import threading
+    from atmos.config import load_settings
+    from atmos.schema import Reading
+    pipe = Pipeline(load_settings())
+    errors = []
+
+    def add():
+        try:
+            for i in range(150):
+                pipe.process(Reading(station_id=f"S{i}", timestamp="2026-01-01T00:00:00", temperature_c=20, pressure_hpa=1000, humidity_pct=50))
+        except Exception as e:
+            errors.append(e)
+
+    def listing():
+        try:
+            for _ in range(2000):
+                pipe.stations_seen()
+        except Exception as e:
+            errors.append(e)
+
+    ts = [threading.Thread(target=add), threading.Thread(target=listing), threading.Thread(target=listing)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert errors == [] and len(pipe.stations_seen()) == 150

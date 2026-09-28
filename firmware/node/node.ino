@@ -13,6 +13,7 @@
 // Honesty notes:
 //  * A sample that fails a check or reads NaN is left out of the minute's mean. Only the 1-minute mean leaves
 //    the device, so the individual 1 Hz samples are not kept. What was left out is reported in `device_flags`.
+//  * A minute is measured by the clock, so seconds lost to a slow network only lower the valid-sample count.
 //  * Timestamps are UTC from NTP, written without a zone, like the CSV files. No report is made until the
 //    clock is synced.
 //  * If the queue is full, the OLDEST unsent minute is dropped (printed on Serial).
@@ -63,7 +64,7 @@ int queueCount = 0;
 double sum[NUM_CHANNELS];
 uint16_t validCount[NUM_CHANNELS];
 uint16_t rangeViolations[NUM_CHANNELS];
-uint16_t ticks = 0;
+uint32_t minuteStart = 0;
 uint32_t nextSampleAt = 0;
 uint32_t lastWifiTry = 0;
 bool bmeOk = false;
@@ -94,7 +95,7 @@ void resetMinute() {
     validCount[c] = 0;
     rangeViolations[c] = 0;
   }
-  ticks = 0;
+  minuteStart = millis();
 }
 
 void connectWifi(uint32_t waitMs) {
@@ -106,6 +107,13 @@ void connectWifi(uint32_t waitMs) {
   }
   lastWifiTry = millis();
   Serial.println(WiFi.status() == WL_CONNECTED ? "WiFi connected" : "WiFi not connected");
+}
+
+// Used in loop(): start a new attempt but do NOT wait for it, so sampling never stalls while the network is down.
+void retryWifiWithoutWaiting() {
+  WiFi.disconnect();
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  lastWifiTry = millis();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -124,7 +132,6 @@ void takeSample() {
     sum[c] += v[c];
     validCount[c]++;
   }
-  ticks++;
 }
 
 // Close the minute: build a Report from the sums and put it in the queue.
@@ -221,13 +228,16 @@ void setup() {
 }
 
 void loop() {
-  if (WiFi.status() != WL_CONNECTED && millis() - lastWifiTry > WIFI_RETRY_MS) connectWifi(WIFI_RETRY_MS / 2);
+  if (WiFi.status() != WL_CONNECTED && millis() - lastWifiTry > WIFI_RETRY_MS) retryWifiWithoutWaiting();
   if ((int32_t)(millis() - nextSampleAt) < 0) return;
   nextSampleAt += SAMPLE_INTERVAL_MS;
+  // If a slow POST made us fall behind, skip the missed seconds instead of reading the sensor in a burst.
+  if ((int32_t)(millis() - nextSampleAt) > (int32_t)SAMPLE_INTERVAL_MS) nextSampleAt = millis() + SAMPLE_INTERVAL_MS;
   if (!clockSynced()) { resetMinute(); return; }       // nothing is reported without a real clock
-  if (bmeOk) takeSample(); else ticks++;               // a dead sensor still closes the minute (all channels missing)
-  if (ticks * (SAMPLE_INTERVAL_MS / 1000UL) >= AGGREGATE_SECONDS) {
+  if (bmeOk) takeSample();                             // a dead sensor still closes the minute (all channels missing)
+  // The minute is measured by the clock, not by counting samples, so missed seconds only lower the valid count.
+  if (millis() - minuteStart >= AGGREGATE_SECONDS * 1000UL) {
     finishMinute();
-    flushQueue();
+    flushQueue();                                      // finishMinute() already started the next minute
   }
 }

@@ -5,11 +5,12 @@ timestamp and station id. A channel may be None (dropout); it is stored as recei
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+import math
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 CHANNELS = ("temperature_c", "pressure_hpa", "humidity_pct")
@@ -23,12 +24,25 @@ class Verdict(str, Enum):
 
 
 class Reading(BaseModel):
-    station_id: str
+    """One reading. Timestamps are UTC and kept without a zone: a zone-aware value is converted to UTC first,
+    so readings from different senders can always be compared. A value that is NaN or infinite is not a
+    measurement, so it is kept as missing (None)."""
+    station_id: str = Field(min_length=1, max_length=64)
     timestamp: datetime
     temperature_c: Optional[float] = None
     pressure_hpa: Optional[float] = None
     humidity_pct: Optional[float] = None
     device_flags: Optional[list[str]] = None   # L0 flags raised on the node itself (firmware / simnode)
+
+    @field_validator("timestamp")
+    @classmethod
+    def _utc_without_zone(cls, v: datetime) -> datetime:
+        return v.astimezone(timezone.utc).replace(tzinfo=None) if v.tzinfo is not None else v
+
+    @field_validator("temperature_c", "pressure_hpa", "humidity_pct")
+    @classmethod
+    def _finite_or_missing(cls, v: Optional[float]) -> Optional[float]:
+        return v if v is None or math.isfinite(v) else None
 
 
 class CheckResult(BaseModel):

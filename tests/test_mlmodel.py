@@ -92,3 +92,13 @@ def test_lstm_ae_is_behind_a_flag_and_not_built(train, model, settings):
         check_ml(train[-3:], model, settings)
     with pytest.raises(NotImplementedError):
         check_lstm_ae(train[-3:], settings)
+
+
+def test_absurd_values_are_skipped_instead_of_crashing_the_float32_forest(train, model, settings):
+    """Found by fuzzing: 1e308 (and 3.5e38) made scikit-learn raise ValueError."""
+    for huge in (1e308, -1e308, 3.5e38, 1e39):
+        odd = _next_reading(train, temperature_c=huge)
+        res = check_ml(train[-5:] + [odd], model, settings)[0]
+        assert not res.flagged and "not run" in res.reason
+    X, usable = build_features([train[-2], _next_reading(train, pressure_hpa=1e300)])
+    assert usable.tolist() == [False, False]

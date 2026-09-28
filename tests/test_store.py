@@ -75,3 +75,41 @@ def test_old_database_without_the_new_columns_is_migrated_and_keeps_its_rows(tmp
     rid = store.add_reading(_reading(device_flags=["x"]))
     assert store.get(rid).reading.device_flags == ["x"]
     SQLiteStore(str(path))                                                  # opening it again is harmless
+
+
+def test_stations_and_recent_readings_come_back_oldest_first():
+    store = SQLiteStore()
+    for i in range(5):
+        store.add_reading(_reading(timestamp=datetime(2026, 1, 1, 12, i)))
+    store.add_reading(_reading(station_id="S2"))
+    assert store.stations() == ["S1", "S2"]
+    got = store.recent_readings("S1", 3)
+    assert [r.timestamp.minute for r in got] == [2, 3, 4]                # the newest 3, oldest first
+    assert store.recent_readings("S3", 10) == []
+
+
+def test_the_store_survives_many_threads_at_once():
+    """The API shares one connection between worker threads: writes and reads at the same time must not fail."""
+    import threading
+    store = SQLiteStore()
+    errors = []
+
+    def writer(k):
+        try:
+            for i in range(60):
+                rid = store.add_reading(_reading(station_id=f"S{k}", timestamp=datetime(2026, 1, 1, 12, i % 60)))
+                store.set_verdict(rid, VerdictResult(verdict=Verdict.VALID, confidence=1.0, reason="ok"))
+        except Exception as e:
+            errors.append(e)
+
+    def reader():
+        try:
+            for _ in range(60):
+                store.latest(limit=20); store.alerts(); store.counts(); store.stations(); store.recent_readings("S0", 10)
+        except Exception as e:
+            errors.append(e)
+
+    threads = [threading.Thread(target=writer, args=(k,)) for k in range(4)] + [threading.Thread(target=reader) for _ in range(4)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert errors == [] and store.counts() == {"VALID": 240}

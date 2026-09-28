@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from abc import ABC, abstractmethod
 from datetime import date, datetime
 from typing import Optional
@@ -29,6 +30,13 @@ class Store(ABC):
 
     @abstractmethod
     def alerts(self, station_id: Optional[str] = None, limit: int = 50) -> list[StoredRecord]: ...
+
+    @abstractmethod
+    def stations(self) -> list[str]: ...
+
+    @abstractmethod
+    def recent_readings(self, station_id: str, limit: int) -> list[Reading]:
+        """The newest `limit` raw readings of a station, oldest first."""
 
     @abstractmethod
     def counts(self) -> dict[str, int]: ...
@@ -58,9 +66,19 @@ CREATE INDEX IF NOT EXISTS idx_records_station_ts ON records (station_id, timest
 """
 
 
+def _locked(fn):
+    """Run a store method while holding the store's lock (the connection is shared by API threads)."""
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return fn(self, *args, **kwargs)
+    wrapper.__name__, wrapper.__doc__ = fn.__name__, fn.__doc__
+    return wrapper
+
+
 class SQLiteStore(Store):
     def __init__(self, path: str = ":memory:"):
-        # check_same_thread=False: FastAPI may call from worker threads.
+        # check_same_thread=False: FastAPI may call from worker threads, so every call below takes this lock.
+        self._lock = threading.RLock()
         self._db = sqlite3.connect(path, check_same_thread=False)
         self._db.row_factory = sqlite3.Row
         self._db.executescript(_SCHEMA)
@@ -74,6 +92,7 @@ class SQLiteStore(Store):
                 self._db.execute(f"ALTER TABLE records ADD COLUMN {column} TEXT")
         self._db.commit()
 
+    @_locked
     def add_reading(self, reading: Reading) -> int:
         cur = self._db.execute(
             "INSERT INTO records (station_id, timestamp, raw_temperature_c, raw_pressure_hpa, raw_humidity_pct,"
@@ -85,6 +104,7 @@ class SQLiteStore(Store):
         self._db.commit()
         return int(cur.lastrowid)
 
+    @_locked
     def set_verdict(self, record_id: int, result: VerdictResult) -> None:
         """Writes verdict and imputed columns only. Raw columns are never touched."""
         self._db.execute(
@@ -99,16 +119,31 @@ class SQLiteStore(Store):
         )
         self._db.commit()
 
+    @_locked
     def get(self, record_id: int) -> Optional[StoredRecord]:
         row = self._db.execute("SELECT * FROM records WHERE id = ?", (record_id,)).fetchone()
         return _row_to_record(row) if row else None
 
+    @_locked
     def latest(self, station_id: Optional[str] = None, limit: int = 1) -> list[StoredRecord]:
         return self._query("", station_id, limit)
 
+    @_locked
     def alerts(self, station_id: Optional[str] = None, limit: int = 50) -> list[StoredRecord]:
         return self._query("verdict IS NOT NULL AND verdict != 'VALID'", station_id, limit)
 
+    @_locked
+    def stations(self) -> list[str]:
+        return [r["station_id"] for r in self._db.execute(
+            "SELECT DISTINCT station_id FROM records ORDER BY station_id").fetchall()]
+
+    @_locked
+    def recent_readings(self, station_id: str, limit: int) -> list[Reading]:
+        rows = self._db.execute("SELECT * FROM records WHERE station_id = ? ORDER BY id DESC LIMIT ?",
+                                (station_id, limit)).fetchall()
+        return [_row_to_record(r).reading for r in reversed(rows)]        # arrival order, oldest first
+
+    @_locked
     def counts(self) -> dict[str, int]:
         rows = self._db.execute(
             "SELECT COALESCE(verdict, 'PENDING') AS v, COUNT(*) AS n FROM records GROUP BY v"
