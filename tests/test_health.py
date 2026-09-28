@@ -70,6 +70,25 @@ def test_noise_flagged(settings):
     assert by_name(_run(h, settings), "noise:temperature_c").flagged
 
 
+def test_smooth_ramp_is_not_noise(settings):
+    # a front: 8 C fall over 3 h, sampled every 15 min. Big changes, but smooth.
+    import math
+    h = make_history(30, cadence=15, t=lambda i: 20.0 - 4.0 * (1 - math.cos(2 * math.pi * min(1.0, max(0.0, (i - 12) / 12)))))
+    assert not by_name(_run(h, settings, cadence=15), "noise:temperature_c").flagged
+    steady_ramp = make_history(30, t=lambda i: 20.0 + 0.5 * i)          # 0.5 C per minute, perfectly smooth
+    assert not by_name(_run(steady_ramp, settings), "noise:temperature_c").flagged
+
+
+def test_noise_estimate_matches_the_injected_jitter(settings):
+    import numpy as np
+    rng = np.random.default_rng(0)
+    h = make_history(60, t=lambda i: 20.0 + float(rng.normal(0, 1.0)))       # std 1 C is above the 0.5 limit
+    assert "jitter" in by_name(_run(h, settings), "noise:temperature_c").reason
+    assert by_name(_run(h, settings), "noise:temperature_c").flagged
+    calm = make_history(60, t=lambda i: 20.0 + float(rng.normal(0, 0.1)))
+    assert not by_name(_run(calm, settings), "noise:temperature_c").flagged
+
+
 def test_dropout_flagged(settings):
     h = make_history(20)
     h[-1] = make_reading(19, p=None)
@@ -111,9 +130,12 @@ def test_cusum_ignores_noise_around_zero():
 
 
 def test_drift_flagged_with_expected_values(settings):
-    h = make_history(100)
-    expected = {"temperature_c": [r.temperature_c - 2.0 for r in h]}   # reading is 2 C above expected
+    h = make_history(400)                                              # 6.7 h at 1-min cadence
+    expected = {"temperature_c": [r.temperature_c - 5.0 for r in h]}   # reading is 5 C above expected for the whole time
     assert by_name(_run(h, settings, expected=expected), "drift:temperature_c").flagged
+    short = make_history(100)                                          # 100 min of the same offset is not yet drift
+    expected_short = {"temperature_c": [r.temperature_c - 5.0 for r in short]}
+    assert not by_name(_run(short, settings, expected=expected_short), "drift:temperature_c").flagged
 
 
 def test_drift_not_run_without_expected(settings):
@@ -128,3 +150,35 @@ def test_every_check_has_a_reason(settings):
 def test_health_layer_can_be_switched_off(settings):
     settings["layers"]["health"] = False
     assert _run(make_history(100, t=lambda i: 20.0), settings) == []
+
+
+# ---- CUSUM: cadence scaling and no lingering after one big excursion -----------------------------------
+def _shift_history(cadence, shift, hours, settings):
+    """Readings for `hours` hours; temperature sits `shift` sigma above expected (sigma = 1 C)."""
+    n = int(hours * 60 / cadence) + 1
+    h = make_history(n, cadence=cadence, t=lambda i: 20.0)
+    expected = [20.0 - shift] * n
+    return h, expected
+
+
+def _drift(cadence, shift, hours, settings):
+    from atmos.health import check_drift
+    h, e = _shift_history(cadence, shift, hours, settings)
+    return check_drift(h, "temperature_c", e, settings, [1.0] * len(h), cadence_minutes=cadence).flagged
+
+
+def test_cusum_gives_the_same_answer_on_1_min_and_15_min_data(settings):
+    for shift, expect in ((5.0, True), (3.0, False)):            # sustained 5 sigma for 6 h alarms, 3 sigma does not
+        assert _drift(1, shift, 6, settings) == _drift(15, shift, 6, settings) == expect
+
+
+def test_one_big_excursion_does_not_keep_the_drift_alarm_on(settings):
+    # a front: 20 sigma for 3 hours. z is capped per sample, so it cannot alarm and cannot linger afterwards
+    assert not _drift(15, 20.0, 3, settings)
+    assert not _drift(1, 20.0, 3, settings)
+
+
+def test_check_drift_takes_cadence_from_history_when_not_given(settings):
+    from atmos.health import check_drift
+    h, e = _shift_history(15, 5.0, 6, settings)
+    assert check_drift(h, "temperature_c", e, settings, [1.0] * len(h)).flagged

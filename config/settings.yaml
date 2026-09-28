@@ -48,22 +48,24 @@ health:            # L1  (all windows in minutes; starting points)
       temperature_c: 10.0
       pressure_hpa: 10.0
       humidity_pct: 40.0
-  noise:           # std-dev of sample-to-sample differences
+  noise:           # jitter, estimated from second differences so smooth weather ramps are not counted
     window_minutes: 30
-    min_diffs: 5                 # window is stretched to hold at least this many differences
-    max_diff_std:
+    min_samples: 7               # window is stretched to hold at least this many samples
+    max_noise_std:               # estimated jitter (std-dev) above this is a noisy sensor
       temperature_c: 0.5
-      pressure_hpa: 0.3
+      pressure_hpa: 0.5
       humidity_pct: 3.0
   gaps:
     gap_cadence_multiplier: 3    # gap if time since last sample > this x station cadence
   timestamps:
     future_tolerance_minutes: 5  # reading may be this far ahead of the server clock
-  cusum:           # drift; runs on (reading - expected). Expected values come from L2 normality (step 3)
+  cusum:           # drift; runs on (reading - expected). Expected values and sigma come from L2 normality
     window_minutes: 360
+    reference_minutes: 15        # every step is scaled by cadence / this, so 1-min and 15-min data give the same sum
+    z_cap: 4.0                   # one sample counts at most this many sigma, so one front cannot keep the alarm on
     k_sigma: 1.5                 # slack, in sigma units. Well above the textbook 0.5 because weather anomalies
-    h_sigma: 40.0                # alarm level, in sigma units.  last hours (autocorrelated). Picked from a
-                                 # synthetic sweep, NOT evidence. Tune on DEV; slow drift is measured by Theil-Sen.
+    h_sigma: 40.0                # alarm level.  last hours (autocorrelated). Starting points, NOT evidence. Tune on DEV;
+                                 # slow drift is measured by Theil-Sen in healthscore.py.
     sigma:                       # FALLBACK only. Normally sigma = the usual spread from the L2 table
       temperature_c: 1.0
       pressure_hpa: 0.5
@@ -85,7 +87,7 @@ injector:          # fault injection for evaluation (starting points). Fault typ
   events_per_type: 3             # used by make_plan
   min_separation_minutes: 120    # empty time kept between two injected faults
   duration_minutes:              # spike always lasts one sample
-    frozen: 120
+    frozen: 240                  # must be longer than the longest frozen window, or the test measures the window
     step: 60
     drift: 360
     noise: 60
@@ -163,3 +165,23 @@ dashboard:
   refresh_seconds: 5
   points: 300                      # newest readings drawn on the charts
   alerts_shown: 50
+
+evaluate:          # evaluate.py (starting points)
+  train_fraction: 0.7            # real data: first part of data/clean is DEV-train, the rest is DEV clean-eval
+  injection_rounds: 3            # each round injects a different seeded fault plan into the clean-eval data
+  detection_grace_minutes: 60    # a fault counts as detected if an alarm comes up to this long after it ends
+  synthetic:                     # --synthetic only: fake weather to test the plumbing. NOT real results.
+    start: "2026-01-01T00:00:00"
+    cadence_minutes: 15
+    train_days: 20
+    eval_days: 8
+    event_count: 4               # fake "extreme weather" windows per split
+    event_window_days: 2
+    event_duration_minutes: 180
+    event_delta:                 # smooth excursion: cooling and moistening with a pressure dip (a front)
+      temperature_c: -8.0
+      pressure_hpa: -6.0
+      humidity_pct: 25.0
+    temperature: {mean: 15.0, daily_amp: 6.0, noise: 0.1}
+    pressure: {mean: 1010.0, reversion: 0.02, noise: 0.05}
+    humidity: {mean: 60.0, daily_amp: 15.0, noise: 1.0}

@@ -7,7 +7,7 @@ Every check returns a CheckResult with a reason string. Toggle with `layers.heal
 """
 from __future__ import annotations
 
-import statistics
+import math
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
@@ -99,22 +99,24 @@ def check_spike(history: Sequence[Reading], ch: str, settings: dict, cadence_min
 
 
 def check_noise(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float) -> CheckResult:
+    """Jitter check. Noise is estimated from SECOND differences, which cancel a smooth trend (a front or a
+    diurnal ramp is not noise). For independent noise of std s, the second differences have RMS s * sqrt(6)."""
     cfg = settings["health"]["noise"]
-    window_min = max(cfg["window_minutes"], cfg["min_diffs"] * cadence_minutes)
+    window_min = max(cfg["window_minutes"], (cfg["min_samples"] - 1) * cadence_minutes)
     name = f"noise:{ch}"
     values = [getattr(r, ch) for r in _window(history, window_min)]
-    if any(v is None for v in values) or len(values) - 1 < cfg["min_diffs"]:
+    if any(v is None for v in values) or len(values) < cfg["min_samples"]:
         return CheckResult(check=name, flagged=False,
                            reason=f"{ch}: not enough complete samples in the last {window_min:g} min for a noise check.")
-    diffs = [y - x for x, y in zip(values, values[1:])]
-    spread = statistics.pstdev(diffs)
-    limit = cfg["max_diff_std"][ch]
-    if spread > limit:
+    second = [values[i + 2] - 2 * values[i + 1] + values[i] for i in range(len(values) - 2)]
+    noise = math.sqrt(sum(d * d for d in second) / len(second) / 6.0)
+    limit = cfg["max_noise_std"][ch]
+    if noise > limit:
         return CheckResult(check=name, flagged=True,
-                           reason=f"{ch} is too noisy: sample-to-sample std {spread:.3g} is above {limit:g} "
+                           reason=f"{ch} is too noisy: estimated jitter {noise:.3g} is above {limit:g} "
                                   f"over {window_min:g} min.")
     return CheckResult(check=name, flagged=False,
-                       reason=f"{ch} noise {spread:.3g} is within the limit of {limit:g}.")
+                       reason=f"{ch} jitter {noise:.3g} is within the limit of {limit:g}.")
 
 
 def check_dropout(history: Sequence[Reading]) -> CheckResult:
@@ -153,30 +155,42 @@ def check_timestamp(history: Sequence[Reading], settings: dict, now: Optional[da
     return CheckResult(check="timestamp", flagged=False, reason="Timestamp is in order.")
 
 
-def cusum(residuals: Sequence[float], sigma, k_sigma: float, h_sigma: float) -> tuple[bool, float]:
+def cusum(residuals: Sequence[float], sigma, k_sigma: float, h_sigma: float, step_scale: float = 1.0,
+          z_cap: Optional[float] = None) -> tuple[bool, float]:
     """Two-sided tabular CUSUM. `sigma` is one number or one number per residual.
-    Returns (alarm, largest sum in sigma units)."""
+    `step_scale` multiplies every step (cadence / reference minutes, so a shift of the same size and length
+    gives the same sum on 1-min and 15-min data). `z_cap` limits one sample's z-score, so a single huge
+    excursion (a front) cannot pile up and keep the alarm on for hours.
+    Returns (alarm, largest sum)."""
     sigmas = [sigma] * len(residuals) if isinstance(sigma, (int, float)) else list(sigma)
     s_pos = s_neg = peak = 0.0
     for r, sg in zip(residuals, sigmas):
         z = r / sg
-        s_pos = max(0.0, s_pos + z - k_sigma)
-        s_neg = max(0.0, s_neg - z - k_sigma)
+        if z_cap is not None:
+            z = max(-z_cap, min(z_cap, z))
+        s_pos = max(0.0, s_pos + (z - k_sigma) * step_scale)
+        s_neg = max(0.0, s_neg + (-z - k_sigma) * step_scale)
         peak = max(peak, s_pos, s_neg)
     return peak >= h_sigma, peak
 
 
 def check_drift(history: Sequence[Reading], ch: str, expected: Optional[Sequence[Optional[float]]],
-                settings: dict, sigma: Optional[Sequence[Optional[float]]] = None) -> CheckResult:
+                settings: dict, sigma: Optional[Sequence[Optional[float]]] = None,
+                cadence_minutes: Optional[float] = None) -> CheckResult:
     """CUSUM drift on (reading - expected). SOFT flag: a long weather anomaly looks like drift over a few
     hours, so this can lead to SUSPECT but never blocks WEATHER. Real drift is measured by Theil-Sen in
-    healthscore.py. `expected` (and optional `sigma`) are aligned with `history`
-    and come from L2 normality. If `sigma` is missing, the fixed value in settings is used."""
+    healthscore.py. `expected` (and optional `sigma`) are aligned with `history` and come from L2 normality.
+    If `sigma` is missing, the fixed value in settings is used. If `cadence_minutes` is missing it is
+    taken from the history."""
     name = f"drift:{ch}"
     if expected is None or len(expected) != len(history):
         return CheckResult(check=name, flagged=False, severity="soft",
                            reason=f"{ch}: drift not checked, no expected values supplied (needs L2 normality).")
     cfg = settings["health"]["cusum"]
+    if cadence_minutes is None:
+        gaps = [_minutes(a.timestamp, b.timestamp) for a, b in zip(history, history[1:])]
+        gaps = sorted(g for g in gaps if g > 0)
+        cadence_minutes = gaps[len(gaps) // 2] if gaps else cfg["reference_minutes"]
     cutoff = history[-1].timestamp - timedelta(minutes=cfg["window_minutes"])
     residuals, sigmas = [], []
     for i, (r, e) in enumerate(zip(history, expected)):
@@ -188,13 +202,14 @@ def check_drift(history: Sequence[Reading], ch: str, expected: Optional[Sequence
     if not residuals:
         return CheckResult(check=name, flagged=False, severity="soft",
                            reason=f"{ch}: no usable samples for drift check.")
-    alarm, peak = cusum(residuals, sigmas, cfg["k_sigma"], cfg["h_sigma"])
+    alarm, peak = cusum(residuals, sigmas, cfg["k_sigma"], cfg["h_sigma"],
+                        step_scale=cadence_minutes / cfg["reference_minutes"], z_cap=cfg["z_cap"])
     if alarm:
         return CheckResult(check=name, flagged=True, severity="soft",
-                           reason=f"{ch} is drifting away from its expected value (CUSUM {peak:.1f} sigma, "
+                           reason=f"{ch} is drifting away from its expected value (CUSUM {peak:.1f}, "
                                   f"alarm at {cfg['h_sigma']:g}). Could also be a long weather anomaly.")
     return CheckResult(check=name, flagged=False, severity="soft",
-                       reason=f"{ch} has no sustained drift (CUSUM {peak:.1f} sigma, alarm at {cfg['h_sigma']:g}).")
+                       reason=f"{ch} has no sustained drift (CUSUM {peak:.1f}, alarm at {cfg['h_sigma']:g}).")
 
 
 def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: float,
@@ -212,6 +227,6 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
             check_step(history, ch, settings, cadence_minutes),
             check_spike(history, ch, settings, cadence_minutes),
             check_noise(history, ch, settings, cadence_minutes),
-            check_drift(history, ch, (expected or {}).get(ch), settings, (sigma or {}).get(ch)),
+            check_drift(history, ch, (expected or {}).get(ch), settings, (sigma or {}).get(ch), cadence_minutes),
         ]
     return results

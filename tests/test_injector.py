@@ -30,7 +30,7 @@ def test_frozen_holds_one_value(clean, settings):
     res = _run(clean, settings, "frozen")
     ev = res.events[0]
     vals = {res.readings[i].temperature_c for i in range(ev.start_index, ev.end_index + 1)}
-    assert len(vals) == 1 and ev.end_index - ev.start_index + 1 == 8      # 120 min at 15-min cadence
+    assert len(vals) == 1 and ev.end_index - ev.start_index + 1 == 16     # 240 min at 15-min cadence
     assert ev.params["held_value"] == clean[99].temperature_c
 
 

@@ -37,12 +37,13 @@ def data_root(settings: dict) -> Path:
     return (p if p.is_absolute() else REPO_ROOT / p).resolve()
 
 
-def check_path(path: Path, settings: dict, must_be_in_data_dir: bool = False) -> Path:
-    """Resolve `path` and refuse the holdout folder (and, if asked, anything outside the data folder)."""
+def check_path(path: Path, settings: dict, must_be_in_data_dir: bool = False, allow_holdout: bool = False) -> Path:
+    """Resolve `path` and refuse the holdout folder (and, if asked, anything outside the data folder).
+    Only evaluate.py passes allow_holdout=True, after its own holdout guard."""
     p = Path(path)
     p = (p if p.is_absolute() else Path.cwd() / p).resolve()
     root = data_root(settings)
-    if p == root / "holdout" or (root / "holdout") in p.parents:
+    if not allow_holdout and (p == root / "holdout" or (root / "holdout") in p.parents):
         raise ValueError("data/holdout/ is read once, by evaluate.py. Replay will not read it.")
     if must_be_in_data_dir and root not in p.parents:
         raise ValueError(f"CSV must be inside the data folder ({root}).")
@@ -54,8 +55,8 @@ def _number(text: str) -> Optional[float]:
 
 
 def read_readings(path: Path, settings: dict, station_id: Optional[str] = None,
-                  must_be_in_data_dir: bool = False) -> list[Reading]:
-    path = check_path(path, settings, must_be_in_data_dir)
+                  must_be_in_data_dir: bool = False, allow_holdout: bool = False) -> list[Reading]:
+    path = check_path(path, settings, must_be_in_data_dir, allow_holdout)
     out: list[Reading] = []
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)

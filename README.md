@@ -17,7 +17,8 @@ Built one module at a time (build order in `CLAUDE_CODE_SETUP.md`).
 | 3 | `injector`, `normality`, `mlmodel` + tests | done (tested on synthetic data only; no real station data yet) |
 | 4 | `fusion`, `healthscore`, full pipeline behind `/ingest` and `/health` | done (synthetic data only) |
 | 5 | `replay`, `dashboard` | done |
-| 6-7 | `evaluate`, `timing`, `impute`, firmware, Docker | not started |
+| 6 | `evaluate` (baselines, ablation, DEV vs HOLDOUT, guarded holdout) | done (synthetic data only) |
+| 7 | `timing`, `impute`, firmware, Docker | not started |
 
 All thresholds in `config/settings.yaml` are starting points, not tuned.
 
@@ -28,6 +29,9 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python replay.py data/clean/your.csv --station S1 --speed 60   # stream a CSV into /ingest
 .venv/bin/streamlit run dashboard.py                        # the dashboard (reads the API)
 .venv/bin/python -m pytest                                  # tests
+.venv/bin/python evaluate.py --synthetic                    # fake-data run of the evaluation (plumbing check only)
+.venv/bin/python evaluate.py --station S1                   # DEV only, from data/clean and data/events
+.venv/bin/python evaluate.py --station S1 --holdout         # once, at the end (needs config/protocol.md committed)
 ```
 CSV columns: `timestamp, temperature_c, pressure_hpa, humidity_pct` (+ optional `station_id`). An empty cell is a missing value.
 Speed 1 is real time, 60 is one hour per minute, 0 is as fast as possible. `POST /replay` does the same inside the API,
