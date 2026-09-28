@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import os
 import time
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
@@ -119,7 +120,8 @@ def run(settings: dict, station: str, url: str, minutes: int, start: datetime, s
         sleep=time.sleep) -> list[dict]:
     """Send `minutes` readings. Returns the payloads that were sent."""
     rng = np.random.default_rng(settings["seed"])
-    client = client or httpx.Client(base_url=url, timeout=settings["node"]["post_timeout_seconds"])
+    client = client or httpx.Client(base_url=url, timeout=settings["node"]["post_timeout_seconds"],
+                                    headers={"X-API-Key": os.environ["ATMOS_API_KEY"]} if os.environ.get("ATMOS_API_KEY") else {})
     sent = []
     frozen_value: Optional[float] = None
     tracker = FrozenTracker(settings["node"]["frozen_minutes"])

@@ -194,7 +194,7 @@ def test_streamlit_control_panel_lists_faults_channels_and_datasets(records, cfg
 def test_arm_fault_button_posts_to_inject(records, cfg, monkeypatch):
     seen = {}
 
-    def fake_post(url, json=None, timeout=None):
+    def fake_post(url, json=None, timeout=None, headers=None):
         seen["url"], seen["json"] = url, json
         return httpx.Response(200, json={"armed": {"fault_type": json["fault_type"], "channel": json["channel"],
                                                    "samples": json["samples"]}}, request=httpx.Request("POST", url))

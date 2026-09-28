@@ -41,6 +41,10 @@ class Store(ABC):
     @abstractmethod
     def counts(self) -> dict[str, int]: ...
 
+    @abstractmethod
+    def purge_older_than(self, cutoff: datetime) -> int:
+        """Delete whole records with a timestamp before `cutoff`; returns how many. Only used when a retention period is set."""
+
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS records (
@@ -142,6 +146,12 @@ class SQLiteStore(Store):
         rows = self._db.execute("SELECT * FROM records WHERE station_id = ? ORDER BY id DESC LIMIT ?",
                                 (station_id, limit)).fetchall()
         return [_row_to_record(r).reading for r in reversed(rows)]        # arrival order, oldest first
+
+    @_locked
+    def purge_older_than(self, cutoff: datetime) -> int:
+        cur = self._db.execute("DELETE FROM records WHERE timestamp < ?", (cutoff.isoformat(),))
+        self._db.commit()
+        return int(cur.rowcount)
 
     @_locked
     def counts(self) -> dict[str, int]:

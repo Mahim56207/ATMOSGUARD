@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import threading
 import time
 from collections import Counter
@@ -106,8 +107,14 @@ def replay(readings: list[Reading], ingest: Callable[[Reading], str], speed: flo
     return summary
 
 
+def api_headers() -> dict:
+    """X-API-Key from the environment (ATMOS_API_KEY), if the API was started with one."""
+    key = os.environ.get("ATMOS_API_KEY")
+    return {"X-API-Key": key} if key else {}
+
+
 def http_ingest(url: str, client: Optional[httpx.Client] = None) -> Callable[[Reading], str]:
-    client = client or httpx.Client(base_url=url, timeout=30)
+    client = client or httpx.Client(base_url=url, timeout=30, headers=api_headers())
 
     def _ingest(reading: Reading) -> str:
         resp = client.post("/ingest", json=reading.model_dump(mode="json"))

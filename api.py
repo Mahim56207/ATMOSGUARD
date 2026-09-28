@@ -11,19 +11,24 @@ it, and the altered value is stored and judged. /metrics serves the committed ev
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import os
+import sys
 import threading
-from datetime import datetime, timezone
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 import replay as replay_module
-from atmos.config import CONFIG_DIR, load_settings, load_stations
+from atmos.config import CONFIG_DIR, load_settings, load_stations, model_path
 from atmos.explain import explain_reading
 from atmos.fusion import Pipeline
 from atmos.livefault import LIVE_FAULT_TYPES, LiveInjector
@@ -52,6 +57,20 @@ class ReplayRequest(BaseModel):
     station_id: Optional[str] = Field(default=None, min_length=1, max_length=64)   # needed if the CSV has no station_id column
     speed: float = Field(default=0.0, ge=0)   # 1 = real time, 0 = fastest
     limit: Optional[int] = Field(default=None, ge=1)
+
+
+def model_fingerprints(settings: dict, station_ids) -> dict[str, dict]:
+    """Which model files each station is running: a short hash of each, so a verdict can be tied to the models behind it."""
+    out = {}
+    for sid in station_ids:
+        files = {}
+        for kind, suffix in (("normality", ".json"), ("iforest", ".joblib"), ("mahalanobis", ".joblib"), ("limits", ".json")):
+            p = model_path(settings, sid, kind, suffix)
+            if p.exists():
+                files[kind] = hashlib.sha256(p.read_bytes()).hexdigest()[:12]
+        if files:
+            out[sid] = files
+    return out
 
 
 class InjectRequest(BaseModel):
@@ -92,9 +111,38 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
                 verdict = VerdictResult(verdict=Verdict.SUSPECT, confidence=0.0, reason=reason,
                                         checks=[CheckResult(check="pipeline_error", flagged=True, severity="soft", reason=reason)])
             store.set_verdict(record_id, verdict)
+            counters["ingested"] += 1
+            days = api_cfg.get("retention_days", 0)
+            if days and counters["ingested"] % int(api_cfg.get("purge_every", 1000)) == 0:
+                store.purge_older_than(clock() - timedelta(days=days))
             return store.get(record_id)
 
     app = FastAPI(title="AtmosGuard")
+    started = time.time()
+    counters = {"ingested": 0}
+    api_cfg = settings.get("api", {})
+    hits: dict[str, deque] = defaultdict(deque)
+
+    @app.middleware("http")
+    async def guard(request: Request, call_next):
+        """Optional API key on every write (POST, DELETE) and an optional per-address rate limit on /ingest."""
+        from fastapi.responses import JSONResponse
+        key = os.environ.get(api_cfg.get("api_key_env", "ATMOS_API_KEY"))
+        if key and request.method in ("POST", "DELETE"):
+            given = request.headers.get("x-api-key", "")
+            if not hmac.compare_digest(given.encode(), key.encode()):
+                return JSONResponse({"detail": "A valid X-API-Key header is required for this request."}, status_code=401)
+        limit = int(api_cfg.get("rate_limit_per_minute", 0) or 0)
+        if limit and request.method == "POST" and request.url.path == "/ingest":
+            who = request.client.host if request.client else "?"
+            now = time.time()
+            q = hits[who]
+            while q and now - q[0] > 60:
+                q.popleft()
+            if len(q) >= limit:
+                return JSONResponse({"detail": f"Rate limit: {limit} readings per minute per client."}, status_code=429)
+            q.append(now)
+        return await call_next(request)
 
     @app.post("/ingest", response_model=StoredRecord)
     def ingest(reading: Reading) -> StoredRecord:
@@ -121,6 +169,12 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
     def status():
         return {
             "status": "ok",
+            "uptime_seconds": round(time.time() - started, 1),
+            "readings_processed": counters["ingested"],
+            "auth_required_for_writes": bool(os.environ.get(api_cfg.get("api_key_env", "ATMOS_API_KEY"))),
+            "retention_days": api_cfg.get("retention_days", 0),
+            "python": sys.version.split()[0],
+            "model_fingerprints": model_fingerprints(settings, sorted(pipeline.tables)),
             "stations_configured": sorted(stations),
             "stations_seen": sorted(set(pipeline.stations_seen()) | set(store.stations())),
             "models_loaded": {"normality": sorted(pipeline.tables), "isolation_forest": sorted(pipeline.models),

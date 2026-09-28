@@ -213,14 +213,19 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
         st.dataframe(series_rows(records), width="stretch", hide_index=True)
 
 
+def _headers() -> dict:
+    key = os.environ.get("ATMOS_API_KEY")
+    return {"X-API-Key": key} if key else {}
+
+
 def post(api_url: str, path: str, body: Optional[dict] = None):
-    r = httpx.post(api_url.rstrip("/") + path, json=body, timeout=15)
+    r = httpx.post(api_url.rstrip("/") + path, json=body, timeout=15, headers=_headers())
     r.raise_for_status()
     return r.json()
 
 
 def delete(api_url: str, path: str, params: Optional[dict] = None):
-    r = httpx.delete(api_url.rstrip("/") + path, params=params, timeout=15)
+    r = httpx.delete(api_url.rstrip("/") + path, params=params, timeout=15, headers=_headers())
     r.raise_for_status()
     return r.json()
 
