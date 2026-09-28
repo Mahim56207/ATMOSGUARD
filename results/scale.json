@@ -1,0 +1,83 @@
+{
+ "note": "Simulated stations on one machine (a design check, not a deployment proof). cpu_count=4, python=3.11.15.",
+ "pipeline_by_station_count": [
+  {
+   "stations": 1,
+   "readings": 288,
+   "readings_per_second": 3704.7,
+   "median_ms": 0.194,
+   "p95_ms": 0.643,
+   "p99_ms": 0.718,
+   "rss_mb_after_fit": 220.8,
+   "rss_mb_after_run": 221.0,
+   "memory_per_station_mb": 5.14,
+   "storage_per_station": {
+    "normality_json_kb": 6.0,
+    "isolation_forest_kb": 1577.1,
+    "limits_json_kb": 0.6,
+    "total_kb": 1583.7
+   }
+  },
+  {
+   "stations": 10,
+   "readings": 2880,
+   "readings_per_second": 3459.2,
+   "median_ms": 0.217,
+   "p95_ms": 0.709,
+   "p99_ms": 0.807,
+   "rss_mb_after_fit": 241.7,
+   "rss_mb_after_run": 241.7,
+   "memory_per_station_mb": 2.07,
+   "storage_per_station": {
+    "normality_json_kb": 6.0,
+    "isolation_forest_kb": 1577.1,
+    "limits_json_kb": 0.6,
+    "total_kb": 1583.7
+   }
+  },
+  {
+   "stations": 50,
+   "readings": 14400,
+   "readings_per_second": 2986.9,
+   "median_ms": 0.236,
+   "p95_ms": 0.806,
+   "p99_ms": 1.287,
+   "rss_mb_after_fit": 328.8,
+   "rss_mb_after_run": 335.2,
+   "memory_per_station_mb": 1.87,
+   "storage_per_station": {
+    "normality_json_kb": 6.0,
+    "isolation_forest_kb": 1577.1,
+    "limits_json_kb": 0.6,
+    "total_kb": 1583.7
+   }
+  },
+  {
+   "stations": 200,
+   "readings": 57600,
+   "readings_per_second": 2996.1,
+   "median_ms": 0.239,
+   "p95_ms": 0.792,
+   "p99_ms": 1.281,
+   "rss_mb_after_fit": 657.0,
+   "rss_mb_after_run": 690.2,
+   "memory_per_station_mb": 1.8,
+   "storage_per_station": {
+    "normality_json_kb": 6.0,
+    "isolation_forest_kb": 1577.1,
+    "limits_json_kb": 0.6,
+    "total_kb": 1583.7
+   }
+  }
+ ],
+ "http": {
+  "stations": 50,
+  "clients": 8,
+  "requests": 3000,
+  "errors": 0,
+  "requests_per_second": 256.4,
+  "median_ms": 28.99,
+  "p95_ms": 36.06,
+  "p99_ms": 40.3
+ }
+}

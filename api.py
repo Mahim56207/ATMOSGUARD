@@ -1,6 +1,6 @@
 """FastAPI service.
 
-Endpoints: /ingest /latest /alerts /health /replay /inject /metrics /status
+Endpoints: /ingest /latest /alerts /health /explain /replay /inject /datasets /metrics /status
 
 /ingest runs the full pipeline (physics, health, normality, ML, fusion) and stores the raw reading,
 the verdict and the checks side by side. /health gives the sensor health score, projected service
@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 import replay as replay_module
 from atmos.config import CONFIG_DIR, load_settings, load_stations
+from atmos.explain import explain_reading
 from atmos.fusion import Pipeline
 from atmos.livefault import LIVE_FAULT_TYPES, LiveInjector
 from atmos.schema import CheckResult, Reading, StoredRecord, Verdict, VerdictResult
@@ -184,6 +185,21 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
     @app.delete("/inject")
     def clear_injections(station_id: Optional[str] = None):
         return {"removed": injector.clear(station_id)}
+
+    @app.get("/explain")
+    def explain(station_id: str, record_id: Optional[int] = None):
+        """Why the statistical layers found a reading unusual: exact Mahalanobis contributions and (if `shap` is
+        installed) SHAP values for the Isolation Forest. Defaults to the station's latest reading."""
+        recent = store.latest(station_id, 60)                        # newest first
+        if not recent:
+            raise HTTPException(404, f"No readings yet for station {station_id}.")
+        idx = 0 if record_id is None else next((i for i, r in enumerate(recent) if r.id == record_id), None)
+        if idx is None:
+            raise HTTPException(404, f"Reading {record_id} is not among the latest 60 of {station_id}.")
+        history = [r.reading for r in reversed(recent[idx: idx + 2])]      # previous reading, then the one to explain
+        out = explain_reading(history, pipeline.tables.get(station_id), pipeline.models.get(station_id),
+                              pipeline.mahalanobis.get(station_id))
+        return {"station_id": station_id, "record_id": recent[idx].id, "timestamp": recent[idx].reading.timestamp.isoformat(), **out}
 
     @app.get("/datasets")
     def datasets():

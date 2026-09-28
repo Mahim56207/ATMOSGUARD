@@ -190,6 +190,25 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
 
     with st.expander("Checks behind the latest verdict"):
         st.dataframe(check_rows(newest), width="stretch", hide_index=True)
+    with st.expander("Why the statistical layers found it unusual (exact Mahalanobis contributions, SHAP for the Isolation Forest)"):
+        try:
+            ex = fetch(api_url, "/explain", {"station_id": station, "record_id": newest.id})
+        except httpx.HTTPError:
+            ex = None
+        if not ex:
+            st.caption("No explanation available from the API.")
+        else:
+            for key, title in (("mahalanobis", "Mahalanobis distance"), ("isolation_forest", "Isolation Forest")):
+                part = ex.get(key, {})
+                st.markdown(f"**{title}**")
+                rows = part.get("contributions") or part.get("shap")
+                if not part.get("available") or not rows:
+                    st.caption(part.get("note", "Not available."))
+                    continue
+                head = (f"distance^2 {part['distance2']} (limit {part['threshold']})" if key == "mahalanobis"
+                        else f"score {part['score']} (limit {part['threshold']})")
+                st.caption(f"{head}. {part.get('note', '')}")
+                st.dataframe(rows, width="stretch", hide_index=True)
     with st.expander("Data table (same readings as the charts)"):
         st.dataframe(series_rows(records), width="stretch", hide_index=True)
 
