@@ -1,0 +1,7 @@
+# Step 1 only. Later steps add: numpy, pandas, scikit-learn, scipy, streamlit, plotly, shap.
+fastapi
+uvicorn
+pydantic
+pyyaml
+httpx
+pytest

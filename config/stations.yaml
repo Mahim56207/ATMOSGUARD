@@ -1,0 +1,9 @@
+# One entry per station. The system is single-station: never compare against neighbours.
+stations: []
+# Example entry shape:
+#  - id: STATION_ID
+#    lat: 0.0
+#    lon: 0.0
+#    elevation_m: 0
+#    climate_zone: ""
+#    cadence_minutes: 1
