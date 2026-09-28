@@ -98,7 +98,7 @@ class DriftTracker:
 
     def __init__(self, settings: dict):
         cfg = settings["healthscore"]["drift"]
-        self._keep_days = int(cfg["window_days"]) + 3
+        self._keep_days = int(cfg["window_days"]) + int(cfg["persist_days"]) + 3
         self._winsor = float(cfg["winsor_sigma"])
         self._min_std = settings["normality"]["min_std"]
         self.days: dict[str, dict[int, list]] = {ch: {} for ch in CHANNELS}      # ch -> day ordinal -> [sum, n]
@@ -142,7 +142,8 @@ def _daily_from_records(recs: Sequence[HealthRecord], table: Optional[NormalityT
             continue
         tracker.update(Reading(station_id="_", timestamp=r.timestamp, **{ch: v}), table, faulty)
     now = recs[-1].timestamp if recs else datetime.min
-    return tracker.series(ch, now, settings["healthscore"]["drift"]["window_days"], min_samples)
+    dcfg = settings["healthscore"]["drift"]
+    return tracker.series(ch, now, dcfg["window_days"] + dcfg["persist_days"], min_samples)
 
 
 def _drift(ch: str, daily: Sequence[tuple[float, float]], now: datetime, settings: dict, have_table: bool) -> dict:
@@ -155,6 +156,8 @@ def _drift(ch: str, daily: Sequence[tuple[float, float]], now: datetime, setting
     cfg = settings["healthscore"]["drift"]
     if not have_table:
         return {"note": "drift not measured: no normality table for this station."}
+    last = now.toordinal()
+    daily = [(d, m) for d, m in daily if last - cfg["window_days"] < d <= last]
     if len(daily) < cfg["min_days"]:
         return {"note": f"drift not measured: {len(daily)} usable days of {cfg['min_days']} needed."}
     x = np.array([d for d, _ in daily], dtype=float)
@@ -184,6 +187,54 @@ def _drift(ch: str, daily: Sequence[tuple[float, float]], now: datetime, setting
             out["service_date"] = now.date()
         elif days <= cfg["max_projection_days"]:
             out["service_date"] = (now + timedelta(days=float(days))).date()
+    return out
+
+
+def _isolated(results: dict[str, dict], settings: dict) -> dict[str, dict]:
+    """The isolated-trend rule on one set of per-channel results (see drift_all)."""
+    cfg = settings["healthscore"]["drift"]
+    for ch in CHANNELS:
+        d = results[ch]
+        if not d.get("drift_significant"):
+            continue
+        partners = [o for o in CHANNELS if o != ch and abs(results[o].get("drift_z") or 0.0) >= cfg["partner_z"]]
+        if partners:
+            d["drift_significant"] = False
+            d["coherent_with"] = partners
+            d.pop("service_date", None)
+            d["note"] = (f"{ch} and {', '.join(partners)} are trending together: read as a weather or seasonal "
+                         f"transition, not sensor drift (slope {d['drift_per_day']:+.3g} per day, z = {d['drift_z']:.1f}).")
+    return results
+
+
+def drift_all(daily: dict[str, Sequence[tuple[float, float]]], now: datetime, settings: dict,
+              have_table: bool) -> dict[str, dict]:
+    """Drift result per channel, after two guards against weather being read as a sick sensor.
+
+    Isolated trend: weather moves several channels, a drifting sensor moves one. If a channel's trend is
+    significant but another channel also trends clearly (|z| at least `partner_z`), the trend is read as a seasonal
+    or weather transition (monsoon onset, change of air mass) and is NOT counted as drift. The cost: a real drift
+    that starts during a transition is masked until the transition is over.
+
+    Persistence: the trend must be significant, with the same sign, on each of the last `persist_days` daily
+    evaluations (windows ending today, yesterday, ...). One lucky day of weather is not enough. The cost: a drift
+    is claimed `persist_days` days later than a single test would claim it.
+    Pass `daily` covering `window_days + persist_days` days."""
+    cfg = settings["healthscore"]["drift"]
+    out = _isolated({ch: _drift(ch, daily.get(ch, []), now, settings, have_table) for ch in CHANNELS}, settings)
+    for k in range(1, int(cfg["persist_days"])):
+        if not any(out[ch].get("drift_significant") for ch in CHANNELS):
+            break
+        past = _isolated({ch: _drift(ch, daily.get(ch, []), now - timedelta(days=k), settings, have_table)
+                          for ch in CHANNELS}, settings)
+        for ch in CHANNELS:
+            d = out[ch]
+            if d.get("drift_significant") and not (
+                    past[ch].get("drift_significant") and past[ch]["drift_per_day"] * d["drift_per_day"] > 0):
+                d["drift_significant"] = False
+                d.pop("service_date", None)
+                d["note"] = (f"{ch}: a trend showed up today (z = {d['drift_z']:.1f}) but was not significant on each of "
+                             f"the last {int(cfg['persist_days'])} days, so it is not claimed as drift yet.")
     return out
 
 
@@ -228,17 +279,18 @@ def compute_health(station_id: str, records: Sequence[HealthRecord], table: Opti
                             note=f"Not enough records yet for a score ({len(recs)} of {cfg['min_records']}).")
     w = cfg["weights"]
     channels: dict[str, ChannelHealth] = {}
+    dcfg = cfg["drift"]
+    if cadence_minutes is None and len(recs) > 1:
+        gaps = sorted((b.timestamp - a.timestamp).total_seconds() / 60.0 for a, b in zip(recs, recs[1:]))
+        cadence_minutes = max(gaps[len(gaps) // 2], 1e-3)
+    min_samples = max(1.0, dcfg["min_day_fraction"] * 1440.0 / (cadence_minutes or 1440.0))
+    daily_by_ch = {ch: (tracker.series(ch, now, dcfg["window_days"] + dcfg["persist_days"], min_samples) if tracker is not None
+                        else _daily_from_records(all_records, table, ch, settings, min_samples)) for ch in CHANNELS}
+    drifts = drift_all(daily_by_ch, now, settings, table is not None)
     for ch in CHANNELS:
         f_fault = sum(1 for r in recs if r.verdict == Verdict.FAULT and ch in r.flagged_channels) / len(recs)
         f_susp = sum(1 for r in recs if r.verdict == Verdict.SUSPECT and ch in r.flagged_channels) / len(recs)
-        dcfg = cfg["drift"]
-        if cadence_minutes is None and len(recs) > 1:
-            gaps = sorted((b.timestamp - a.timestamp).total_seconds() / 60.0 for a, b in zip(recs, recs[1:]))
-            cadence_minutes = max(gaps[len(gaps) // 2], 1e-3)
-        min_samples = max(1.0, dcfg["min_day_fraction"] * 1440.0 / (cadence_minutes or 1440.0))
-        daily = (tracker.series(ch, now, dcfg["window_days"], min_samples) if tracker is not None
-                 else _daily_from_records(all_records, table, ch, settings, min_samples))
-        d = _drift(ch, daily, now, settings, table is not None)
+        d = drifts[ch]
         ratio = min(1.0, abs(d["offset_now"]) / cfg["drift"]["service_limit"][ch]) if d.get("drift_significant") else 0.0
         score = min(100.0, max(0.0, 100.0 - w["fault"] * f_fault - w["suspect"] * f_susp - w["drift"] * ratio))
         channels[ch] = ChannelHealth(channel=ch, score=round(score, 2), fault_fraction=round(f_fault, 4),

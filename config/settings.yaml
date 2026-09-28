@@ -163,12 +163,14 @@ healthscore:       # (starting points)
   check_channels:                # checks whose name has no ":channel" part
     dew_point: [temperature_c, humidity_pct]
   drift:                         # Theil-Sen slope of the DAILY MEAN of (reading - smooth expected), see DriftTracker
-    window_days: 45              # slope is fitted over this many days
+    window_days: 60              # slope is fitted over this many days
     min_days: 21                 # fewer usable days than this: drift is not measured
     min_day_fraction: 0.5        # a day counts if it holds this share of the samples the cadence would give
     winsor_sigma: 3.0            # one sample counts at most this many normality-cell sigmas
     z_crit: 4.0                  # significant when slope / (autocorrelation-inflated standard error) is this large
     ar1_max: 0.9                 # cap on the lag-1 autocorrelation used to inflate that error
+    persist_days: 7              # the trend must be significant, same sign, on each of the last this many daily evaluations
+    partner_z: 2.5               # a trend on one channel is NOT sensor drift if another channel trends this clearly too
     service_limit:               # offset at which the sensor needs service
       temperature_c: 0.5
       pressure_hpa: 1.0
@@ -209,7 +211,7 @@ evaluate:          # evaluate.py (starting points)
     overrides:                   # merged over the settings above for real-data runs. A stuck sensor, a level shift
       injector:                  # or a burst of noise lasts days on a real network, not the hours used on 15-min data
         min_separation_minutes: 720
-        duration_minutes: {frozen: 2880, step: 1440, drift: 20160, noise: 1440, dropout: 180, clock_shift: 5760}
+        duration_minutes: {frozen: 2880, step: 1440, drift: 86400, noise: 1440, dropout: 180, clock_shift: 5760}
   synthetic:                     # --synthetic only: fake weather to test the plumbing. NOT real results.
     start: "2026-01-01T00:00:00"
     cadence_minutes: 15
@@ -230,5 +232,6 @@ node:              # firmware/node (ESP32 + BME280). firmware/node/gen_config.py
   sample_interval_seconds: 1
   aggregate_seconds: 60
   min_valid_samples: 30          # fewer valid samples than this in a minute -> that channel is sent as missing
+  frozen_minutes: 30             # this many identical 1-minute means in a row -> the node flags the channel as frozen (0 = off)
   buffer_slots: 30               # unsent minutes kept on the device while the network is down
   post_timeout_seconds: 10

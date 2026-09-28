@@ -16,6 +16,9 @@ data/holdout/*
 !data/holdout/real/
 !data/holdout/.holdout_used
 models/*
+!models/*_normality.json
+!models/*_limits.json
+!models/*_iforest.joblib
 !**/.gitkeep
 
 # Node secrets (WiFi password etc.)

@@ -74,11 +74,13 @@ def test_records_outside_the_window_are_ignored(settings):
 HOURLY = 60
 
 
-def hrec(i, verdict=Verdict.VALID, flagged=(), offset=0.0, table=None):
+def hrec(i, verdict=Verdict.VALID, flagged=(), offset=0.0, table=None, rh_offset=0.0):
+    """Every channel sits at its expected value, temperature plus `offset`. So only temperature can drift."""
     ts = T0 + timedelta(minutes=i * HOURLY)
-    exp = table.smooth_expected(ts, "temperature_c") if table else 20.0
-    return HealthRecord(ts, {"temperature_c": exp + offset, "pressure_hpa": 1000.0, "humidity_pct": 50.0},
-                        verdict, frozenset(flagged))
+    exp = {ch: (table.smooth_expected(ts, ch) if table else d)
+           for ch, d in (("temperature_c", 20.0), ("pressure_hpa", 1000.0), ("humidity_pct", 50.0))}
+    return HealthRecord(ts, {**exp, "temperature_c": exp["temperature_c"] + offset,
+                             "humidity_pct": exp["humidity_pct"] + rh_offset}, verdict, frozenset(flagged))
 
 
 @pytest.fixture(scope="module")
@@ -137,6 +139,37 @@ def test_the_seasonal_cycle_is_not_read_as_drift(settings):
     assert not ch.drift_significant, ch.note
     step_offsets = [r.values["temperature_c"] - table.expected(r.timestamp, "temperature_c") for r in recs]
     assert max(step_offsets) - min(step_offsets) > 2.0        # the plain table WOULD have shown a large fake trend
+
+
+def test_a_trend_on_two_channels_is_read_as_weather_not_drift(settings, long_table):
+    """Weather moves several channels, a drifting sensor moves one. Temperature and humidity trending together
+    (as in a monsoon onset) must not be reported as a sick sensor."""
+    settings["healthscore"]["drift"]["winsor_sigma"] = 10.0             # this test is about the rule, not the clipping
+    recs = [hrec(i, offset=0.02 * _per_day(i), rh_offset=0.1 * _per_day(i), table=long_table) for i in range(60 * 24)]
+    rep = compute_health("S1", recs, long_table, now_of(recs), settings)
+    for ch in ("temperature_c", "humidity_pct"):
+        assert not rep.channels[ch].drift_significant and "trending together" in rep.channels[ch].note
+    assert rep.channels["temperature_c"].service_date is None
+
+
+def test_a_trend_must_persist_for_several_days_before_it_is_claimed(settings, monkeypatch):
+    """The per-window test is faked to be significant only on the last 3 daily evaluations. Three days of
+    persistence claims the drift; four days does not."""
+    import atmos.healthscore as hs
+    now = datetime(2026, 3, 1)
+
+    def fake_drift(ch, daily, when, settings, have_table):
+        hot = ch == "temperature_c" and when >= now - timedelta(days=2)
+        return {"drift_significant": hot, "drift_per_day": 0.1, "drift_z": 9.0 if ch == "temperature_c" else 0.0,
+                "offset_now": 1.0, "note": "x"}
+    monkeypatch.setattr(hs, "_drift", fake_drift)
+
+    def claimed(persist):
+        settings["healthscore"]["drift"]["persist_days"] = persist
+        return hs.drift_all({ch: [] for ch in CHANNELS}, now, settings, True)["temperature_c"]
+    assert claimed(3)["drift_significant"]
+    four = claimed(4)
+    assert not four["drift_significant"] and "not claimed as drift yet" in four["note"]
 
 
 def test_the_floor_is_reported(settings, long_table):

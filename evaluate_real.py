@@ -39,6 +39,7 @@ from atmos import health, physics
 from atmos.config import CONFIG_DIR, load_settings
 from atmos.fusion import Pipeline
 from atmos.injector import ALL_FAULT_TYPES, InjectionResult, inject, make_plan
+from atmos import healthscore
 from atmos.limits import StationLimits, fit_limits
 from atmos.mlmodel import IsolationModel, build_features
 from atmos.normality import NormalityTable
@@ -53,6 +54,12 @@ TRAIN_END = pd.Timestamp("2020-01-01")          # training = everything before t
 DEV_END = pd.Timestamp("2022-01-01")
 LEAD_IN_DAYS = 2                                 # extra history fed before an event window, not counted
 ALARM = ("FAULT", "SUSPECT")
+# Slow drift is judged by the health score (drift_power), not by alarms, so it is not in the alarm table.
+REAL_TYPES = tuple(t for t in ALL_FAULT_TYPES if t != "drift")
+DRIFT_SEVERITIES = (1.0, 2.0, 4.0, 8.0)      # total offset at the end of the ramp, in multiples of the service limit
+DRIFT_RAMP_DAYS = 45
+DRIFT_START_DAY = 10
+DRIFT_MIN_CHUNK_DAYS = 80
 
 
 # ====================================================================================================
@@ -288,7 +295,7 @@ def count_events(events: list[EventSeries], predict: Predictor) -> dict:
 def count_detection(faulted: list[tuple[list[Reading], InjectionResult]], predict: Predictor, settings: dict,
                     cadence: float) -> dict:
     grace = math.ceil(settings["evaluate"]["detection_grace_minutes"] / cadence)
-    out: dict[str, dict] = {t: {"detected": 0, "injected": 0, "delays_min": []} for t in ALL_FAULT_TYPES}
+    out: dict[str, dict] = {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}
     for readings, res in faulted:
         preds = predict(readings)
         for e in res.events:
@@ -310,52 +317,69 @@ def make_faulted(chunks: list[list[Reading]], settings: dict, rounds: int, min_l
             if len(series) < min_len:
                 continue
             seed = settings["seed"] + 1000 * (rnd + 1) + idx
-            plan = make_plan(series, settings, seed=seed, types=ALL_FAULT_TYPES)
+            plan = make_plan(series, settings, seed=seed, types=REAL_TYPES)
             if plan:
                 res = inject(series, settings, plan, seed=seed)
                 out.append((res.readings, res))
     return out
 
 
-def drift_by_health(faulted: list[tuple[list[Reading], InjectionResult]], settings: dict, table: NormalityTable,
-                    model: IsolationModel, limits: StationLimits, sid: str, cadence: float) -> dict:
-    """Slow drift is judged by the health score: did the Theil-Sen drift on the right channel become significant
-    (and with the right sign) before the ramp ended, and how far had it gone by then?"""
-    s = copy.deepcopy(settings)
-    s["healthscore"]["recompute_every_minutes"] = 10 ** 9
-    check_every = max(1, int(round(24 * 60 / cadence)))                      # once per day of data
-    limit_of = s["healthscore"]["drift"]["service_limit"]
-    res = {"detected": 0, "injected": 0, "days_to_detect": [], "offset_over_limit": [], "wrong_sign": 0}
-    for readings, inj in faulted:
-        drifts = [e for e in inj.events if e.fault_type == "drift"]
-        if not drifts:
+def drift_power(chunks: list[list[Reading]], settings: dict, table: NormalityTable, cadence: float) -> dict:
+    """Detection power of the drift monitor. A ramp is added to ONE channel of a clean real chunk (from day
+    DRIFT_START_DAY, over DRIFT_RAMP_DAYS, then held), and the daily monitor (DriftTracker + significance test +
+    the isolated-trend rule) is read once a day. Severity = the offset reached at the end of the ramp, in multiples
+    of the service limit. Detected = significant on the ramped channel with the right sign, at any day from the
+    start of the ramp. Severity 0 = no ramp (false claims, on the same real weather). Uses the tracker on the raw
+    residual stream: a drift does not make the hard checks raise FAULT, so it is the same stream the pipeline
+    gives the tracker."""
+    cfg = settings["healthscore"]["drift"]
+    limit_of = cfg["service_limit"]
+    min_samples = max(1.0, cfg["min_day_fraction"] * 1440.0 / cadence)
+    per_day = max(1, int(round(1440 / cadence)))
+    out: dict[str, dict] = {}
+    for ch in CHANNELS:
+        for sev in (0.0, *DRIFT_SEVERITIES):
+            out[f"{ch}|{sev:g}"] = {"trials": 0, "detected": 0, "wrong_sign": 0, "days_to_detect": [],
+                                    "offset_over_limit": []}
+    for readings in chunks:
+        if len(readings) * cadence / 1440.0 < DRIFT_MIN_CHUNK_DAYS:
             continue
-        pipe = Pipeline(s, {sid: {"cadence_minutes": cadence}}, {sid: table},
-                        {sid: ev._PrecomputedModel(model, readings)}, {sid: limits})
-        first_start = min(e.start_index for e in drifts)
-        found: dict[int, tuple[int, float]] = {}
-        for i, r in enumerate(readings):
-            pipe.process(r)
-            if i < first_start or (i - first_start) % check_every:
-                continue
-            for k, e in enumerate(drifts):
-                if k in found or not (e.start_index <= i <= e.end_index):
-                    continue
-                rep = pipe.health_report(sid, r.timestamp)
-                ch = rep.channels.get(e.channel) if rep else None
-                if ch and ch.drift_significant:
-                    sign = e.params.get("sign", 1.0)
-                    if ch.drift_per_day is not None and ch.drift_per_day * sign > 0:
-                        found[k] = (i - e.start_index, ch.offset_now or 0.0)
-                    else:
-                        res["wrong_sign"] += 1
-        for k, e in enumerate(drifts):
-            res["injected"] += 1
-            if k in found:
-                res["detected"] += 1
-                res["days_to_detect"].append(found[k][0] * cadence / 1440.0)
-                res["offset_over_limit"].append(abs(found[k][1]) / limit_of[e.channel])
-    return res
+        t0 = readings[0].timestamp
+        for target in CHANNELS:
+            for sev in (0.0, *DRIFT_SEVERITIES):
+                if sev == 0.0 and target != CHANNELS[0]:
+                    continue                                   # one no-ramp run per chunk covers every channel
+                tracker = healthscore.DriftTracker(settings)
+                total = sev * limit_of[target]
+                found: dict[str, tuple[float, float]] = {}
+                wrong = 0
+                for i, r in enumerate(readings):
+                    day = (r.timestamp - t0).total_seconds() / 86400.0
+                    vals = {ch: getattr(r, ch) for ch in CHANNELS}
+                    if vals[target] is not None and sev > 0:
+                        vals[target] += total * min(1.0, max(0.0, (day - DRIFT_START_DAY) / DRIFT_RAMP_DAYS))
+                    tracker.update(Reading(station_id=r.station_id, timestamp=r.timestamp, **vals), table, frozenset())
+                    if day < DRIFT_START_DAY or i % per_day:
+                        continue
+                    daily = {ch: tracker.series(ch, r.timestamp, cfg["window_days"] + cfg["persist_days"], min_samples) for ch in CHANNELS}
+                    res = healthscore.drift_all(daily, r.timestamp, settings, True)
+                    for ch in ((target,) if sev > 0 else CHANNELS):
+                        d = res[ch]
+                        if ch in found or not d.get("drift_significant"):
+                            continue
+                        if sev == 0 or d["drift_per_day"] > 0:
+                            found[ch] = (day - DRIFT_START_DAY, d["offset_now"])
+                        else:
+                            wrong += 1
+                for ch in ((target,) if sev > 0 else CHANNELS):
+                    o = out[f"{ch}|{sev:g}"]
+                    o["trials"] += 1
+                    o["wrong_sign"] += wrong if ch == target else 0
+                    if ch in found:
+                        o["detected"] += 1
+                        o["days_to_detect"].append(found[ch][0])
+                        o["offset_over_limit"].append(abs(found[ch][1]) / limit_of[ch])
+    return out
 
 
 def drift_false_alarms(clean: list[list[Reading]], settings: dict, table: NormalityTable, model: IsolationModel,
@@ -431,7 +455,8 @@ class PhasePlan:
     allow_holdout: bool
 
 
-def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: list[dict]) -> dict:
+def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: list[dict],
+                     parts: frozenset = frozenset({"detect", "events", "noaa", "drift", "latency"})) -> dict:
     s = real_settings(settings)
     df_train_src = read_frame(plan.train_path, s, plan.allow_holdout)
     df_eval_src = df_train_src if plan.eval_path == plan.train_path else read_frame(plan.eval_path, s, plan.allow_holdout)
@@ -464,17 +489,19 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
 
     configs = build_configs(s, table, model, limits, train, sid, cadence)
     results = {}
-    for name, kind, predict in configs:
-        results[name] = {"kind": kind, "clean": count_clean(clean, predict),
-                         "events": count_events(event_series, predict),
-                         "detection": count_detection(faulted, predict, s, cadence)}
+    if parts & {"detect", "events"}:
+        for name, kind, predict in configs:
+            results[name] = {"kind": kind, "clean": count_clean(clean, predict),
+                             "events": count_events(event_series, predict) if "events" in parts else {},
+                             "detection": count_detection(faulted, predict, s, cadence) if "detect" in parts else
+                             {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}}
     full = configs[0][2]
-    extra = {"drift_health": drift_by_health(faulted, s, table, model, limits, sid, cadence),
-             "drift_false": drift_false_alarms(clean, s, table, model, limits, sid, cadence),
-             "noaa": noaa_agreement(period_df.reset_index(drop=True), full, cadence)}
+    extra = {"drift_power": drift_power(clean, s, table, cadence) if "drift" in parts else {},
+             "drift_false": (drift_false_alarms(clean, s, table, model, limits, sid, cadence) if "drift" in parts else {}),
+             "noaa": (noaa_agreement(period_df.reset_index(drop=True), full, cadence) if "noaa" in parts else {})}
 
     # ---- speed of the full pipeline, per reading (median and 95th percentile)
-    sample = clean[0][: 2000] if clean else []
+    sample = clean[0][: 2000] if (clean and "latency" in parts) else []
     lat = []
     if sample:
         pipe = Pipeline(s, {sid: {"cadence_minutes": cadence}}, {sid: table}, {sid: model}, {sid: limits})
@@ -492,8 +519,8 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
 
 
 def _worker(args):
-    plan, settings, quick, events_all = args
-    return evaluate_station(plan, settings, quick, events_all)
+    plan, settings, quick, events_all, parts = args
+    return evaluate_station(plan, settings, quick, events_all, parts)
 
 
 # ====================================================================================================
@@ -521,11 +548,12 @@ def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
     return plans
 
 
-def run(phase: str, quick: bool, workers: int, only: Optional[list[str]] = None) -> dict:
+def run(phase: str, quick: bool, workers: int, only: Optional[list[str]] = None,
+        parts: frozenset = frozenset({"detect", "events", "noaa", "drift", "latency"})) -> dict:
     settings = load_settings()
     meta = load_events()
     plans = [p for p in make_plans(phase, meta) if not only or p.station in only]
-    jobs = [(p, settings, quick, meta["events"][p.station]) for p in plans]
+    jobs = [(p, settings, quick, meta["events"][p.station], parts) for p in plans]
     if workers > 1 and len(jobs) > 1:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             rows = list(pool.map(_worker, jobs))
@@ -544,7 +572,7 @@ def aggregate(rows: list[dict], phase: str) -> dict:
     names = list(sel[0]["configs"]) if sel else []
     out = {}
     for n in names:
-        det = {t: {"detected": 0, "injected": 0, "delays_min": []} for t in ALL_FAULT_TYPES}
+        det = {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}
         clean = Counter()
         events: dict[str, Counter] = defaultdict(Counter)
         for r in sel:
@@ -561,13 +589,14 @@ def aggregate(rows: list[dict], phase: str) -> dict:
     noaa = Counter()
     for r in sel:
         noaa.update({k: v for k, v in r["noaa"].items() if k != "examples"})
-    drift = {"detected": 0, "injected": 0, "days_to_detect": [], "offset_over_limit": [], "wrong_sign": 0}
+    drift: dict[str, dict] = {}
     for r in sel:
-        d = r["drift_health"]
-        for k in ("detected", "injected", "wrong_sign"):
-            drift[k] += d[k]
-        drift["days_to_detect"] += d["days_to_detect"]
-        drift["offset_over_limit"] += d["offset_over_limit"]
+        for key, d in r["drift_power"].items():
+            a = drift.setdefault(key, {"trials": 0, "detected": 0, "wrong_sign": 0, "days_to_detect": [], "offset_over_limit": []})
+            for k in ("trials", "detected", "wrong_sign"):
+                a[k] += d[k]
+            a["days_to_detect"] += d["days_to_detect"]
+            a["offset_over_limit"] += d["offset_over_limit"]
     dfa = Counter()
     for r in sel:
         dfa.update(r["drift_false"])
@@ -579,19 +608,22 @@ def aggregate(rows: list[dict], phase: str) -> dict:
 
 def format_phase(agg: dict, title: str) -> str:
     cfgs = agg["configs"]
+    if not cfgs:                                        # a --parts run without the verdict tables
+        cfgs = {"full": {"kind": "full", "clean": {"n": 0, "alarm": 0, "fault": 0, "weather": 0}, "events": {},
+                         "detection": {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}}}
     w = max(len(n) for n in cfgs) + 2
     L = [f"### {title}", f"stations: {', '.join(agg['stations'])}", ""]
     L.append("1) Detection of injected faults, by type  (alarm = FAULT or SUSPECT, from fault start to end + grace)")
-    L.append(f"   {'config':<{w}}" + "".join(f"{t:>12}" for t in ALL_FAULT_TYPES))
+    L.append(f"   {'config':<{w}}" + "".join(f"{t:>12}" for t in REAL_TYPES))
     for n, c in cfgs.items():
         L.append(f"   {n:<{w}}" + "".join(f"{_pct(c['detection'][t]['detected'], c['detection'][t]['injected']):>12}"
-                                          for t in ALL_FAULT_TYPES))
+                                          for t in REAL_TYPES))
     first = next(iter(cfgs.values()))
-    L.append(f"   {'(faults injected)':<{w}}" + "".join(f"{first['detection'][t]['injected']:>12}" for t in ALL_FAULT_TYPES))
+    L.append(f"   {'(faults injected)':<{w}}" + "".join(f"{first['detection'][t]['injected']:>12}" for t in REAL_TYPES))
     full = cfgs["full"]["detection"]
-    med = {t: (float(np.median(full[t]["delays_min"])) if full[t]["delays_min"] else None) for t in ALL_FAULT_TYPES}
+    med = {t: (float(np.median(full[t]["delays_min"])) if full[t]["delays_min"] else None) for t in REAL_TYPES}
     L.append(f"   {'full: median delay to first alarm (min)':<{w}}" +
-             "".join(f"{('-' if med[t] is None else f'{med[t]:.0f}'):>12}" for t in ALL_FAULT_TYPES))
+             "".join(f"{('-' if med[t] is None else f'{med[t]:.0f}'):>12}" for t in REAL_TYPES))
     L += ["", "2) False alarms on clean real data  (no faults injected, extreme-weather windows and NOAA-flagged values removed)",
           f"   {'config':<{w}}{'any alarm':>11}{'FAULT only':>12}{'WEATHER':>10}{'samples':>10}"]
     for n, c in cfgs.items():
@@ -623,11 +655,26 @@ def format_phase(agg: dict, title: str) -> str:
           f"and on {_pct(n.get('erroneous_caught', 0), n.get('erroneous', 0))} of the erroneous ones",
           f"   AtmosGuard alarmed on {_pct(n.get('unflagged_alarm', 0), n.get('unflagged', 0))} of the {n.get('unflagged', 0)} values NOAA did not flag"]
     d = agg["drift"]
-    L += ["", "5) Slow drift, judged by the health score  (Theil-Sen slope significant, right sign, before the ramp ends)",
-          f"   detected {d['detected']}/{d['injected']}  ({_pct(d['detected'], d['injected'])}); wrong-sign detections: {d['wrong_sign']}"]
-    if d["days_to_detect"]:
-        L.append(f"   median time to detect: {np.median(d['days_to_detect']):.1f} days into the ramp; "
-                 f"median offset at detection: {np.median(d['offset_over_limit']):.2f} x the service limit")
+    L += ["", "5) Slow drift, judged by the health score  (daily-mean Theil-Sen, autocorrelation-aware test)",
+          f"   A ramp over {DRIFT_RAMP_DAYS} days is added to one channel of a clean real chunk; severity = offset at the end of the ramp in",
+          "   multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). Detected = significant with the right sign.",
+          f"   {'severity':<10}" + "".join(f"{ch.split('_')[0]:>26}" for ch in CHANNELS),
+          f"   {'':<10}" + "".join(f"{'detected  day  offset/limit':>26}" for _ in CHANNELS)]
+    for sev in (0.0, *DRIFT_SEVERITIES):
+        row = f"   {('none' if sev == 0 else f'{sev:g}x limit'):<10}"
+        for ch in CHANNELS:
+            a = d.get(f"{ch}|{sev:g}")
+            if not a or not a["trials"]:
+                row += f"{'n/a':>26}"
+                continue
+            det = _pct(a["detected"], a["trials"])
+            if sev == 0:
+                row += f"{det + ' (false claims)':>26}"
+            else:
+                day = f"{np.median(a['days_to_detect']):.0f}" if a["days_to_detect"] else "-"
+                off = f"{np.median(a['offset_over_limit']):.1f}x" if a["offset_over_limit"] else "-"
+                row += f"{f'{det:>6}  {day:>4}  {off:>7}':>26}"
+        L.append(row)
     f = agg["drift_false"]
     L += [f"   on clean data with NO drift injected: significant drift claimed on {_pct(f.get('days_with_significant', 0), f.get('days', 0))} "
           f"of {f.get('days', 0)} station-days (per channel: {_pct(f.get('significant', 0), f.get('channel_days', 0))}); "
@@ -644,6 +691,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--quick", action="store_true", help="one year and one fault round: for tuning loops only")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stations", nargs="*", help="only these stations")
+    ap.add_argument("--parts", default="detect,events,noaa,drift,latency",
+                    help="comma list of what to run: detect, events, noaa, drift, latency (for tuning loops)")
     ap.add_argument("--out", type=Path, default=None, help="write the raw results as JSON")
     ap.add_argument("--force-rerun-holdout", action="store_true",
                     help="reproduce a holdout run that was already made (the original lock file stays in git history)")
@@ -660,7 +709,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             except ev.HoldoutError as e:
                 print(f"Cannot run the holdout: {e}")
                 return 2
-    res = run(phase, args.quick, args.workers, args.stations)
+    res = run(phase, args.quick, args.workers, args.stations, frozenset(args.parts.split(",")))
     text = []
     for ph in dict.fromkeys(r["phase"] for r in res["stations"]):
         text.append(format_phase(aggregate(res["stations"], ph), {"DEV": "DEV (tuning allowed)",

@@ -1,0 +1,24 @@
+{
+ "station_id": "BBI",
+ "cadence_minutes": 60.0,
+ "channels": {
+  "temperature_c": {
+   "resolution": 1.0,
+   "frozen_minutes": 1020.0,
+   "noise_std": 2.090520780410108,
+   "n_runs": 6301
+  },
+  "pressure_hpa": {
+   "resolution": 1.0,
+   "frozen_minutes": 540.0,
+   "noise_std": 1.4200938936093863,
+   "n_runs": 8411
+  },
+  "humidity_pct": {
+   "resolution": 0.1,
+   "frozen_minutes": 1659.2399999999725,
+   "noise_std": 11.81256538429966,
+   "n_runs": 5347
+  }
+ }
+}
