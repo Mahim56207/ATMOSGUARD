@@ -1,0 +1,26 @@
+# All thresholds, tolerances, windows and layer flags live here. No magic numbers in code.
+# Windows are in MINUTES (not samples) so the same code runs on 1-min, 15-min and hourly data.
+# Fill values in as each module is built.
+
+seed: 42           # one fixed seed, used everywhere
+
+store:
+  sqlite_path: atmosguard.sqlite
+
+layers:            # every layer is toggleable so the ablation study needs no code edits
+  physics: true        # L0
+  health: true         # L1
+  normality: true      # L2
+  mlmodel: true        # L3
+  lstm_ae: false       # optional, behind a flag
+  timing: true         # T1, T2
+  impute: true
+
+physics: {}        # TODO: ranges, dew point tolerance, wet-bulb soft-flag level
+health: {}         # TODO: frozen / step / spike / CUSUM / noise / gap windows (minutes)
+normality: {}      # TODO
+mlmodel: {}        # TODO
+timing: {}         # TODO
+fusion: {}         # TODO
+healthscore: {}    # TODO
+impute: {}         # TODO
