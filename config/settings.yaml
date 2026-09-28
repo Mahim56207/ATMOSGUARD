@@ -90,6 +90,10 @@ normality:         # L2: station x month x hour statistics  (starting points)
     pressure_hpa: 0.1
     humidity_pct: 1.0
 
+coldstart:         # atmos/coldstart.py: a new station starts from other stations' frozen tables, then learns its own
+  full_weight_samples: 30        # own samples in a month-hour cell at which the station's own mean and spread take over
+  full_weight_days: 365          # own days of clean history at which the station's own learned limits take over
+
 mlmodel:           # L3  (starting points)
   n_estimators: 100
   threshold_quantile: 0.005      # flag scores below this quantile of the clean training scores
@@ -113,6 +117,7 @@ injector:          # fault injection for evaluation (starting points). Fault typ
 timing:            # T1 clock / diurnal-phase check, T2 cross-channel co-jump check  (starting points)
   clock:                         # T1: does the daily cycle match this station's normal cycle, or is it shifted?
     window_minutes: 1440         # needs a full day of history
+    recompute_hours: 3           # the check is redone at most this often (data time). A wrong clock lasts days.
     channels: [temperature_c, humidity_pct]   # the channels with a clear daily cycle
     max_shift_hours: 6           # shifts tried: -6 ... +6 hours (the L2 table has one cell per hour)
     min_shift_hours: 1

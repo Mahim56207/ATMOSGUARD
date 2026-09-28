@@ -253,11 +253,12 @@ class Pipeline:
         return used
 
     def _clock_check(self, sid: str, full_history: list, table) -> CheckResult:
-        """T1 result, recomputed once per hour of data time (the normal pattern has one cell per hour)."""
-        hour = full_history[-1].timestamp.replace(minute=0, second=0, microsecond=0)
+        """T1 result, recomputed every `timing.clock.recompute_hours` of data time. A wrong clock lasts days, so this only delays a flag."""
+        step = timedelta(hours=self.settings["timing"]["clock"]["recompute_hours"])
+        now = full_history[-1].timestamp
         cached = self._clock.get(sid)
-        if cached is None or cached[0] != hour:
-            cached = (hour, timing.check_clock(full_history, table, self.settings))
+        if cached is None or now - cached[0] >= step or now < cached[0]:
+            cached = (now, timing.check_clock(full_history, table, self.settings))
             self._clock[sid] = cached
         return cached[1]
 

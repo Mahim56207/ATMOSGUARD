@@ -27,6 +27,11 @@ class NormalityTable:
         self.station_id = station_id
         self.cells = cells                    # {"month-hour": {channel: {mean, std, n}}}
         self._min_std = settings["normality"]["min_std"]
+        # the same cells keyed by (month, hour): the checks look cells up thousands of times per reading
+        self._by_mh: dict[tuple[int, int], dict] = {}
+        for key, per_ch in cells.items():
+            m, h = key.split("-")
+            self._by_mh[(int(m), int(h))] = per_ch
 
     @classmethod
     def fit(cls, readings: Sequence[Reading], settings: dict) -> "NormalityTable":
@@ -49,7 +54,8 @@ class NormalityTable:
         return cls(stations.pop(), cells, settings)
 
     def cell(self, ts, ch: str) -> Optional[dict[str, float]]:
-        return self.cells.get(_key(ts), {}).get(ch)
+        per_ch = self._by_mh.get((ts.month, ts.hour))
+        return None if per_ch is None else per_ch.get(ch)
 
     def expected(self, ts, ch: str) -> Optional[float]:
         c = self.cell(ts, ch)
@@ -76,7 +82,7 @@ class NormalityTable:
         num = den = 0.0
         for m, wmo in ((m0, 1.0 - wm), (m1, wm)):
             for h, whr in ((h0, 1.0 - wh), ((h0 + 1) % 24, wh)):
-                c = self.cells.get(f"{m}-{h}", {}).get(ch)
+                c = self._by_mh.get((m, h), {}).get(ch)
                 if c is not None and wmo * whr > 0:
                     num += wmo * whr * c["mean"]
                     den += wmo * whr
