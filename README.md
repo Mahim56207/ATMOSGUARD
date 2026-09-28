@@ -8,7 +8,16 @@ Anomaly and sensor-health system for an Automatic Weather Station (AWS).
 - **Output:** verdict `VALID | WEATHER | SUSPECT | FAULT`, with confidence, a plain-English reason, a health score, a projected service date, and optional imputation.
 
 ## Status
-Structure and stubs only. Modules are built one at a time (see build order in `CLAUDE_CODE_SETUP.md`).
+Built one module at a time (build order in `CLAUDE_CODE_SETUP.md`).
+
+| Step | Modules | State |
+|---|---|---|
+| 1 | `schema`, `store`, `config/`, `api` (`/ingest` stub) | done |
+| 2 | `physics`, `health` + tests | done |
+| 3 | `injector`, `normality`, `mlmodel` + tests | done (tested on synthetic data only; no real station data yet) |
+| 4-7 | `fusion`, `healthscore`, `replay`, `dashboard`, `evaluate`, `timing`, `impute`, firmware, Docker | not started |
+
+All thresholds in `config/settings.yaml` are starting points, not tuned.
 
 ## Standard practice (not our invention)
 Physics checks, persistence (frozen-value) checks, CUSUM, Isolation Forest, SHAP.

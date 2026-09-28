@@ -26,3 +26,8 @@ def load_stations(config_dir: Path | None = None) -> dict[str, dict]:
 def layer_enabled(settings: dict, layer: str) -> bool:
     """Every layer is toggleable by a config flag."""
     return bool(settings.get("layers", {}).get(layer, False))
+
+
+def model_path(settings: dict, station_id: str, kind: str, suffix: str) -> Path:
+    """Where a per-station model is saved, e.g. models/S1_normality.json."""
+    return CONFIG_DIR.parent / settings.get("models_dir", "models") / f"{station_id}_{kind}{suffix}"
