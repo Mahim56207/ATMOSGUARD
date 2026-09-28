@@ -17,6 +17,12 @@ import numpy as np
 from .schema import CHANNELS, Reading
 
 FAULT_TYPES = ("frozen", "spike", "step", "drift", "noise", "dropout")
+# Faults that need a longer record than the six above (and that only the timing layer can see):
+#   clock_shift: the logger clock is wrong by a whole number of hours, so every channel carries the value of
+#   `injector.clock_shift_hours` earlier. Nothing is out of range and each value is plausible on its own.
+EXTRA_FAULT_TYPES = ("clock_shift",)
+ALL_FAULT_TYPES = FAULT_TYPES + EXTRA_FAULT_TYPES
+ALL_CHANNELS_TAG = "all"           # channel tag for a fault that hits every channel at once
 
 
 @dataclass
@@ -55,15 +61,17 @@ def _n_samples(fault_type: str, settings: dict, cadence: float) -> int:
     return max(1, round(settings["injector"]["duration_minutes"][fault_type] / cadence))
 
 
-def make_plan(readings: list[Reading], settings: dict, seed: Optional[int] = None) -> list[FaultSpec]:
-    """Random, non-overlapping fault placement. Same seed -> same plan."""
+def make_plan(readings: list[Reading], settings: dict, seed: Optional[int] = None,
+              types: tuple[str, ...] = FAULT_TYPES) -> list[FaultSpec]:
+    """Random, non-overlapping fault placement. Same seed -> same plan (for the default six types the plan
+    is the same as before `types` existed)."""
     cfg = settings["injector"]
     rng = np.random.default_rng(settings["seed"] if seed is None else seed)
     cadence = _cadence_minutes(readings)
     sep = round(cfg["min_separation_minutes"] / cadence)
     taken: list[tuple[int, int]] = []          # (start, end) inclusive, padded by separation
     plan: list[FaultSpec] = []
-    for fault_type in FAULT_TYPES:
+    for fault_type in types:
         n = _n_samples(fault_type, settings, cadence)
         placed = 0
         for _ in range(1000):
@@ -74,6 +82,11 @@ def make_plan(readings: list[Reading], settings: dict, seed: Optional[int] = Non
             if end >= len(readings) or any(start <= b + sep and end >= a - sep for a, b in taken):
                 continue
             channel = CHANNELS[int(rng.integers(len(CHANNELS)))]
+            if fault_type in EXTRA_FAULT_TYPES:
+                channel = ALL_CHANNELS_TAG
+                lag = round(settings["injector"]["clock_shift_hours"] * 60.0 / cadence)
+                if start < lag:
+                    continue                                  # needs `lag` samples of earlier record to copy from
             taken.append((start, end))
             plan.append(FaultSpec(fault_type, channel, start))
             placed += 1
@@ -91,16 +104,30 @@ def inject(readings: list[Reading], settings: dict, plan: list[FaultSpec],
     events: list[FaultEvent] = []
 
     for spec in sorted(plan, key=lambda f: f.start_index):
-        if spec.fault_type not in FAULT_TYPES:
+        if spec.fault_type not in ALL_FAULT_TYPES:
             raise ValueError(f"unknown fault type: {spec.fault_type}")
         ch = spec.channel
-        if ch not in CHANNELS:
+        if ch not in CHANNELS and not (spec.fault_type in EXTRA_FAULT_TYPES and ch == ALL_CHANNELS_TAG):
             raise ValueError(f"unknown channel: {ch}")
         if not 0 <= spec.start_index < len(readings):
             raise ValueError(f"start_index {spec.start_index} is outside the {len(readings)} readings")
         n = _n_samples(spec.fault_type, settings, cadence)
         s, e = spec.start_index, min(spec.start_index + n, len(readings)) - 1
         params: dict = {}
+        if spec.fault_type == "clock_shift":
+            lag = round(cfg["clock_shift_hours"] * 60.0 / cadence)
+            if s < lag:
+                raise ValueError(f"clock_shift at index {s} needs {lag} earlier samples")
+            for i in range(s, e + 1):
+                if labels[i] is not None:
+                    raise ValueError(f"fault at index {i} overlaps another fault")
+                src = readings[i - lag]
+                out[i] = out[i].model_copy(update={c: getattr(src, c) for c in CHANNELS})
+                labels[i] = spec.fault_type
+            events.append(FaultEvent("clock_shift", ALL_CHANNELS_TAG, readings[s].timestamp.isoformat(),
+                                     readings[e].timestamp.isoformat(), s, e,
+                                     {"shift_hours": cfg["clock_shift_hours"]}))
+            continue
         hold = getattr(readings[s - 1 if s > 0 else s], ch)
         mag = cfg["magnitude"].get(spec.fault_type, {}).get(ch)
         sign = 1.0 if rng.random() < 0.5 else -1.0

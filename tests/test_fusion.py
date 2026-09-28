@@ -103,8 +103,17 @@ def test_rule4_unusual_but_ambiguous_is_suspect(settings):
 
 
 def test_rule4_other_hard_flags_are_suspect(settings):
-    for name in ("noise:temperature_c", "gap", "timestamp", "drift:pressure_hpa"):
+    for name in ("noise:temperature_c", "timestamp", "drift:pressure_hpa"):
         assert run([chk(name)], settings).verdict == Verdict.SUSPECT
+
+
+def test_a_communication_gap_is_a_notice_and_does_not_change_the_verdict(settings):
+    """The values that arrive after a gap are fine. The gap is reported beside the verdict, not as a fault."""
+    v = run([chk("gap")], settings)
+    assert v.verdict == Verdict.VALID
+    assert len(v.notices) == 1 and "gap happened" in v.notices[0]
+    v = run([chk("gap"), chk("range:temperature_c")], settings)          # a real fault still wins
+    assert v.verdict == Verdict.FAULT and len(v.notices) == 1
 
 
 def test_rule5_nothing_flagged_is_valid(settings):

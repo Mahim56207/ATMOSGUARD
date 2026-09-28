@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Sequence
 
-from . import health, healthscore, impute, mlmodel, normality, physics, timing
+from . import health, healthscore, impute, limits as limits_mod, mlmodel, normality, physics, timing
 from .config import layer_enabled, model_path
 from .schema import CHANNELS, CheckResult, Reading, Verdict, VerdictResult
 
@@ -78,7 +78,9 @@ def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: di
     fcfg = settings["fusion"]
     conf = fcfg["confidence"]
     checks = list(checks)
-    flagged = [c for c in checks if c.flagged]
+    info = set(fcfg.get("informational_checks", []))
+    notices = [c.reason for c in checks if c.flagged and _kind(c) in info]
+    flagged = [c for c in checks if c.flagged and _kind(c) not in info]
     hard = [c for c in flagged if c.severity == "hard"]
 
     def confidence(base: float, used: Sequence[CheckResult]) -> float:
@@ -87,7 +89,8 @@ def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: di
         return round(min(conf["max"], base + conf["bonus_per_supporting_flag"] * support), 3)
 
     def result(verdict: Verdict, base: float, used: Sequence[CheckResult], reason: str) -> VerdictResult:
-        return VerdictResult(verdict=verdict, confidence=confidence(base, used), reason=reason, checks=checks)
+        return VerdictResult(verdict=verdict, confidence=confidence(base, used), reason=reason, checks=checks,
+                             notices=notices)
 
     # Rule 1: physically impossible / frozen / dropout
     rule1 = [c for c in hard if _kind(c) in fcfg["fault_checks"]]
@@ -128,14 +131,17 @@ class Pipeline:
 
     def __init__(self, settings: dict, stations: Optional[dict[str, dict]] = None,
                  tables: Optional[dict[str, normality.NormalityTable]] = None,
-                 models: Optional[dict[str, mlmodel.IsolationModel]] = None):
+                 models: Optional[dict[str, mlmodel.IsolationModel]] = None,
+                 limits: Optional[dict[str, limits_mod.StationLimits]] = None):
         self.settings = settings
         self.stations = stations or {}
         self.tables = dict(tables or {})
         self.models = dict(models or {})
+        self.limits = dict(limits or {})
         self._history: dict[str, deque] = {}
         self._records: dict[str, deque] = {}
         self._health: dict[str, healthscore.HealthReport] = {}
+        self._drift: dict[str, healthscore.DriftTracker] = {}
         self._clock: dict[str, tuple] = {}
         self._lock = threading.Lock()
 
@@ -147,6 +153,9 @@ class Pipeline:
         p = model_path(self.settings, station_id, "iforest", ".joblib")
         if p.exists():
             self.models[station_id] = mlmodel.IsolationModel.load(p)
+        p = model_path(self.settings, station_id, "limits", ".json")
+        if p.exists():
+            self.limits[station_id] = limits_mod.StationLimits.load(p)
 
     def cadence_minutes(self, station_id: str) -> float:
         configured = self.stations.get(station_id, {}).get("cadence_minutes")
@@ -159,11 +168,15 @@ class Pipeline:
             return statistics.median(gaps)
         return float(self.settings["pipeline"]["default_cadence_minutes"])
 
-    def _history_length(self, cadence: float, with_clock_window: bool = False) -> int:
-        """Samples to keep. The health checks need a few hours; the clock check (T1) needs a full day."""
+    def _history_length(self, cadence: float, with_clock_window: bool = False,
+                        station_limits: Optional[limits_mod.StationLimits] = None) -> int:
+        """Samples to keep. The health checks need a few hours (a station-learned frozen window can be longer);
+        the clock check (T1) needs a full day."""
         h, w = self.settings["health"], self.settings["fusion"]["weather"]
         minutes = max(*h["frozen"]["window_minutes"].values(), h["noise"]["window_minutes"],
                       h["cusum"]["window_minutes"], w["direction_window_minutes"])
+        if station_limits is not None and limits_mod.limits_active(self.settings):
+            minutes = max(minutes, station_limits.longest_frozen_window() * h["frozen"].get("hard_multiplier", 1.0))
         if with_clock_window and layer_enabled(self.settings, "timing"):
             minutes = max(minutes, self.settings["timing"]["clock"]["window_minutes"])
         return math.ceil(minutes / cadence) + max(h["frozen"]["min_samples"], h["noise"]["min_samples"]) + 2
@@ -189,17 +202,19 @@ class Pipeline:
 
     def _process(self, reading: Reading, now: Optional[datetime], sid: str, hist: deque, records: deque) -> VerdictResult:
         cadence = self.cadence_minutes(sid)
-        while len(hist) > self._history_length(cadence, with_clock_window=True):
+        station_limits = self.limits.get(sid)
+        while len(hist) > self._history_length(cadence, with_clock_window=True, station_limits=station_limits):
             hist.popleft()
         full_history = list(hist)
-        history = full_history[-self._history_length(cadence):]      # what the health checks need
+        history = full_history[-self._history_length(cadence, station_limits=station_limits):]   # what the health checks need
         table, model = self.tables.get(sid), self.models.get(sid)
 
         use_table = table is not None and layer_enabled(self.settings, "normality")
         expected = table.expected_series(history) if use_table else None
         sigma = table.sigma_series(history) if use_table else None
         checks = [*physics.check_physics(reading, self.settings),
-                  *health.check_health(history, self.settings, cadence, now=now, expected=expected, sigma=sigma)]
+                  *health.check_health(history, self.settings, cadence, now=now, expected=expected, sigma=sigma,
+                                       limits=station_limits)]
         if layer_enabled(self.settings, "timing"):
             checks += [self._clock_check(sid, full_history, table), timing.check_cojump(history, self.settings, cadence)]
         if table:
@@ -210,14 +225,18 @@ class Pipeline:
         verdict = impute.apply_imputation(verdict, impute.impute_reading(reading, verdict, list(records), table,
                                                                          self.settings))
 
-        records.append(healthscore.to_health_record(reading, verdict, self.settings))
+        hrec = healthscore.to_health_record(reading, verdict, self.settings)
+        records.append(hrec)
+        faulty = hrec.flagged_channels if verdict.verdict == Verdict.FAULT else frozenset()
+        self._drift.setdefault(sid, healthscore.DriftTracker(self.settings)).update(reading, table, faulty)
         max_records = math.ceil(self.settings["healthscore"]["window_minutes"] / cadence) + 1
         while len(records) > max_records:
             records.popleft()
         report = self._health.get(sid)
         every = timedelta(minutes=self.settings["healthscore"]["recompute_every_minutes"])
         if report is None or reading.timestamp - report.computed_at >= every:
-            report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings)
+            report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings,
+                                                self._drift.get(sid), cadence)
             self._health[sid] = report
         return verdict.model_copy(update={"health_score": report.score, "service_date": report.service_date})
 
@@ -249,7 +268,8 @@ class Pipeline:
             if not records:
                 return None
             return healthscore.compute_health(station_id, records, self.tables.get(station_id),
-                                              now or records[-1].timestamp, self.settings)
+                                              now or records[-1].timestamp, self.settings,
+                                              self._drift.get(station_id), self.cadence_minutes(station_id))
 
     def stations_seen(self) -> list[str]:
         with self._lock:                        # another thread may be adding a station
