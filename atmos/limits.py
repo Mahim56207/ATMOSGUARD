@@ -34,6 +34,7 @@ class ChannelLimits:
     resolution: Optional[float] = None       # detected reporting step (e.g. 1.0 = whole numbers); None = fine
     frozen_minutes: Optional[float] = None   # learned longest normal run of identical values
     noise_std: Optional[float] = None        # learned largest normal jitter estimate
+    typical_step: Optional[float] = None     # 75th percentile of |change| between consecutive readings (the usual step)
     n_runs: int = 0                          # how many runs the frozen limit is based on
 
 
@@ -51,6 +52,10 @@ class StationLimits:
     def noise_std(self, ch: str) -> Optional[float]:
         c = self.channels.get(ch)
         return None if c is None else c.noise_std
+
+    def typical_step(self, ch: str) -> Optional[float]:
+        c = self.channels.get(ch)
+        return None if c is None else c.typical_step
 
     def longest_frozen_window(self) -> float:
         return max((c.frozen_minutes or 0.0 for c in self.channels.values()), default=0.0)
@@ -106,6 +111,21 @@ def _runs(readings: Sequence[Reading], ch: str, epsilon: float, gap_limit_minute
     return out
 
 
+def usual_step(readings: Sequence[Reading], ch: str, gap_limit_minutes: float, cadence_minutes: float,
+               percentile: float = 75.0) -> Optional[float]:
+    """The usual change of `ch` between two consecutive readings one cadence apart (a percentile of |change|).
+    Channels differ and cadences differ (temperature moves about 1 C between hourly readings and 3 C between
+    3-hourly ones), which is why "the other channel is quiet" has to be judged against this and not a fixed number."""
+    d = []
+    for a, b in zip(readings, readings[1:]):
+        va, vb = getattr(a, ch), getattr(b, ch)
+        dt = (b.timestamp - a.timestamp).total_seconds() / 60.0
+        if va is None or vb is None or dt <= 0 or dt > 1.5 * cadence_minutes or dt > gap_limit_minutes:
+            continue
+        d.append(abs(vb - va))
+    return float(np.percentile(d, percentile)) if len(d) >= 200 else None
+
+
 def noise_estimates(readings: Sequence[Reading], ch: str, window_minutes: float, min_samples: int,
                     cadence_minutes: float) -> list[float]:
     """The same jitter estimate health.check_noise gives, for every sample that has a full window behind it.
@@ -141,6 +161,7 @@ def fit_limits(readings: Sequence[Reading], settings: dict, cadence_minutes: Opt
         lim = ChannelLimits(resolution=detect_resolution([getattr(r, ch) for r in readings]))
         runs = _runs(readings, ch, hcfg["frozen"]["epsilon"][ch], gap_limit)
         lim.n_runs = len(runs)
+        lim.typical_step = usual_step(readings, ch, gap_limit, cadence_minutes)
         if len(runs) >= cfg["min_runs"]:
             lim.frozen_minutes = float(np.quantile(runs, cfg["frozen_quantile"])) * cfg["frozen_margin"]
         noise = noise_estimates(readings, ch, hcfg["noise"]["window_minutes"], hcfg["noise"]["min_samples"],

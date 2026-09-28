@@ -14,7 +14,8 @@ layers:            # every layer is toggleable so the ablation study needs no co
   physics: true        # L0
   health: true         # L1
   normality: true      # L2
-  mlmodel: true        # L3
+  mlmodel: true        # L3 Isolation Forest
+  mahalanobis: true    # L3b Mahalanobis distance of (departure from normal, rate of change)
   lstm_ae: false       # optional, behind a flag
   timing: true         # T1, T2
   limits: true         # station-learned frozen-run and noise ceilings (atmos/limits.py)
@@ -97,6 +98,9 @@ coldstart:         # atmos/coldstart.py: a new station starts from other station
 mlmodel:           # L3  (starting points)
   n_estimators: 100
   threshold_quantile: 0.005      # flag scores below this quantile of the clean training scores
+  mahalanobis:
+    quantile: 0.995              # alarm above this quantile of the clean training distances (squared)
+    ridge: 1.0e-6                # added to the covariance diagonal so it can always be inverted
 
 injector:          # fault injection for evaluation (starting points). Fault types come from the L1 checks.
   events_per_type: 3             # used by make_plan
@@ -133,7 +137,10 @@ fusion:            # verdict logic (starting points). Rules run in the order giv
   informational_checks: [gap]                         # reported as a notice on the reading; never changes the verdict
   fault_checks: [range, dew_point, frozen, dropout]   # rule 1: a HARD flag from these -> FAULT
   jump_checks: [step, spike]                          # rule 2: a jump on ONE channel, others quiet -> FAULT
+  quiet_fraction: 0.5                                 # "quiet" = moved by at most this share of the step allowance over the last two intervals
+  quiet_multiple: 1.5                                 #   ...and, once the station's usual step is learned, at most this many times it
   weather:                                            # rule 3: needs 2+ channels moving, smoothly, matching a signature
+    coherent: {min_channels: 2, z: 2.0}               #   ...or 2+ channels this many normality sigmas from normal at once
     direction_window_minutes: 60
     min_move:                    # change over the window needed to count a channel as "moving"
       temperature_c: 1.0

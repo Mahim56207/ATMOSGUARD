@@ -1,56 +1,97 @@
-# Evaluation Protocol
+# Evaluation protocol
 
-**This file must be committed BEFORE the first holdout run.** `evaluate.py --holdout` refuses to run unless this
-file is tracked by git, has no uncommitted changes, and contains no unfinished markers.
+**This file is committed BEFORE the first holdout run.** `evaluate_real.py --holdout` refuses to run unless this file is
+tracked by git, has no uncommitted changes, and has no unfinished markers. The commit that adds this text is the proof of
+order. The holdout is read once; a lock file (`data/holdout/.holdout_used`) records when and under which commit.
 
-## Rules (from the setup guide)
-- Tune on DEV data only.
-- `data/holdout/` is read once, by `evaluate.py`, at the end. Nothing else may read it (`replay.py` and `/replay` refuse it).
-- Fixed random seeds everywhere (`seed` in `config/settings.yaml`); results must reproduce exactly.
-- `evaluate.py` always prints three separate numbers, for every configuration:
-  1. Detection rate per fault type
-  2. False-alarm rate on clean data
-  3. False-alarm rate on real extreme-weather windows (no faults injected)
+Whatever the holdout gives is reported, including if it is worse than DEV.
+
+## What is evaluated
+The full pipeline (`evaluate_real.py`), on **real** NOAA ISD airport records, 14 Indian stations, 2016-2024
+(`docs/DATA.md`). Injected faults are injected; everything else is real weather with nothing changed.
+(`evaluate.py --synthetic` is a plumbing check on fake weather and is not a result.)
 
 ## Data split
-| Set | Where | Used for |
-|---|---|---|
-| DEV train | first `evaluate.train_fraction` of `data/clean/*.csv` (in time order) | fit the normality table and the IsolationForest |
-| DEV clean-eval | the rest of `data/clean/*.csv` | number 2 (false alarms on clean data) and the base for fault injection (number 1) |
-| DEV events | each file in `data/events/*.csv` (one window per file, with lead-in before the event) | number 3 |
-| HOLDOUT clean | each file in `data/holdout/clean/*.csv` | number 2 and fault injection, on HOLDOUT |
-| HOLDOUT events | each file in `data/holdout/events/*.csv` | number 3, on HOLDOUT |
+| Set | Stations | Years | Use |
+|---|---|---|---|
+| Training | every station, on its **own** record | 2016-2019, extreme-weather windows and NOAA-flagged values removed | fit the normality table, Isolation Forest, Mahalanobis model, learned limits |
+| DEV | Bhubaneswar, Chennai, Kolkata, Delhi, Jaipur, Thiruvananthapuram (hourly METAR) | 2020-2021 | **tuning was allowed here** |
+| HOLDOUT in time | the same six | 2022-2024 | sealed until the single holdout run |
+| HOLDOUT in space | Ahmedabad, Nagpur, Mumbai, Guwahati, Visakhapatnam (hourly METAR) and Port Blair, Bhuj, Cochin (3-hourly SYNOP) | 2020-2024 | sealed; no threshold was ever chosen by looking at these stations |
 
-Models are always fitted on DEV train only. HOLDOUT is never used for fitting or tuning.
-One CSV file = one station. Columns: `timestamp, temperature_c, pressure_hpa, humidity_pct` (+ optional `station_id`).
-The events files must be real extreme-weather windows with no faults injected. If a real sensor fault is known to be
-inside a window, cut it out and note that in the run log.
+`data/holdout/` is read only by `evaluate_real.py` after its guard passes. `replay.py` and the API's `/replay` refuse it.
+The demo data (`data/demo/`) use DEV-period events only.
+
+## Extreme-weather windows (chosen by rule on the data, before looking at any verdict)
+| Kind | Rule | Window |
+|---|---|---|
+| low | pressure at least 10 hPa below its trailing 30-day median; the 8 deepest per station | +/- 3 days |
+| heat | top 0.3 % of daily maximum temperature; up to 5 per station, 7 days apart | +/- 3 days |
+| cold | bottom 0.3 % of daily minimum temperature; up to 5 per station | +/- 3 days |
+| sharp | the largest 3-hour temperature change of each year | +/- 2 days |
+
+`data/real/events.json` holds the rules and every window. Windows are removed from a station's training data and its clean
+evaluation data. A window is fed with two extra days of lead-in that are not counted. NOAA-flagged values are cut out of the
+windows (they are analysed separately in the agreement table).
+
+## The numbers, always separate, for every configuration
+1. **Detection of injected faults**, per type: frozen (48 h), spike (1 sample), level shift (24 h), noise burst (24 h),
+   dropout (3 samples), clock shift by 3 h (4 days). Seeded plans (`seed` in `config/settings.yaml`), 2 rounds on DEV. A fault
+   is detected if there is an alarm from its first sample to its last plus 60 minutes. Also reported: median minutes to the first alarm.
+2. **False alarms on clean real data**: share of samples that get `FAULT` or `SUSPECT` (an alarm); share that get `FAULT`;
+   share that get `WEATHER` (not an alarm).
+3. **Real extreme weather**: share of samples that get `FAULT` (a failure), `SUSPECT`, `WEATHER`, `VALID`; number of windows
+   containing at least one `FAULT`; and the same by kind of window.
+4. **Agreement with NOAA's own quality flags** on the raw record: how often AtmosGuard alarms on, and escalates, flagged
+   values, and on values NOAA did not flag. Another automated system, not ground truth.
+5. **Slow drift** (health monitor, not alarms): a ramp over 45 days is added to one channel of clean real chunks (at least 80
+   days long), reaching 1, 2, 4 or 8 times the service limit (T 0.5 C, P 1 hPa, RH 3 %); detected = significant with the right sign;
+   plus **false drift claims** on the same real weather with no ramp, and on all clean station-days.
+6. **Speed**: median and 95th percentile time per reading (`loadtest.py` on an otherwise quiet machine is the number to quote).
+
+Rates on small counts are shown with the count (`make_summary.py` adds Wilson 95 % intervals to the headline).
+
+## Configurations (same data, same three numbers)
+- **full**;
+- **ablations**, each one layer off by its config flag (no code edits): physics, health, normality, Isolation Forest, Mahalanobis,
+  timing, station-learned limits;
+- **baselines**: range check only; textbook range + step + persistence (fixed limits, 6 h identical, the guide's Appendix A step limits);
+  climatology z-score only; Isolation Forest only; Mahalanobis distance only (the other common approach on this problem).
+  Fitted on the same training data.
 
 ## Definitions
-- **Alarm:** the verdict is `FAULT` or `SUSPECT`. `WEATHER` is a correct answer on a weather window, so it is not an alarm.
-  On clean data and on event windows, the share of `WEATHER` verdicts is printed next to the false-alarm rate.
-- **Detection of an injected fault:** at least one alarm from the first faulty sample to the last faulty sample plus
-  `evaluate.detection_grace_minutes`. Rate = detected faults / injected faults, per fault type.
-- **False-alarm rate:** alarmed samples / all samples, on data with no injected faults.
+- **Alarm:** verdict `FAULT` or `SUSPECT`. `WEATHER` is a correct answer on real weather, so it is not an alarm; its share is printed beside.
+- **A communication gap** is a notice on the reading, never an alarm.
+- **Confidence** is agreement between checks. It is not used in any metric and is not a probability.
 
-## Fault injection
-- Fault types (from the L1 checks): `frozen`, `spike`, `step`, `drift`, `noise`, `dropout`.
-- Sizes, durations and placement come from the `injector` section of `config/settings.yaml`.
-- `evaluate.injection_rounds` rounds, each with a different seeded plan. Same seed gives the same faults.
+## Tuning log (everything changed after looking at DEV, and why)
+Every change below was made against DEV stations and years only, and each was checked not to reduce detection of injected faults.
 
-## Baselines
-1. `baseline_range`: physical range check only (L0 ranges).
-2. `baseline_range_persistence`: range check plus the frozen-value check (standard operational QC).
-3. `baseline_isolation_forest`: the IsolationForest alone, alarm when its score is below the trained limit.
+| # | Change | Why (measured on DEV) |
+|---|---|---|
+| 1 | Station-learned frozen and noise limits (`atmos/limits.py`) | fixed limits alarmed on 63.1 % of clean samples and gave FAULT on 28.6 % of real extreme-weather samples (30 of 30 windows) |
+| 2 | Frozen is graded: soft just past the learned limit, hard at twice it | a pressure plateau inside a real cyclone read as a frozen barometer |
+| 3 | Communication gaps are notices, not verdict changes | the healthy reading after a gap was counted as a false alarm |
+| 4 | Drift monitor: daily means, smooth expected value, autocorrelation-aware test, isolated-trend rule, 7-day persistence, 60-day window | the first version claimed drift on 97.7 % of station-days; now 1.1 % |
+| 5 | Rule 2 ("one channel jumped, the others are quiet") requires the others to be actually quiet | 2 of 30 real windows had a FAULT: real thunderstorm outflows (Kolkata, Delhi) where an un-flagged 8-12 C fall counted as "quiet" |
+| 6 | Mahalanobis layer (departures from normal + rates of change) | level-shift detection 74 % and noise 66 % without it; 97 % and 81 % with it, false alarms unchanged. The Isolation Forest contributes almost nothing in the ablation and is kept because the guide lists it |
+| 7 | WEATHER also when two or more channels depart from normal together (level, not only movement) | most SUSPECT verdicts in real extreme windows showed no movement in the last hour; detection of injected faults unchanged |
+| 8 | Clock check recomputed every 3 hours of data time instead of every reading | 4.6x faster evaluation; a wrong clock lasts days |
+| 9 | "Quiet" in rule 2 is also judged against the station's learned usual step (1.5 x its 75th percentile) | on a 3-hourly copy of a DEV station, 5 of 2,695 clean samples got FAULT: day/night swings where a 5 C fall (under the step cap) let derived humidity jump. Now 0. The copy was made from DEV data only; no sealed station was read to find this |
 
-## Ablation
-The full pipeline, then the full pipeline with one layer switched off by its config flag:
-`no_physics`, `no_health`, `no_normality`, `no_mlmodel`, `no_timing`.
-(`impute` does not change any verdict, so it is not ablated. `lstm_ae` is not built.)
-The fault types above contain no timing fault (clock shift, co-jump), so `no_timing` only shows the effect of the
-timing layer on false alarms, not on detection.
+DEV result after the changes (`results/dev_run3.txt`, the final code): clean false alarms 1.9 % (FAULT 0.0 %) over 98,340 samples; real extreme weather: FAULT
+0.0 % (0 of 30 windows), WEATHER 10.8 %, SUSPECT 9.0 %; detection: frozen 100 %, dropout 100 %, spike 98.8 %, level shift 97.1 %,
+clock shift 96.8 %, noise burst 80.7 %.
 
-## Order of work
-1. Tune thresholds on DEV only (`python evaluate.py`).
-2. Finish and commit this file.
-3. Run `python evaluate.py --holdout` once. A lock file (`data/holdout/.holdout_used`) is written; a second run is refused.
+## Holdout procedure
+1. Freeze the code and `config/settings.yaml`. Commit this file (this commit).
+2. `python evaluate_real.py --holdout --out results/holdout_run1.json` runs once. It writes the lock file; a second run is refused
+   (`--force-rerun-holdout` reproduces a run that was already made; the original lock stays in git history).
+3. `python make_summary.py results/dev_run3.json results/holdout_run1.json --scale results/scale.json` builds `results/summary.json`
+   and `results/REPORT.md`. Nothing is tuned afterwards.
+
+## Known limits of this protocol
+- The stations are airport records with derived humidity and whole-degree, whole-hPa reporting.
+- No labelled real faults exist: detection is on injected faults.
+- Windows chosen by rule can still contain a real sensor fault that neither we nor NOAA flagged.
+- The DEV stations were also used to look at failure cases, which is why they are the optimistic numbers.

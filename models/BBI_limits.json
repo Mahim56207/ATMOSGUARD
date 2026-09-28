@@ -6,18 +6,21 @@
    "resolution": 1.0,
    "frozen_minutes": 1020.0,
    "noise_std": 2.090520780410108,
+   "typical_step": 1.0,
    "n_runs": 6301
   },
   "pressure_hpa": {
    "resolution": 1.0,
    "frozen_minutes": 540.0,
    "noise_std": 1.4200938936093863,
+   "typical_step": 1.0,
    "n_runs": 8411
   },
   "humidity_pct": {
    "resolution": 0.1,
    "frozen_minutes": 1659.2399999999725,
    "noise_std": 11.81256538429966,
+   "typical_step": 5.799999999999997,
    "n_runs": 5347
   }
  }

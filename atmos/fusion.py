@@ -61,6 +61,28 @@ def movement(history: Sequence[Reading], cadence_minutes: float, settings: dict)
     return out
 
 
+def channel_is_quiet(history: Sequence[Reading], ch: str, settings: dict,
+                     limits: Optional[limits_mod.StationLimits] = None, cadence_minutes: Optional[float] = None) -> bool:
+    """True if `ch` has NOT moved noticeably over the last two intervals. "No check fired" is not the same as "quiet":
+    a real thunderstorm outflow moves temperature by 8 C, which is under the step limit and fires nothing.
+    Quiet = each change is at most `quiet_fraction` of the L1 step allowance for that interval and, when this
+    station's usual step is known, at most `quiet_multiple` times that usual step (it scales with cadence and channel:
+    at 3-hourly reports a 5 C fall is ordinary weather, and derived humidity follows it)."""
+    fcfg = settings["fusion"]
+    usual = limits.typical_step(ch) if (limits is not None and limits_mod.limits_active(settings)) else None
+    for a, b in zip(history[-3:-1], history[-2:]):
+        va, vb = getattr(a, ch), getattr(b, ch)
+        dt = (b.timestamp - a.timestamp).total_seconds() / 60.0
+        if va is None or vb is None or dt <= 0:
+            continue
+        allowed = fcfg["quiet_fraction"] * health._allowed_step(ch, dt, settings)
+        if usual is not None and cadence_minutes and dt <= 1.5 * cadence_minutes:
+            allowed = min(allowed, fcfg["quiet_multiple"] * usual)
+        if abs(vb - va) > allowed:
+            return False
+    return True
+
+
 def match_signature(moves: dict[str, int], settings: dict) -> Optional[dict]:
     for sig in settings["fusion"]["weather"]["signatures"]:
         needed = {k: v for k, v in sig.items() if k in CHANNELS}
@@ -73,8 +95,21 @@ def _join(checks: Sequence[CheckResult]) -> str:
     return " ".join(c.reason for c in checks)
 
 
+def coherent_departures(departures: Optional[dict[str, Optional[float]]], settings: dict) -> dict[str, float]:
+    """Channels whose departure from this station's normal is large (|z| >= `z`), if at least `min_channels` of them
+    depart at once. Weather moves several channels; one failing sensor moves one. This is the same principle as
+    rule 2, applied to LEVELS: a heat wave (hot, dry, low pressure) or a deep low departs on several channels, an
+    offset on one sensor departs on one."""
+    cfg = settings["fusion"]["weather"]["coherent"]
+    if not departures:
+        return {}
+    big = {ch: z for ch, z in departures.items() if z is not None and abs(z) >= cfg["z"]}
+    return big if len(big) >= cfg["min_channels"] else {}
+
+
 def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: dict,
-         cadence_minutes: float) -> VerdictResult:
+         cadence_minutes: float, departures: Optional[dict[str, Optional[float]]] = None,
+         limits: Optional[limits_mod.StationLimits] = None) -> VerdictResult:
     fcfg = settings["fusion"]
     conf = fcfg["confidence"]
     checks = list(checks)
@@ -104,18 +139,26 @@ def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: di
     if len(jump_channels) == 1:
         (jumper,) = jump_channels
         others = [c for c in flagged if _channel(c) not in (None, jumper)]
-        if not others:
+        moving = [ch for ch in CHANNELS if ch != jumper and not channel_is_quiet(history, ch, settings, limits, cadence_minutes)]
+        if not others and not moving:
             return result(Verdict.FAULT, conf["fault_rule2"], jumps,
                           f"Sensor fault: only {jumper} jumped while the other two channels stayed quiet. "
                           + _join(jumps))
 
-    # Rule 3: two or three channels move together, smoothly, matching a weather signature
+    # Rule 3: two or three channels move together, smoothly, matching a weather signature - or two or more
+    # channels sit far from normal together (a heat wave, a deep low: the level, not the movement)
     if flagged and not hard:
         sig = match_signature(movement(history, cadence_minutes, settings), settings)
         if sig is not None:
             return result(Verdict.WEATHER, conf["weather"], [],
                           f"Likely real weather: {sig['description']}. Several channels are moving together "
                           "smoothly, so this is escalated, not suppressed. " + _join(flagged))
+        together = coherent_departures(departures, settings)
+        if together:
+            desc = " and ".join(f"{ch} {z:+.1f} standard deviations" for ch, z in together.items())
+            return result(Verdict.WEATHER, conf["weather"], [],
+                          f"Likely real weather: {desc} from normal at the same time. Several channels departing together "
+                          "is how weather looks; one failing sensor departs alone. Escalated, not suppressed. " + _join(flagged))
 
     # Rule 4: unusual but ambiguous
     if flagged:
@@ -132,12 +175,14 @@ class Pipeline:
     def __init__(self, settings: dict, stations: Optional[dict[str, dict]] = None,
                  tables: Optional[dict[str, normality.NormalityTable]] = None,
                  models: Optional[dict[str, mlmodel.IsolationModel]] = None,
-                 limits: Optional[dict[str, limits_mod.StationLimits]] = None):
+                 limits: Optional[dict[str, limits_mod.StationLimits]] = None,
+                 mahalanobis: Optional[dict[str, mlmodel.MahalanobisModel]] = None):
         self.settings = settings
         self.stations = stations or {}
         self.tables = dict(tables or {})
         self.models = dict(models or {})
         self.limits = dict(limits or {})
+        self.mahalanobis = dict(mahalanobis or {})
         self._history: dict[str, deque] = {}
         self._records: dict[str, deque] = {}
         self._health: dict[str, healthscore.HealthReport] = {}
@@ -156,6 +201,9 @@ class Pipeline:
         p = model_path(self.settings, station_id, "limits", ".json")
         if p.exists():
             self.limits[station_id] = limits_mod.StationLimits.load(p)
+        p = model_path(self.settings, station_id, "mahalanobis", ".joblib")
+        if p.exists():
+            self.mahalanobis[station_id] = mlmodel.MahalanobisModel.load(p)
 
     def cadence_minutes(self, station_id: str) -> float:
         configured = self.stations.get(station_id, {}).get("cadence_minutes")
@@ -221,7 +269,11 @@ class Pipeline:
             checks += normality.check_normality(reading, table, self.settings)
         if model:
             checks += mlmodel.check_ml(history, model, self.settings)
-        verdict = fuse(checks, history, self.settings, cadence)
+        mahal = self.mahalanobis.get(sid)
+        if mahal:
+            checks += mlmodel.check_mahalanobis(history, mahal, table, self.settings)   # needs the table even if L2 checks are off
+        departures = ({ch: table.z_score(reading, ch) for ch in CHANNELS} if use_table else None)
+        verdict = fuse(checks, history, self.settings, cadence, departures, station_limits)
         verdict = impute.apply_imputation(verdict, impute.impute_reading(reading, verdict, list(records), table,
                                                                          self.settings))
 
