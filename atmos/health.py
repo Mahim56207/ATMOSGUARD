@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
 from .config import layer_enabled
+from .limits import StationLimits, limits_active
 from .schema import CHANNELS, CheckResult, Reading
 
 
@@ -34,9 +35,35 @@ def _gap_limit_minutes(settings: dict, cadence_minutes: float) -> float:
     return settings["health"]["gaps"]["gap_cadence_multiplier"] * cadence_minutes
 
 
-def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float) -> CheckResult:
+def _trailing_run_minutes(history: Sequence[Reading], ch: str, epsilon: float, gap_limit_minutes: float) -> float:
+    """How long (minutes) the newest value of `ch` has been unchanged, looking back through `history`.
+    A missing value or a time gap ends the run."""
+    newest = getattr(history[-1], ch)
+    if newest is None:
+        return 0.0
+    first = history[-1]
+    for r in reversed(history[:-1]):
+        v = getattr(r, ch)
+        if v is None or abs(v - newest) > epsilon or _minutes(r.timestamp, first.timestamp) > gap_limit_minutes:
+            break
+        first = r
+    return _minutes(first.timestamp, history[-1].timestamp)
+
+
+def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float,
+                 limits: Optional[StationLimits] = None) -> CheckResult:
+    """Frozen = no change at all over the window. The window is the configured one, stretched to the longest run
+    of identical values this station's clean history produced (`limits`), so a station that reports whole
+    numbers is not called stuck for an ordinary calm night.
+
+    Two tiers when the window was learned: a run just past the learned limit is a SOFT flag (a long calm or a
+    pressure plateau in a deep low looks like this); a run `hard_multiplier` times longer than the limit is HARD
+    (nothing in the clean history comes close). Without learned limits every frozen flag is hard, as before."""
     cfg = settings["health"]["frozen"]
     window_min = max(cfg["window_minutes"][ch], (cfg["min_samples"] - 1) * cadence_minutes)
+    learned = limits.frozen_minutes(ch) if (limits is not None and limits_active(settings)) else None
+    if learned:
+        window_min = max(window_min, learned)
     name = f"frozen:{ch}"
     if _minutes(history[0].timestamp, history[-1].timestamp) < window_min:
         return CheckResult(check=name, flagged=False,
@@ -47,8 +74,12 @@ def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_mi
                            reason=f"{ch}: missing values or too few samples in the last {window_min:g} min, frozen check skipped.")
     spread = max(values) - min(values)
     if spread <= cfg["epsilon"][ch]:
-        return CheckResult(check=name, flagged=True,
-                           reason=f"{ch} has not changed for {window_min:g} min (stuck at {values[-1]}).")
+        run = _trailing_run_minutes(history, ch, cfg["epsilon"][ch], _gap_limit_minutes(settings, cadence_minutes))
+        hard = not learned or run >= cfg.get("hard_multiplier", 1.0) * window_min
+        return CheckResult(check=name, flagged=True, severity="hard" if hard else "soft",
+                           reason=f"{ch} has not changed for {max(run, window_min):g} min (stuck at {values[-1]})."
+                                  + ("" if hard else " That is longer than usual for this station, but a long calm "
+                                                     "or a pressure plateau in a deep low can look like this."))
     return CheckResult(check=name, flagged=False,
                        reason=f"{ch} changed by {spread:g} in the last {window_min:g} min, so it is not frozen.")
 
@@ -98,7 +129,8 @@ def check_spike(history: Sequence[Reading], ch: str, settings: dict, cadence_min
     return CheckResult(check=name, flagged=False, reason=f"{ch}: no one-sample spike ({a} -> {b} -> {c}).")
 
 
-def check_noise(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float) -> CheckResult:
+def check_noise(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float,
+                limits: Optional[StationLimits] = None) -> CheckResult:
     """Jitter check. Noise is estimated from SECOND differences, which cancel a smooth trend (a front or a
     diurnal ramp is not noise). For independent noise of std s, the second differences have RMS s * sqrt(6)."""
     cfg = settings["health"]["noise"]
@@ -111,6 +143,8 @@ def check_noise(history: Sequence[Reading], ch: str, settings: dict, cadence_min
     second = [values[i + 2] - 2 * values[i + 1] + values[i] for i in range(len(values) - 2)]
     noise = math.sqrt(sum(d * d for d in second) / len(second) / 6.0)
     limit = cfg["max_noise_std"][ch]
+    if limits is not None and limits_active(settings):
+        limit = max(limit, limits.noise_std(ch) or 0.0)          # learned from this station's clean history
     if noise > limit:
         return CheckResult(check=name, flagged=True,
                            reason=f"{ch} is too noisy: estimated jitter {noise:.3g} is above {limit:g} "
@@ -215,7 +249,8 @@ def check_drift(history: Sequence[Reading], ch: str, expected: Optional[Sequence
 def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: float,
                  now: Optional[datetime] = None,
                  expected: Optional[dict[str, Sequence[Optional[float]]]] = None,
-                 sigma: Optional[dict[str, Sequence[Optional[float]]]] = None) -> list[CheckResult]:
+                 sigma: Optional[dict[str, Sequence[Optional[float]]]] = None,
+                 limits: Optional[StationLimits] = None) -> list[CheckResult]:
     """Run all L1 checks on the newest reading. Returns [] when the health layer is off or no history."""
     if not layer_enabled(settings, "health") or not history:
         return []
@@ -223,10 +258,10 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
                check_gap(history, settings, cadence_minutes)]
     for ch in CHANNELS:
         results += [
-            check_frozen(history, ch, settings, cadence_minutes),
+            check_frozen(history, ch, settings, cadence_minutes, limits),
             check_step(history, ch, settings, cadence_minutes),
             check_spike(history, ch, settings, cadence_minutes),
-            check_noise(history, ch, settings, cadence_minutes),
+            check_noise(history, ch, settings, cadence_minutes, limits),
             check_drift(history, ch, (expected or {}).get(ch), settings, (sigma or {}).get(ch), cadence_minutes),
         ]
     return results

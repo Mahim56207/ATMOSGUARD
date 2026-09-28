@@ -10,7 +10,11 @@ __pycache__/
 data/raw/*
 data/clean/*
 data/events/*
+data/real/*/
+!data/real/dev/
 data/holdout/*
+!data/holdout/real/
+!data/holdout/.holdout_used
 models/*
 !**/.gitkeep
 

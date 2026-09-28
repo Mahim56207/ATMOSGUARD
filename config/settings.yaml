@@ -17,6 +17,7 @@ layers:            # every layer is toggleable so the ablation study needs no co
   mlmodel: true        # L3
   lstm_ae: false       # optional, behind a flag
   timing: true         # T1, T2
+  limits: true         # station-learned frozen-run and noise ceilings (atmos/limits.py)
   impute: true
 
 physics:           # L0
@@ -30,6 +31,7 @@ physics:           # L0
 
 health:            # L1  (all windows in minutes; starting points)
   frozen:          # value does not change at all over the window
+    hard_multiplier: 2.0         # with a station-learned window: a run this many times the learned limit is HARD, shorter is soft
     min_samples: 3               # window is stretched to hold at least this many samples
     window_minutes:
       temperature_c: 60
@@ -71,6 +73,15 @@ health:            # L1  (all windows in minutes; starting points)
       pressure_hpa: 0.5
       humidity_pct: 5.0
 
+limits:            # station-learned limits (atmos/limits.py). Upper quantiles of CLEAN training data. The configured
+                   # health.frozen / health.noise values stay as the floor: learning can only relax them.
+  frozen_quantile: 0.999         # longest identical-value run: this quantile of the clean runs
+  frozen_margin: 1.0             # multiplier on that run length
+  min_runs: 30                   # fewer runs than this and nothing is learned (the configured window is used)
+  noise_quantile: 0.999          # largest jitter estimate: this quantile of the clean window estimates
+  noise_margin: 1.1
+  min_noise_samples: 200
+
 normality:         # L2: station x month x hour statistics  (starting points)
   min_samples_per_cell: 10       # cells with fewer samples are left out ("not enough data")
   z_flag: 4.0                    # soft flag when |z| is above this
@@ -92,6 +103,8 @@ injector:          # fault injection for evaluation (starting points). Fault typ
     drift: 360
     noise: 60
     dropout: 30
+    clock_shift: 5760            # 4 days. Only used when the plan asks for it (types=ALL_FAULT_TYPES)
+  clock_shift_hours: 3           # how far the logger clock is out
   magnitude:
     step:    {temperature_c: 5.0, pressure_hpa: 5.0, humidity_pct: 20.0}   # level shift
     spike:   {temperature_c: 8.0, pressure_hpa: 8.0, humidity_pct: 30.0}   # one-sample offset
@@ -112,6 +125,7 @@ pipeline:
   warmup_max_readings: 2000      # on start, this many stored readings per station are replayed to rebuild the history
 
 fusion:            # verdict logic (starting points). Rules run in the order given in the guide.
+  informational_checks: [gap]                         # reported as a notice on the reading; never changes the verdict
   fault_checks: [range, dew_point, frozen, dropout]   # rule 1: a HARD flag from these -> FAULT
   jump_checks: [step, spike]                          # rule 2: a jump on ONE channel, others quiet -> FAULT
   weather:                                            # rule 3: needs 2+ channels moving, smoothly, matching a signature
@@ -148,10 +162,13 @@ healthscore:       # (starting points)
     drift: 40
   check_channels:                # checks whose name has no ":channel" part
     dew_point: [temperature_c, humidity_pct]
-  drift:                         # Theil-Sen line through (reading - expected)
-    min_samples: 30
-    max_points: 2000             # evenly thinned above this, to keep Theil-Sen fast
-    alpha: 0.95                  # confidence level of the slope interval
+  drift:                         # Theil-Sen slope of the DAILY MEAN of (reading - smooth expected), see DriftTracker
+    window_days: 45              # slope is fitted over this many days
+    min_days: 21                 # fewer usable days than this: drift is not measured
+    min_day_fraction: 0.5        # a day counts if it holds this share of the samples the cadence would give
+    winsor_sigma: 3.0            # one sample counts at most this many normality-cell sigmas
+    z_crit: 4.0                  # significant when slope / (autocorrelation-inflated standard error) is this large
+    ar1_max: 0.9                 # cap on the lag-1 autocorrelation used to inflate that error
     service_limit:               # offset at which the sensor needs service
       temperature_c: 0.5
       pressure_hpa: 1.0
@@ -188,6 +205,11 @@ evaluate:          # evaluate.py (starting points)
   train_fraction: 0.7            # real data: first part of data/clean is DEV-train, the rest is DEV clean-eval
   injection_rounds: 3            # each round injects a different seeded fault plan into the clean-eval data
   detection_grace_minutes: 60    # a fault counts as detected if an alarm comes up to this long after it ends
+  real:                          # evaluate_real.py only (station data reported hourly or every 3 hours)
+    overrides:                   # merged over the settings above for real-data runs. A stuck sensor, a level shift
+      injector:                  # or a burst of noise lasts days on a real network, not the hours used on 15-min data
+        min_separation_minutes: 720
+        duration_minutes: {frozen: 2880, step: 1440, drift: 20160, noise: 1440, dropout: 180, clock_shift: 5760}
   synthetic:                     # --synthetic only: fake weather to test the plumbing. NOT real results.
     start: "2026-01-01T00:00:00"
     cadence_minutes: 15
