@@ -230,11 +230,41 @@ def to_markdown(summary: dict) -> str:
     return "\n".join(L)
 
 
+README_START, README_END = "<!-- RESULTS:START -->", "<!-- RESULTS:END -->"
+
+
+def readme_block(summary: dict) -> str:
+    """A compact headline table for the README, straight from the summary (so it cannot drift from the results)."""
+    L = ["| | DEV (tuned here) | Holdout, same stations, later years | Holdout, eight unseen stations |", "|---|---|---|---|"]
+    order = ["DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE"]
+    ph = summary["phases"]
+    questions = [("False alarms on clean real data", 0), ("Real cyclones, heat, cold, fronts (nothing injected)", 1),
+                 ("Injected faults detected (injected, not real)", 2), ("Agreement with NOAA quality flags", 3),
+                 ("Slow drift (one station, no reference)", 4)]
+    for label, i in questions:
+        cells = [ph[k]["headline"]["rows"][i]["answer"] if k in ph else "not run" for k in order]
+        L.append(f"| **{label}** | " + " | ".join(c.replace("|", "/") for c in cells) + " |")
+    L.append("")
+    L.append("Real NOAA airport records, 14 Indian stations. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
+             "Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).")
+    return "\n".join(L)
+
+
+def update_readme(summary: dict, path: Path) -> bool:
+    text = path.read_text(encoding="utf-8")
+    if README_START not in text or README_END not in text:
+        return False
+    a, b = text.index(README_START) + len(README_START), text.index(README_END)
+    path.write_text(text[:a] + "\n" + readme_block(summary) + "\n" + text[b:], encoding="utf-8")
+    return True
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Build results/summary.json and results/REPORT.md.")
     ap.add_argument("results", nargs="+", type=Path, help="JSON files written by evaluate_real.py --out")
     ap.add_argument("--scale", type=Path, default=None, help="JSON written by loadtest.py")
     ap.add_argument("--out-dir", type=Path, default=er.RESULTS_DIR)
+    ap.add_argument("--readme", type=Path, default=None, help="refresh the block between the RESULTS markers in this README")
     args = ap.parse_args(argv)
     results = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in args.results}
     scale = json.loads(args.scale.read_text(encoding="utf-8")) if args.scale and args.scale.exists() else None
@@ -243,6 +273,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     (args.out_dir / "REPORT.md").write_text(to_markdown(summary), encoding="utf-8")
     print(f"wrote {args.out_dir / 'summary.json'} and {args.out_dir / 'REPORT.md'}")
+    if args.readme:
+        print("README updated" if update_readme(summary, args.readme) else "README has no RESULTS markers: not updated")
     return 0
 
 

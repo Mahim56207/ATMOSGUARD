@@ -102,7 +102,7 @@ def _fake_get(records, report, status):
             body = {"stations": {"S1": report}}
         elif path == "/datasets":
             body = {"datasets": ["data/real/dev/BBI.csv"]}
-        elif path == "/metrics":
+        elif path in ("/metrics", "/explain"):
             return httpx.Response(404, json={"detail": "none"}, request=httpx.Request("GET", url))
         else:
             raise AssertionError(path)
