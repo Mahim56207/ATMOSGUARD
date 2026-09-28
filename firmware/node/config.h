@@ -9,6 +9,7 @@
 #define L0_HUMIDITY_MIN_PCT 0.0f
 #define L0_HUMIDITY_MAX_PCT 100.0f
 #define L0_DEW_POINT_TOLERANCE_C 0.5f
+#define L0_FROZEN_MINUTES 30
 
 // Sampling and sending (section `node`)
 #define SAMPLE_INTERVAL_MS 1000UL

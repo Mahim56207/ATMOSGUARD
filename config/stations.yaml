@@ -1,9 +1,117 @@
-# One entry per station. The system is single-station: never compare against neighbours.
-stations: []
-# Example entry shape:
-#  - id: STATION_ID
-#    lat: 0.0
-#    lon: 0.0
-#    elevation_m: 0
-#    climate_zone: ""
-#    cadence_minutes: 1
+# Real stations (NOAA ISD airport records, 2016-2024). One entry per station. The system is single-station: never compare against neighbours.
+# `cadence_minutes` is how often the station reports in the data we replay (hourly METAR = 60, 3-hourly SYNOP = 180).
+# `resolution` says how the station rounds what it reports (Indian METAR: whole degC, whole hPa). It is informational:
+# the pipeline learns the effect itself (atmos/limits.py). Coordinates and elevation are NOAA's own station metadata.
+stations:
+  - id: BBI
+    name: "Bhubaneswar (Biju Patnaik Intl, VEBS)"
+    lat: 20.244
+    lon: 85.818
+    elevation_m: 42.1
+    climate_zone: "tropical coastal east"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: VTZ
+    name: "Visakhapatnam (VOVZ)"
+    lat: 17.717
+    lon: 83.217
+    elevation_m: 4.6
+    climate_zone: "tropical coastal east"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: MAA
+    name: "Chennai Intl (VOMM)"
+    lat: 12.994
+    lon: 80.181
+    elevation_m: 15.8
+    climate_zone: "tropical coastal east"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: CCU
+    name: "Kolkata (Netaji Subhash Chandra Bose Intl, VECC)"
+    lat: 22.655
+    lon: 88.447
+    elevation_m: 4.9
+    climate_zone: "humid subtropical east"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: BOM
+    name: "Mumbai (Chhatrapati Shivaji Maharaj Intl, VABB)"
+    lat: 19.089
+    lon: 72.868
+    elevation_m: 11.3
+    climate_zone: "tropical coastal west"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: DEL
+    name: "Delhi (Indira Gandhi Intl, VIDP)"
+    lat: 28.567
+    lon: 77.103
+    elevation_m: 236.8
+    climate_zone: "semi-arid north plains"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: JAI
+    name: "Jaipur (VIJP)"
+    lat: 26.824
+    lon: 75.812
+    elevation_m: 385.0
+    climate_zone: "arid northwest"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: AMD
+    name: "Ahmedabad (Sardar Vallabhbhai Patel Intl, VAAH)"
+    lat: 23.077
+    lon: 72.635
+    elevation_m: 57.6
+    climate_zone: "arid northwest"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: NAG
+    name: "Nagpur (Dr Babasaheb Ambedkar Intl, VANP)"
+    lat: 21.092
+    lon: 79.047
+    elevation_m: 314.9
+    climate_zone: "tropical interior"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: TRV
+    name: "Thiruvananthapuram Intl (VOTV)"
+    lat: 8.482
+    lon: 76.92
+    elevation_m: 4.6
+    climate_zone: "tropical humid southwest"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: GAU
+    name: "Guwahati (Lokpriya Gopinath Bordoloi Intl, VEGT)"
+    lat: 26.106
+    lon: 91.586
+    elevation_m: 49.4
+    climate_zone: "humid northeast"
+    cadence_minutes: 60
+    pressure_kind: QNH (altimeter setting, whole hPa)
+  - id: IXZ
+    name: "Port Blair (VEPB)"
+    lat: 11.667
+    lon: 92.717
+    elevation_m: 79.0
+    climate_zone: "tropical island"
+    cadence_minutes: 180
+    pressure_kind: sea-level pressure (0.1 hPa)
+  - id: BHJ
+    name: "Bhuj (VABJ)"
+    lat: 23.288
+    lon: 69.67
+    elevation_m: 81.7
+    climate_zone: "arid northwest"
+    cadence_minutes: 180
+    pressure_kind: sea-level pressure (0.1 hPa)
+  - id: COK
+    name: "Cochin Intl (VOCC)"
+    lat: 9.946
+    lon: 76.272
+    elevation_m: 2.4
+    climate_zone: "tropical humid southwest"
+    cadence_minutes: 180
+    pressure_kind: sea-level pressure (0.1 hPa)

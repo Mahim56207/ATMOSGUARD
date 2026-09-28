@@ -100,6 +100,10 @@ def _fake_get(records, report, status):
             body = [r.model_dump(mode="json") for r in reversed(records) if r.verdict.verdict.value != "VALID"]
         elif path == "/health":
             body = {"stations": {"S1": report}}
+        elif path == "/datasets":
+            body = {"datasets": ["data/real/dev/BBI.csv"]}
+        elif path == "/metrics":
+            return httpx.Response(404, json={"detail": "none"}, request=httpx.Request("GET", url))
         else:
             raise AssertionError(path)
         return httpx.Response(200, json=body, request=httpx.Request("GET", url))
@@ -170,3 +174,51 @@ def test_streamlit_app_copes_with_a_station_that_has_no_health_report_yet(record
     at = AppTest.from_file(SCRIPT, default_timeout=30).run()
     assert not at.exception and not at.error
     assert any("No health report yet" in c.value for c in at.caption)
+
+
+def _status():
+    return {"status": "ok", "stations_seen": ["S1"], "models_loaded": {"normality": [], "isolation_forest": []},
+            "replay": {"state": "idle", "sent": 0, "total": 0}, "injections": []}
+
+
+def test_streamlit_control_panel_lists_faults_channels_and_datasets(records, cfg, monkeypatch):
+    monkeypatch.setattr(httpx, "get", _fake_get(records, _report(cfg, records), _status()))
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    assert not at.exception
+    fault_box = next(b for b in at.selectbox if b.label == "Fault")
+    assert list(fault_box.options) == list(db.FAULT_TYPES)
+    assert "data/real/dev/BBI.csv" in next(b for b in at.selectbox if b.label == "File").options
+    assert [t.label for t in at.tabs] == ["Live monitor", "Control panel", "Evaluation", "How it decides"]
+
+
+def test_arm_fault_button_posts_to_inject(records, cfg, monkeypatch):
+    seen = {}
+
+    def fake_post(url, json=None, timeout=None):
+        seen["url"], seen["json"] = url, json
+        return httpx.Response(200, json={"armed": {"fault_type": json["fault_type"], "channel": json["channel"],
+                                                   "samples": json["samples"]}}, request=httpx.Request("POST", url))
+    monkeypatch.setattr(httpx, "get", _fake_get(records, _report(cfg, records), _status()))
+    monkeypatch.setattr(httpx, "post", fake_post)
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    next(b for b in at.button if b.label == "Arm fault").click().run()
+    assert seen["url"].endswith("/inject") and seen["json"]["station_id"] == "S1"
+    assert seen["json"]["fault_type"] == "frozen" and seen["json"]["channel"] == "temperature_c"
+    assert any("Armed" in s.value for s in at.success)
+
+
+def test_evaluation_tab_renders_a_summary_and_says_so_when_there_is_none(records, cfg, monkeypatch):
+    fake = _fake_get(records, _report(cfg, records), _status())
+    summary = {"note": "n", "phases": {"DEV": {"title": "DEV", "subtitle": "s", "headline": {
+        "title": "Headline", "caption": "c", "rows": [{"what": "clean false alarms", "value": "2.6%"}]}}}}
+
+    def get(url, params=None, timeout=None):
+        if url.endswith("/metrics"):
+            return httpx.Response(200, json=summary, request=httpx.Request("GET", url))
+        return fake(url, params, timeout)
+    monkeypatch.setattr(httpx, "get", get)
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    assert not at.exception and any(d.value and "Headline" in d.value for d in at.markdown)
+    monkeypatch.setattr(httpx, "get", fake)
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    assert any("No evaluation summary" in i.value for i in at.info)

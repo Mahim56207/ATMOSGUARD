@@ -29,9 +29,36 @@ from atmos.schema import CHANNELS
 FAULTS = ("none", "frozen", "dropout", "glitch")
 
 
-def aggregate_minute(samples: Sequence[Sequence[Optional[float]]], settings: dict) -> tuple[dict, list[str]]:
+class FrozenTracker:
+    """The device's frozen counter (finish_minute() in firmware/node/atmos_l0.h): the same minute mean, as a
+    32-bit float, `frozen_minutes` times in a row. A missing minute breaks the run."""
+
+    def __init__(self, minutes: int):
+        self.minutes = minutes
+        self.last: dict[str, float] = {}
+        self.run: dict[str, int] = {ch: 0 for ch in CHANNELS}
+
+    def update(self, values: dict) -> list[str]:
+        flags = []
+        for ch in CHANNELS:
+            v = values[ch]
+            if v is None:
+                self.last.pop(ch, None)
+                self.run[ch] = 0
+                continue
+            v32 = float(np.float32(v))
+            self.run[ch] = self.run[ch] + 1 if self.last.get(ch) == v32 else 0
+            self.last[ch] = v32
+            if self.minutes > 0 and self.run[ch] + 1 >= self.minutes:
+                flags.append(f"frozen:{ch}")
+        return flags
+
+
+def aggregate_minute(samples: Sequence[Sequence[Optional[float]]], settings: dict,
+                     frozen: Optional[FrozenTracker] = None) -> tuple[dict, list[str]]:
     """The device's minute logic. `samples` is a list of (temperature, pressure, humidity), None or NaN = failed
-    read. Returns ({channel: mean or None}, device_flags). Mirrors finishMinute() in node.ino."""
+    read. Returns ({channel: mean or None}, device_flags). Mirrors finish_minute() in atmos_l0.h. Pass a
+    FrozenTracker (kept between minutes) to get the frozen flag too."""
     ranges, node = settings["physics"]["ranges"], settings["node"]
     sums = {ch: 0.0 for ch in CHANNELS}
     valid = {ch: 0 for ch in CHANNELS}
@@ -49,16 +76,18 @@ def aggregate_minute(samples: Sequence[Sequence[Optional[float]]], settings: dic
     values: dict[str, Optional[float]] = {}
     flags: list[str] = []
     for ch in CHANNELS:
-        values[ch] = sums[ch] / valid[ch] if valid[ch] >= node["min_valid_samples"] else None
+        values[ch] = sums[ch] / valid[ch] if (valid[ch] >= node["min_valid_samples"] and valid[ch] > 0) else None
         if range_hit[ch]:
             flags.append(f"range:{ch}")
         if values[ch] is None:
             flags.append(f"few_valid:{ch}")
+    if frozen is not None:
+        flags += frozen.update(values)
     t, rh = values["temperature_c"], values["humidity_pct"]
     if t is not None and rh is not None and rh > 0 and dew_point_c(t, rh) > t + settings["physics"]["dew_point_tolerance_c"]:
         flags.append("dew_point")
     # same order as node.ino: all range flags first (per channel), then few_valid, then dew_point
-    flags.sort(key=lambda f: (0 if f.startswith("range") else 1 if f.startswith("few_valid") else 2,
+    flags.sort(key=lambda f: (0 if f.startswith("range") else 1 if f.startswith("few_valid") else 2 if f.startswith("frozen") else 3,
                               CHANNELS.index(f.split(":")[1]) if ":" in f else 0))
     return values, flags
 
@@ -93,13 +122,14 @@ def run(settings: dict, station: str, url: str, minutes: int, start: datetime, s
     client = client or httpx.Client(base_url=url, timeout=settings["node"]["post_timeout_seconds"])
     sent = []
     frozen_value: Optional[float] = None
+    tracker = FrozenTracker(settings["node"]["frozen_minutes"])
     for m in range(minutes):
         t0 = start + timedelta(minutes=m)
         faulty = fault != "none" and fault_start <= m < fault_start + fault_length
         samples = simulate_minute(settings, t0, rng, fault, faulty, frozen_value)
         if fault == "frozen" and frozen_value is None and m + 1 >= fault_start:
             frozen_value = samples[0][0]
-        values, flags = aggregate_minute(samples, settings)
+        values, flags = aggregate_minute(samples, settings, tracker)
         payload = {"station_id": station,
                    "timestamp": (t0 + timedelta(seconds=settings["node"]["aggregate_seconds"])).strftime("%Y-%m-%dT%H:%M:%S"),
                    **values, "device_flags": flags}

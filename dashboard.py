@@ -158,6 +158,8 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
     c1.metric("Latest verdict", v.verdict.value if v else "pending")
     if v:
         c1.caption(f"Confidence {v.confidence:.2f}. {v.reason}")
+        for note in v.notices:
+            c1.caption(f"Notice: {note}")
         if v.imputation:
             c1.caption("Estimated for the missing or faulty value (raw value kept): " + "; ".join(
                 f"{db_label(ch)} {e.value:.2f} (band {e.lower:.2f} to {e.upper:.2f})" for ch, e in v.imputation.channels.items()))
@@ -192,6 +194,113 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
         st.dataframe(series_rows(records), width="stretch", hide_index=True)
 
 
+def post(api_url: str, path: str, body: Optional[dict] = None):
+    r = httpx.post(api_url.rstrip("/") + path, json=body, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+
+def delete(api_url: str, path: str, params: Optional[dict] = None):
+    r = httpx.delete(api_url.rstrip("/") + path, params=params, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+
+FAULT_TYPES = ("frozen", "spike", "step", "drift", "noise", "dropout")
+
+
+def render_controls(api_url: str, station: str, status: dict) -> None:
+    """Break the sensor on demand, and start or stop a replay. Everything here calls the API."""
+    st.subheader("Break the sensor")
+    st.caption("Arms a fault on this station's NEXT readings. Whatever streams in (a replay, the fake node, a real "
+               "ESP32) is altered the way a failing sensor would alter it. Watch the verdict, the reason and the "
+               "health score react on the Live monitor tab.")
+    c1, c2, c3, c4 = st.columns(4)
+    fault = c1.selectbox("Fault", FAULT_TYPES, key="fault_type")
+    channel = c2.selectbox("Channel", CHANNELS, format_func=lambda c: CHANNEL_LABELS[c], key="fault_channel")
+    samples = c3.number_input("Lasts (readings)", min_value=1, max_value=100000, value={"spike": 1, "drift": 60}.get(fault, 30),
+                              key="fault_samples")
+    if c4.button("Arm fault", type="primary", key="arm"):
+        try:
+            armed = post(api_url, "/inject", {"station_id": station, "fault_type": fault, "channel": channel,
+                                              "samples": int(samples)})["armed"]
+            st.success(f"Armed: {armed['fault_type']} on {armed['channel']} for {armed['samples']} readings.")
+        except httpx.HTTPError as e:
+            st.error(f"Could not arm the fault: {e}")
+    active = [i for i in status.get("injections", []) if i.get("active")]
+    if active:
+        st.warning("Armed now: " + "; ".join(f"{i['fault_type']} on {i['channel']} ({i['applied']}/{i['samples']})" for i in active))
+        if st.button("Clear all armed faults", key="clear"):
+            delete(api_url, "/inject")
+            st.rerun()
+
+    st.subheader("Replay recorded data")
+    st.caption("Plays a CSV from the data folder through the same pipeline. Real cyclone windows are in data/real/dev.")
+    try:
+        files = httpx.get(api_url.rstrip("/") + "/datasets", timeout=15).json().get("datasets", [])
+    except (httpx.HTTPError, ValueError):
+        files = []
+    r1, r2, r3 = st.columns([3, 1, 1])
+    path = r1.selectbox("File", files or ["(no CSV files under data/)"], key="replay_file")
+    speed = r2.number_input("Speed (0 = fastest)", min_value=0.0, value=0.0, key="replay_speed")
+    limit = r3.number_input("Readings (0 = all)", min_value=0, value=500, key="replay_limit")
+    station_id = st.text_input("Station id (only if the CSV has no station_id column)", value="", key="replay_station")
+    b1, b2 = st.columns(2)
+    if b1.button("Start replay", key="replay_start") and files:
+        body = {"csv_path": path, "speed": float(speed)}
+        if station_id:
+            body["station_id"] = station_id
+        if limit:
+            body["limit"] = int(limit)
+        try:
+            post(api_url, "/replay", body)
+            st.success("Replay started. Switch to the Live monitor tab.")
+        except httpx.HTTPStatusError as e:
+            st.error(e.response.json().get("detail", str(e)))
+    if b2.button("Stop replay", key="replay_stop"):
+        delete(api_url, "/replay")
+
+
+def render_evaluation(api_url: str) -> None:
+    """The committed evaluation summary. Three separate numbers, never merged, always labelled."""
+    try:
+        r = httpx.get(api_url.rstrip("/") + "/metrics", timeout=15)
+        r.raise_for_status()
+        summary = r.json()
+    except Exception:                                   # no summary committed yet, or the API is older
+        st.info("No evaluation summary available from the API yet. Run `python evaluate_real.py --dev` and "
+                "`python make_summary.py`, then reload.")
+        return
+    st.caption(summary.get("note", ""))
+    for name, phase in summary.get("phases", {}).items():
+        st.subheader(phase.get("title", name))
+        st.caption(phase.get("subtitle", ""))
+        for key in ("headline", "detection", "clean", "extreme_weather", "noaa", "drift", "speed"):
+            table = phase.get(key)
+            if not table:
+                continue
+            st.markdown(f"**{table['title']}**")
+            if table.get("caption"):
+                st.caption(table["caption"])
+            st.dataframe(table["rows"], width="stretch", hide_index=True)
+
+
+def render_method() -> None:
+    st.markdown("""
+**Four verdicts.** `VALID`, `WEATHER`, `SUSPECT`, `FAULT`. A cyclone is escalated as `WEATHER`, never deleted as noise.
+
+**Layers (each can be switched off in `config/settings.yaml`):** L0 physics (ranges, dew point, wet-bulb; also runs on the
+ESP32) → L1 health (frozen, step, spike, noise, gap, CUSUM; limits learned per station) → L2 normality (station x month x
+hour) → L3 Isolation Forest → timing (clock shift, co-jump) → fusion → health score, drift monitor, ticket, imputation.
+
+**Fusion rule in words.** Impossible, frozen or missing: FAULT. One channel jumps while the other two stay calm: FAULT.
+Several channels move together, smoothly, in a known weather pattern: WEATHER. Unusual but ambiguous: SUSPECT.
+
+**Confidence** is agreement between checks, not a calibrated probability. **Imputed values** sit beside the raw value and
+carry an uncertainty band; the raw value is never overwritten.
+""")
+
+
 def main() -> None:
     settings = load_settings()
     cfg = settings["dashboard"]
@@ -216,13 +325,21 @@ def main() -> None:
     st.sidebar.caption(f"Refreshes every {cfg['refresh_seconds']} s. Models loaded: "
                        f"{status['models_loaded']['normality'] or 'none'}")
 
-    @st.fragment(run_every=cfg["refresh_seconds"])
-    def live():
-        try:
-            render_live(api_url, settings, station)
-        except httpx.HTTPError as e:
-            st.error(f"Lost the API at {api_url}: {e}")
-    live()
+    tab_live, tab_ctrl, tab_eval, tab_method = st.tabs(["Live monitor", "Control panel", "Evaluation", "How it decides"])
+    with tab_live:
+        @st.fragment(run_every=cfg["refresh_seconds"])
+        def live():
+            try:
+                render_live(api_url, settings, station)
+            except httpx.HTTPError as e:
+                st.error(f"Lost the API at {api_url}: {e}")
+        live()
+    with tab_ctrl:
+        render_controls(api_url, station, status)
+    with tab_eval:
+        render_evaluation(api_url)
+    with tab_method:
+        render_method()
 
 
 if __name__ == "__main__":
