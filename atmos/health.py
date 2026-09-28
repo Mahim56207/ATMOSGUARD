@@ -153,11 +153,13 @@ def check_timestamp(history: Sequence[Reading], settings: dict, now: Optional[da
     return CheckResult(check="timestamp", flagged=False, reason="Timestamp is in order.")
 
 
-def cusum(residuals: Sequence[float], sigma: float, k_sigma: float, h_sigma: float) -> tuple[bool, float]:
-    """Two-sided tabular CUSUM. Returns (alarm, largest sum in sigma units)."""
+def cusum(residuals: Sequence[float], sigma, k_sigma: float, h_sigma: float) -> tuple[bool, float]:
+    """Two-sided tabular CUSUM. `sigma` is one number or one number per residual.
+    Returns (alarm, largest sum in sigma units)."""
+    sigmas = [sigma] * len(residuals) if isinstance(sigma, (int, float)) else list(sigma)
     s_pos = s_neg = peak = 0.0
-    for r in residuals:
-        z = r / sigma
+    for r, sg in zip(residuals, sigmas):
+        z = r / sg
         s_pos = max(0.0, s_pos + z - k_sigma)
         s_neg = max(0.0, s_neg - z - k_sigma)
         peak = max(peak, s_pos, s_neg)
@@ -165,33 +167,40 @@ def cusum(residuals: Sequence[float], sigma: float, k_sigma: float, h_sigma: flo
 
 
 def check_drift(history: Sequence[Reading], ch: str, expected: Optional[Sequence[Optional[float]]],
-                settings: dict) -> CheckResult:
-    """CUSUM drift on (reading - expected). `expected` is aligned with `history` (from L2 normality)."""
+                settings: dict, sigma: Optional[Sequence[Optional[float]]] = None) -> CheckResult:
+    """CUSUM drift on (reading - expected). SOFT flag: a long weather anomaly looks like drift over a few
+    hours, so this can lead to SUSPECT but never blocks WEATHER. Real drift is measured by Theil-Sen in
+    healthscore.py. `expected` (and optional `sigma`) are aligned with `history`
+    and come from L2 normality. If `sigma` is missing, the fixed value in settings is used."""
     name = f"drift:{ch}"
     if expected is None or len(expected) != len(history):
-        return CheckResult(check=name, flagged=False,
+        return CheckResult(check=name, flagged=False, severity="soft",
                            reason=f"{ch}: drift not checked, no expected values supplied (needs L2 normality).")
     cfg = settings["health"]["cusum"]
     cutoff = history[-1].timestamp - timedelta(minutes=cfg["window_minutes"])
-    residuals = []
-    for r, e in zip(history, expected):
+    residuals, sigmas = [], []
+    for i, (r, e) in enumerate(zip(history, expected)):
         v = getattr(r, ch)
         if r.timestamp >= cutoff and v is not None and e is not None:
             residuals.append(v - e)
+            sg = sigma[i] if sigma is not None else None
+            sigmas.append(sg if sg else cfg["sigma"][ch])
     if not residuals:
-        return CheckResult(check=name, flagged=False, reason=f"{ch}: no usable samples for drift check.")
-    alarm, peak = cusum(residuals, cfg["sigma"][ch], cfg["k_sigma"], cfg["h_sigma"])
+        return CheckResult(check=name, flagged=False, severity="soft",
+                           reason=f"{ch}: no usable samples for drift check.")
+    alarm, peak = cusum(residuals, sigmas, cfg["k_sigma"], cfg["h_sigma"])
     if alarm:
-        return CheckResult(check=name, flagged=True,
+        return CheckResult(check=name, flagged=True, severity="soft",
                            reason=f"{ch} is drifting away from its expected value (CUSUM {peak:.1f} sigma, "
-                                  f"alarm at {cfg['h_sigma']:g}).")
-    return CheckResult(check=name, flagged=False,
+                                  f"alarm at {cfg['h_sigma']:g}). Could also be a long weather anomaly.")
+    return CheckResult(check=name, flagged=False, severity="soft",
                        reason=f"{ch} has no sustained drift (CUSUM {peak:.1f} sigma, alarm at {cfg['h_sigma']:g}).")
 
 
 def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: float,
                  now: Optional[datetime] = None,
-                 expected: Optional[dict[str, Sequence[Optional[float]]]] = None) -> list[CheckResult]:
+                 expected: Optional[dict[str, Sequence[Optional[float]]]] = None,
+                 sigma: Optional[dict[str, Sequence[Optional[float]]]] = None) -> list[CheckResult]:
     """Run all L1 checks on the newest reading. Returns [] when the health layer is off or no history."""
     if not layer_enabled(settings, "health") or not history:
         return []
@@ -203,6 +212,6 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
             check_step(history, ch, settings, cadence_minutes),
             check_spike(history, ch, settings, cadence_minutes),
             check_noise(history, ch, settings, cadence_minutes),
-            check_drift(history, ch, (expected or {}).get(ch), settings),
+            check_drift(history, ch, (expected or {}).get(ch), settings, (sigma or {}).get(ch)),
         ]
     return results

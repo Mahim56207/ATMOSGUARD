@@ -94,6 +94,10 @@ def inject(readings: list[Reading], settings: dict, plan: list[FaultSpec],
         if spec.fault_type not in FAULT_TYPES:
             raise ValueError(f"unknown fault type: {spec.fault_type}")
         ch = spec.channel
+        if ch not in CHANNELS:
+            raise ValueError(f"unknown channel: {ch}")
+        if not 0 <= spec.start_index < len(readings):
+            raise ValueError(f"start_index {spec.start_index} is outside the {len(readings)} readings")
         n = _n_samples(spec.fault_type, settings, cadence)
         s, e = spec.start_index, min(spec.start_index + n, len(readings)) - 1
         params: dict = {}

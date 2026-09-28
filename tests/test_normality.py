@@ -72,6 +72,8 @@ def test_expected_series_lets_health_detect_injected_drift(clean, table, setting
     end = res.events[0].end_index
     history = res.readings[: end + 1]
     expected = table.expected_series(history)
-    assert check_drift(history, "temperature_c", expected["temperature_c"], settings).flagged
+    sigma = table.sigma_series(history)
+    assert check_drift(history, "temperature_c", expected["temperature_c"], settings, sigma["temperature_c"]).flagged
     clean_hist = clean[: end + 1]
-    assert not check_drift(clean_hist, "temperature_c", table.expected_series(clean_hist)["temperature_c"], settings).flagged
+    assert not check_drift(clean_hist, "temperature_c", table.expected_series(clean_hist)["temperature_c"], settings,
+                          table.sigma_series(clean_hist)["temperature_c"]).flagged
