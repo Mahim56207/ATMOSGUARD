@@ -233,6 +233,52 @@ def delete(api_url: str, path: str, params: Optional[dict] = None):
 FAULT_TYPES = ("frozen", "spike", "step", "drift", "noise", "dropout")
 
 
+VERDICT_RANK = {"FAULT": 0, "SUSPECT": 1, "WEATHER": 2, "VALID": 3, None: 4}
+
+
+def fleet_rows(fleet: dict) -> list[dict]:
+    """The network table, most urgent first: FAULT before SUSPECT before WEATHER before VALID, then the lowest health score.
+    Each station is judged on its own record; this only lists them side by side."""
+    stations = fleet.get("stations", [])
+    ordered = sorted(stations, key=lambda s: (VERDICT_RANK.get(s.get("verdict"), 4), s.get("health_score") if s.get("health_score") is not None else 101.0))
+    rows = []
+    for s in ordered:
+        tk = s.get("ticket")
+        cs = s.get("channel_scores") or {}
+        rows.append({"station": s["station_id"], "verdict": s.get("verdict") or "no reading yet",
+                     "health (0-100)": s.get("health_score"),
+                     "T": cs.get("temperature_c"), "P": cs.get("pressure_hpa"), "RH": cs.get("humidity_pct"),
+                     "ticket": (tk["priority"] + ": " + ", ".join(c.split("_")[0] for c in tk["channels"])) if tk else "none",
+                     "service by": s.get("service_date") or "none", "alerts (last 200)": s.get("recent_alerts", 0),
+                     "newest reading": (s.get("last_time") or "")[:16].replace("T", " "), "why": s.get("reason") or ""})
+    return rows
+
+
+def render_network(api_url: str) -> None:
+    st.subheader("The network, station by station")
+    st.caption("One line per station, most urgent first. Every station is judged on its own record; nothing here compares one "
+               "station with another. Health is 0-100 (T, P and RH are the channel scores).")
+    try:
+        fleet = fetch(api_url, "/fleet")
+    except httpx.HTTPError as e:
+        st.info(f"The API has no network view yet ({e}).")
+        return
+    rows = fleet_rows(fleet)
+    if not rows:
+        st.info("No stations have sent readings yet.")
+        return
+    attention = [r for r in rows if r["verdict"] in ("FAULT", "SUSPECT") or r["ticket"] != "none"]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Stations", len(rows))
+    c2.metric("Need attention", len(attention))
+    scores = [r["health (0-100)"] for r in rows if r["health (0-100)"] is not None]
+    c3.metric("Lowest health score", f"{min(scores):.0f}" if scores else "n/a")
+    st.dataframe(rows, width="stretch", hide_index=True, column_config={
+        "health (0-100)": st.column_config.NumberColumn("health (0-100)", format="%.0f"),
+        "T": st.column_config.NumberColumn("T", format="%.0f"), "P": st.column_config.NumberColumn("P", format="%.0f"),
+        "RH": st.column_config.NumberColumn("RH", format="%.0f")})
+
+
 def render_controls(api_url: str, station: str, status: dict) -> None:
     """Break the sensor on demand, and start or stop a replay. Everything here calls the API."""
     st.subheader("Break the sensor")
@@ -349,7 +395,7 @@ def main() -> None:
     st.sidebar.caption(f"Refreshes every {cfg['refresh_seconds']} s. Models loaded: "
                        f"{status['models_loaded']['normality'] or 'none'}")
 
-    tab_live, tab_ctrl, tab_eval, tab_method = st.tabs(["Live monitor", "Control panel", "Evaluation", "How it decides"])
+    tab_live, tab_net, tab_ctrl, tab_eval, tab_method = st.tabs(["Live monitor", "Network", "Control panel", "Evaluation", "How it decides"])
     with tab_live:
         @st.fragment(run_every=cfg["refresh_seconds"])
         def live():
@@ -358,6 +404,8 @@ def main() -> None:
             except httpx.HTTPError as e:
                 st.error(f"Lost the API at {api_url}: {e}")
         live()
+    with tab_net:
+        render_network(api_url)
     with tab_ctrl:
         render_controls(api_url, station, status)
     with tab_eval:
