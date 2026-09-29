@@ -44,8 +44,9 @@ def check_path(path: Path, settings: dict, must_be_in_data_dir: bool = False, al
     p = Path(path)
     p = (p if p.is_absolute() else Path.cwd() / p).resolve()
     root = data_root(settings)
-    if not allow_holdout and (p == root / "holdout" or (root / "holdout") in p.parents):
-        raise ValueError("data/holdout/ is read once, by evaluate.py. Replay will not read it.")
+    for sealed in ("holdout", "fresh"):                 # each is read once, by an evaluation run behind its own guard
+        if not allow_holdout and (p == root / sealed or (root / sealed) in p.parents):
+            raise ValueError(f"data/{sealed}/ is read once, by the evaluation, behind its guard. Replay will not read it.")
     if must_be_in_data_dir and root not in p.parents:
         raise ValueError(f"CSV must be inside the data folder ({root}).")
     return p

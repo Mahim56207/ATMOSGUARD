@@ -132,15 +132,21 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
 
 
-def guard_holdout(settings: dict, repo_dir: Optional[Path] = None, data_dir: Optional[Path] = None) -> None:
-    """Refuse to read the holdout unless: protocol.md is committed and clean, has no unfinished markers,
-    and the holdout has not been used before. Writes the lock file when it passes."""
+FRESH_LOCK_NAME = ".fresh_used"
+
+
+def guard_holdout(settings: dict, repo_dir: Optional[Path] = None, data_dir: Optional[Path] = None,
+                  folder: str = "holdout", lock_name: str = LOCK_NAME, require_text: Optional[str] = None) -> None:
+    """Refuse to read a sealed folder unless: protocol.md is committed and clean, has no unfinished markers (and contains
+    `require_text` when given), and the folder has not been used before. Writes the lock file when it passes."""
     repo = Path(repo_dir or REPO_ROOT)
     proto = "config/protocol.md"
-    lock = Path(data_dir or replay_io.data_root(settings)) / "holdout" / LOCK_NAME
+    lock = Path(data_dir or replay_io.data_root(settings)) / folder / lock_name
     if lock.exists():
-        raise HoldoutError(f"The holdout was already used ({lock}). It is read once. "
+        raise HoldoutError(f"The {folder} data were already used ({lock}). They are read once. "
                            "If you really must run it again, delete that file yourself and record why.")
+    if require_text and require_text not in (repo / proto).read_text(encoding="utf-8"):
+        raise HoldoutError(f"{proto} does not contain '{require_text}'. Write and commit it BEFORE the run.")
     if _git(repo, "ls-files", "--error-unmatch", proto).returncode != 0:
         raise HoldoutError(f"{proto} is not committed. Commit it BEFORE the first holdout run.")
     if _git(repo, "status", "--porcelain", "--", proto).stdout.strip():
@@ -151,6 +157,11 @@ def guard_holdout(settings: dict, repo_dir: Optional[Path] = None, data_dir: Opt
     lock.parent.mkdir(parents=True, exist_ok=True)
     lock.write_text(json.dumps({"used_at": datetime.now(timezone.utc).isoformat(), "protocol_commit": commit}),
                     encoding="utf-8")
+
+
+def guard_fresh(settings: dict, repo_dir: Optional[Path] = None, data_dir: Optional[Path] = None) -> None:
+    """The guard for the FRESH stations: the same rules as the holdout, plus Amendment 2 must be in the committed protocol."""
+    guard_holdout(settings, repo_dir, data_dir, folder="fresh", lock_name=FRESH_LOCK_NAME, require_text="## Amendment 2")
 
 
 def _read_dir(folder: Path, settings: dict, station: Optional[str], allow_holdout: bool = False) -> list[list[Reading]]:
