@@ -1,6 +1,6 @@
 """FastAPI service.
 
-Endpoints: /ingest /latest /alerts /health /fleet /explain /replay /inject /datasets /metrics /status
+Endpoints: /ingest /latest /alerts /health /fleet /explain /replay /replay/upload /inject /datasets /metrics /status
 
 /ingest runs the full pipeline (physics, health, normality, ML, fusion) and stores the raw reading,
 the verdict and the checks side by side. /health gives the sensor health score, projected service
