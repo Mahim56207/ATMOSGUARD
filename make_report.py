@@ -49,6 +49,21 @@ Further sources (ECMWF observation monitoring, MADIS, sensor-network drift liter
 """
 
 
+FIGURES = [("fig_baselines.png", "Figure 3. The same real data and the same three numbers for AtmosGuard and simpler systems, in every split (lower is better in the first two columns, higher in the third)."),
+           ("fig_ablation.png", "Figure 4. Ablation on DEV: what each layer is worth (bars) and what it costs in false alarms on clean real data (top)."),
+           ("fig_real_cyclones.png", "Figure 5. Three real cyclones with nothing injected: the pressure crash is escalated as weather, never called a fault."),
+           ("fig_remedies.png", "Figure 6. The fresh stations: what the two remedies from the holdout post-mortem do (registered decision rule, Section 2.7)."),
+           ("fig_detectability.png", "Figure 7. How big must a fault be? Detection against fault size on the DEV stations (injected faults, tuning set)."),
+           ("fig_coldstart.png", "Figure 8. A new station on day one: with a starter from the nearest other station, and with its own data only."),
+           ("fig_scale.png", "Figure 9. Per-reading cost against the number of stations (state is per station)."),
+           ("fig_drift_power.png", "Figure 10. Slow drift: the share of chunks where the drift monitor claims drift, against the size of the ramp.")]
+
+
+def figure(name: str, caption: str) -> list[str]:
+    """A Markdown image with its caption, if the file exists (paths are relative to docs/, where the report lives)."""
+    return [f"![{caption}](figures/{name})", "", f"*{caption}*", ""] if (DOCS / "figures" / name).exists() else []
+
+
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -159,6 +174,9 @@ def results_section(summary: dict) -> str:
         if c.get("timing"):
             L += [f"The study ran {c['timing']['jobs']} jobs in {c['timing']['wall_minutes']} minutes on {c['timing']['workers']} workers "
                   f"(`python evaluate_coldstart.py`; `--estimate` projects the running time first).", ""]
+    figs = [f for name, cap in FIGURES for f in figure(name, cap)]
+    if figs:
+        L += [head("Figures"), ""] + figs
     return "\n".join(L)
 
 
@@ -183,6 +201,8 @@ def build(summary: dict) -> str:
         "records; and on the unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict "
         f"({unseen_windows(summary)}; Section 5). Sections 5 and 6 say exactly what we cannot show.", "",
         read(src / "01_introduction.md"), "",
+        *figure("diagram_pipeline.png", "Figure 1. What one reading goes through."),
+        *figure("diagram_sensor_or_sky.png", "Figure 2. The four verdicts and what each looks like on the three channels (sketches)."),
         read(src / "02_data_protocol_intro.md"), "",
         "### 2.5 What was changed after looking at DEV (the tuning log, from `config/protocol.md`)", "",
         section(protocol, "Tuning log (everything changed after looking at DEV, and why)"), "",
@@ -221,9 +241,9 @@ def to_docx(md_path: Path) -> Path:
     out = md_path.with_suffix(".docx")
     try:                                        # optional: `pip install pypandoc_binary` (not in requirements.txt on purpose)
         pypandoc = importlib.import_module("pypandoc")
-        pypandoc.convert_file(str(md_path), "docx", outputfile=str(out), extra_args=["--toc"])
+        pypandoc.convert_file(str(md_path), "docx", outputfile=str(out), extra_args=["--toc", f"--resource-path={md_path.parent}"])
     except (ImportError, OSError):
-        subprocess.run(["pandoc", str(md_path), "-o", str(out), "--toc"], check=True)
+        subprocess.run(["pandoc", str(md_path), "-o", str(out), "--toc", f"--resource-path={md_path.parent}"], check=True)
     return out
 
 
