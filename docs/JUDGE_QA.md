@@ -74,7 +74,7 @@ first (Amendment 3): judge only the part of a change that the station's own dail
 **Your false-alarm rate on the Australian stations is 13.6 %. Why?** It is, and we did not hide it. Four of the seven stations reported 16 times a day with alternating one- and two-hour gaps in the
 training years and hourly all day afterwards, so no noise limit could be learned and a fixed floor tuned on coarser data alarmed on their 0.1-resolution readings (33 %, 26 %, 21 % and 8 % of clean samples;
 the other three are 0.9-2.1 %, the five Indian airports 3.2 %). Every earlier station had its limits learned. The pipeline now says so on each reading and the remedy is a refit at the current cadence
-(`refit_diagnostic.py`; a post-hoc diagnostic, not sealed evidence).
+(`python refit.py`): fitted on the hourly years only, the seven stations' false alarms fall from 13.6 % to 2.6 % (`refit_diagnostic.py`; a post-hoc diagnostic on the same stations and different judged years, not sealed evidence).
 
 **A simpler detector beats you on some fault types. Why use yours?** It does, and we show it: a Mahalanobis-only detector is better on spikes and blind to frozen
 sensors, dropouts and clocks; the textbook rules are better on wrong clocks on the unseen stations and blind to dropouts, and on the fresh stations they call a FAULT on 134 of 139 real extreme-weather windows and

@@ -263,6 +263,9 @@ Thredbo in October 2023 (humidity -48.9 % in 120 minutes), remains: the daily cy
   floor of 0.5 C / 0.5 hPa / 3 % was used, and it alarms on 0.1-resolution hourly data. It is a mixed-cadence training record, not a defect specific to Australia; `docs/USE_YOUR_DATA.md` item 2
   had warned about mixed cadence. Nothing was changed in response, to the pipeline or its limits. Two things were added that change no verdict: an informational `limits` notice on every reading
   whose station has an unlearned noise limit or a cadence that differs from the one the limits were learned at (`health.check_limits_fit`), and a post-hoc diagnostic (`refit_diagnostic.py`,
-  `results/fresh2_refit_diagnostic.*`, labelled as not sealed evidence) of what refitting at the current cadence does on the same stations.
+  `results/fresh2_refit_diagnostic.*`, labelled as not sealed evidence) of what refitting at the current cadence does on the same stations: fitted on the hourly years 2020-2021 only and judged 2022-2024,
+  every noise limit is learned and clean false alarms on the seven Australian AWS are **2.6 %** (1.3-3.6 % per station, Mount Crawford 2.0 %, Cape Wessel 3.6 %, Lady Elliot 2.6 %, Willis 2.5 %) instead of 13.6 %, with
+  detection of injected faults frozen 100 %, spike 96 %, level shift 91 %, noise burst 82 %, dropout 98 %, clock 83 %. The judged years differ, so this diagnoses the cause; it is not a like-for-like test. `refit.py` is the
+  one-command tool.
 - Detection of injected faults on these stations (`full`): frozen 100 %, spike 89 %, level shift 91 %, noise burst 83 %, dropout 93 %, clock 90 %. The Indian and Australian subsets are in `results/REPORT.md`.
 - Real extreme weather: FAULT on 0.0 % of 14,732 samples (4 of 134 windows, the four above); WEATHER 4.1 %, SUSPECT 14.1 % (SUSPECT is higher on the AWS, 17.6 %, in step with their higher false-alarm rate).

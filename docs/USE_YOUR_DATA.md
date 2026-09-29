@@ -45,7 +45,7 @@ check, in order:
 2. **Cadence.** The script uses the median gap between readings and prints it. A record with irregular or mixed cadence (a station that
    switches from hourly to half-hourly) should be split into one CSV per cadence. This is not hypothetical: four of the seven Australian AWS in the third sealed set reported 16 times a day with
    alternating 1 h and 2 h gaps for their first four years and hourly all day after, no noise limit could be learned, and they got 8-33 % false alarms until refitted at the current cadence. The pipeline
-   prints an informational `limits` notice on every reading when a noise limit is missing or the cadence differs from the one the limits were learned at: if you see it, refit on a stretch at the current cadence.
+   prints an informational `limits` notice on every reading when a noise limit is missing or the cadence differs from the one the limits were learned at: if you see it, refit on a stretch at the current cadence: `python refit.py your.csv --station ID --from 2020-01-01`.
 3. **Humidity.** If your RH comes from a capacitive sensor that saturates at 100 %, a run of `100` is real and the learned frozen limit
    will reflect it; if it does not, look at the frozen tier the alarm names.
 4. **Record quality.** A long real fault that nobody flagged inside the training years is learned as "normal". Cut it out of the CSV.
