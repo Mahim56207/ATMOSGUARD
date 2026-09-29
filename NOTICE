@@ -1,0 +1,10 @@
+AtmosGuard
+Copyright 2026 The AtmosGuard authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Data notices (the code licence above does not change the terms of the data):
+- data/real, data/holdout, data/fresh, data/fresh2, data/demo and the cluster files built by data_tools/make_peers.py are derived from NOAA's Integrated Surface
+  Database (ISD), which NOAA distributes without restriction (https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database). The original observations come
+  from the national meteorological services that report them, including India's airports and Australia's Bureau of Meteorology. Please cite NOAA ISD (Smith et al. 2011) when you reuse them.
+- Third-party Python packages keep their own licences (see requirements.txt).
