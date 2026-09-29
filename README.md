@@ -94,7 +94,7 @@ uvicorn api:app --port 8000 &                           # loads the six trained 
 streamlit run dashboard.py                              # http://localhost:8501
 ```
 The dashboard has a **Live monitor**, a **Network** view (every station, most urgent first), the **Control panel**, the **Evaluation** tables and **How it decides**. In the **Control panel**: replay a real cyclone (`data/demo/`), **break the sensor on demand** (frozen, spike,
-level shift, drift, noise, dropout), and watch the verdict, the reason and the health score react. **No server?**
+level shift, drift, noise, dropout), and watch the verdict, the reason and the health score react, or **bring your own CSV** and watch it judged (a new station learns from the first half of the file). **No server?**
 Open [`docs/demo/index.html`](docs/demo/index.html): a self-contained replay of six real events with the pipeline's actual verdicts.
 
 `make api`, `make dashboard`, `make replay`, `make test` do the same in one word each. Also: `python -m pytest -q` (400+ tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -

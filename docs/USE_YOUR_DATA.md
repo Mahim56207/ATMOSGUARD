@@ -47,3 +47,17 @@ check, in order:
 3. **Humidity.** If your RH comes from a capacitive sensor that saturates at 100 %, a run of `100` is real and the learned frozen limit
    will reflect it; if it does not, look at the frozen tier the alarm names.
 4. **Record quality.** A long real fault that nobody flagged inside the training years is learned as "normal". Cut it out of the CSV.
+
+## Watch it judge your file, live
+Start the API and the dashboard (`make api`, `make dashboard`), open the **Control panel**, and use **Bring your own CSV**. The file is saved on the
+server under `data/uploads/` and judged through the same pipeline, at the speed you choose. Two things to know:
+
+- **A station the server has no models for learns from the first half of the file** (at least two weeks, at least 300 usable readings), then the second half is
+  judged. Without that the fixed limits would judge it, and they alarm on most clean rounded data. Anything abnormal in the first half is learned as normal,
+  so give it a stretch you trust. Untick the box to judge everything with whatever models exist. The same thing from a script:
+  `POST /replay/upload` with `{"filename": ..., "text": <the CSV>, "learn_fraction": 0.5}`.
+- **A station id the server already knows** (BBI, MAA, CCU, DEL, JAI, TRV) is judged with its committed models from the first reading.
+
+On a real station's file (Chennai, 2016-2021, renamed so the server treated it as new) the second half came out 96 % `VALID`, 2 % `WEATHER`, 2 % `SUSPECT` and no
+`FAULT`, which is what the evaluation says to expect. That is a functional check on the tuning set, not a result.
+

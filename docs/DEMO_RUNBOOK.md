@@ -58,3 +58,11 @@ Fani replay, one armed fault, the outflow, and one slide with the DEV vs HOLDOUT
 - `docs/demo/dashboard_walkthrough.webm` - the same session as a video (a backup for the day the venue network fails; open it locally).
 - `docs/demo/index.html` - the self-contained replay page (no server).
 - `docs/figures/diagram_*.png` - the pipeline, the four verdicts and the order the evidence was produced in, for slides.
+
+## If a judge brings a CSV
+Control panel, **Bring your own CSV**, pick the file (columns `timestamp` in UTC, `temperature_c`, `pressure_hpa`, `humidity_pct`, optional `station_id`; if there is no
+`station_id` column, type one), leave learning ticked, press **Judge this file**. A station the server does not know learns from the first half of the file, so the
+file should be at least a few weeks long and the first half should be a stretch you trust. Then open the Live monitor and pick the station, and the Network tab to see it
+beside the others. Say plainly what happened: "the first half taught it this station's normal; the second half is being judged". `docs/USE_YOUR_DATA.md` has the details
+and the careful offline version (`evaluate_csv.py`).
+

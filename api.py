@@ -16,6 +16,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -28,6 +29,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 import replay as replay_module
+from atmos import autofit
 from atmos.config import CONFIG_DIR, load_settings, load_stations, model_path
 from atmos.explain import explain_reading
 from atmos.fusion import Pipeline
@@ -57,6 +59,21 @@ class ReplayRequest(BaseModel):
     station_id: Optional[str] = Field(default=None, min_length=1, max_length=64)   # needed if the CSV has no station_id column
     speed: float = Field(default=0.0, ge=0)   # 1 = real time, 0 = fastest
     limit: Optional[int] = Field(default=None, ge=1)
+
+
+class UploadRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=200)          # only the base name is used, and only letters, digits, . _ -
+    text: str = Field(min_length=1)                              # the CSV itself (timestamp, temperature_c, pressure_hpa, humidity_pct [, station_id])
+    station_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    speed: float = Field(default=0.0, ge=0)
+    limit: Optional[int] = Field(default=None, ge=1)
+    learn_fraction: float = Field(default=0.5, ge=0, lt=1)    # a station with no models learns from this first share of the file; 0 = never learn
+
+
+def safe_upload_name(filename: str) -> str:
+    """The base name with everything but letters, digits, dot, underscore and dash replaced; always ends in .csv."""
+    base = re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename.replace("\\", "/")).name).lstrip(".") or "upload"
+    return base if base.lower().endswith(".csv") else base + ".csv"
 
 
 def model_fingerprints(settings: dict, station_ids) -> dict[str, dict]:
@@ -234,10 +251,40 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
             raise HTTPException(404, f"No such file: {req.csv_path}")
         except ValueError as e:
             raise HTTPException(400, str(e))
+        return begin_replay(readings, req.speed)
+
+    def begin_replay(readings: list[Reading], speed: float) -> dict:
         replay_stop.clear()
         replay_state.update(state="running", sent=0, total=len(readings), verdicts={}, error=None)
-        threading.Thread(target=run_replay, args=(readings, req.speed), daemon=True).start()
+        threading.Thread(target=run_replay, args=(readings, speed), daemon=True).start()
         return dict(replay_state)
+
+    @app.post("/replay/upload")
+    def upload_and_replay(req: UploadRequest):
+        """Bring your own CSV: it is saved under data/uploads/, checked like any replay file, and judged through the pipeline in the background."""
+        if replay_state["state"] == "running":
+            raise HTTPException(409, "A replay is already running.")
+        limit_bytes = int(api_cfg.get("upload_max_bytes", 20_000_000))
+        if len(req.text.encode("utf-8")) > limit_bytes:
+            raise HTTPException(413, f"The file is larger than {limit_bytes} bytes.")
+        folder = replay_module.data_root(settings) / "uploads"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"{datetime.now(timezone.utc):%Y%m%dT%H%M%S}_{safe_upload_name(req.filename)}"
+        path.write_text(req.text, encoding="utf-8")
+        try:
+            readings = replay_module.read_readings(path, settings, req.station_id, must_be_in_data_dir=True)[: req.limit]
+        except ValueError as e:
+            path.unlink(missing_ok=True)
+            raise HTTPException(400, str(e))
+        if not readings:
+            path.unlink(missing_ok=True)
+            raise HTTPException(400, "The file has no readings.")
+        learned: list = []
+        notes: list[str] = []
+        if req.learn_fraction > 0:
+            readings, learned, notes = autofit.learn_stations(pipeline, readings, settings, req.learn_fraction)
+        return {**begin_replay(readings, req.speed), "saved_as": str(path.relative_to(replay_module.data_root(settings).parent)),
+                "learned": [vars(x) for x in learned], "notes": notes}
 
     @app.get("/replay")
     def replay_progress():
@@ -282,10 +329,10 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
 
     @app.get("/datasets")
     def datasets():
-        """CSV files under the data folder that /replay may play (never data/holdout)."""
+        """CSV files under the data folder that /replay may play (never data/holdout or data/fresh)."""
         root = replay_module.data_root(settings)
         files = sorted(str(p.relative_to(root.parent)) for p in root.rglob("*.csv")
-                       if "holdout" not in p.relative_to(root).parts)
+                       if not {"holdout", "fresh"} & set(p.relative_to(root).parts))
         return {"datasets": files}
 
     @app.get("/metrics")
