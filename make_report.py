@@ -82,34 +82,6 @@ def from_first_section(md: str) -> str:
     return md[i:]
 
 
-def _num(cell: str) -> Optional[float]:
-    try:
-        return float(str(cell).rstrip("%"))
-    except ValueError:
-        return None
-
-
-def tradeoff_rows(phase: dict) -> list[dict]:
-    """One line per system: its weakest injected-fault type, its clean false-alarm rate and its real-weather FAULT windows.
-
-    Built from the phase tables, so it cannot drift from them. It shows that no single baseline is good at every fault type.
-    """
-    det = {r["configuration"]: r for r in phase["detection"]["rows"] if not r["configuration"].startswith(("(", "AtmosGuard: median"))}
-    clean = {r["configuration"]: r for r in phase["clean"]["rows"]}
-    ev = {r["configuration"]: r for r in phase["extreme_weather"]["rows"]}
-    out = []
-    for name, row in det.items():
-        if name.startswith("without"):
-            continue
-        vals = {k: _num(v) for k, v in row.items() if k != "configuration"}
-        vals = {k: v for k, v in vals.items() if v is not None}
-        weakest = min(vals, key=vals.get)
-        out.append({"system": name, "weakest injected-fault type (fault raised the alarm)": f"{weakest}: {vals[weakest]:.0f}%",
-                    "false alarms on clean data": clean[name]["any alarm"],
-                    "real extreme weather, windows with a FAULT": ev[name]["windows with a FAULT"]})
-    return out
-
-
 def abstract(summary: dict) -> str:
     ph = summary["phases"]
     lines = []
@@ -146,10 +118,8 @@ def results_section(summary: dict, coldstart: Optional[list[dict]]) -> str:
                 L += ["Full pipeline, by kind of extreme weather:", ""] + markdown_table(t["by_kind"])
         t = p["detection_registered"]
         L += [f"#### {t['title']}", "", t["caption"], ""] + markdown_table(t["rows"])
-        L += ["#### No single simpler system is good at every fault type", "",
-              "Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system "
-              "that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that "
-              "coverage does not cost real storms.", ""] + markdown_table(tradeoff_rows(p))
+        t = p["tradeoff"]
+        L += [f"#### {t['title']}", "", t["caption"], ""] + markdown_table(t["rows"])
     if "scale" in summary:
         s = summary["scale"]
         L += [head("Scale and speed"), "", s["note"], ""]

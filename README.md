@@ -24,7 +24,15 @@ with a plain-English reason, a health score and a service-date estimate. The raw
 
 ## Results at a glance
 <!-- RESULTS:START -->
-Run `python make_summary.py ... --readme README.md` to fill this block from the results files.
+| | DEV (tuned here) | Holdout, same stations, later years | Holdout, eight unseen stations |
+|---|---|---|---|
+| **False alarms on clean real data** | 1.9% (1.8-2.0) of 98340 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT | 2.5% (2.4-2.6) of 147078 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT | 2.9% (2.8-3.0) of 237411 samples got FAULT or SUSPECT; 0.0% (0.0-0.1) got FAULT |
+| **Real cyclones, heat, cold, fronts (nothing injected)** | FAULT on 0.0% (0.0-0.1) of 3503 samples (0 of 30 windows); WEATHER on 10.8%, SUSPECT on 9.0% | FAULT on 0.0% (0.0-0.1) of 4374 samples (0 of 38 windows); WEATHER on 11.8%, SUSPECT on 8.2% | FAULT on 0.3% (0.2-0.4) of 9074 samples (3 of 98 windows); WEATHER on 15.7%, SUSPECT on 8.6% |
+| **Injected faults detected (injected, not real)** | frozen 100%; spike 98%; level shift 97%; noise burst 78%; dropout 99%; clock 3 h out 97% | frozen 100%; spike 96%; level shift 98%; noise burst 79%; dropout 100%; clock 3 h out 97% | frozen 100%; spike 90%; level shift 89%; noise burst 67%; dropout 98%; clock 3 h out 84% |
+| **Agreement with NOAA quality flags** | escalated (FAULT, SUSPECT or WEATHER) on 66.9% of 236 NOAA-flagged values (FAULT or SUSPECT alone: 22.9%); escalated on 4.7% of the 101736 values NOAA left alone | escalated (FAULT, SUSPECT or WEATHER) on 61.5% of 265 NOAA-flagged values (FAULT or SUSPECT alone: 18.5%); escalated on 5.7% of the 151336 values NOAA left alone | escalated (FAULT, SUSPECT or WEATHER) on 67.6% of 559 NOAA-flagged values (FAULT or SUSPECT alone: 40.8%); escalated on 6.9% of the 246257 values NOAA left alone |
+| **Slow drift (one station, no reference)** | false drift claims on 1.1% of 3859 station-days; an injected ramp reaching 8x the service limit was found in 56% of trials | false drift claims on 1.1% of 5797 station-days; an injected ramp reaching 8x the service limit was found in 50% of trials | false drift claims on 0.6% of 12495 station-days; an injected ramp reaching 8x the service limit was found in 56% of trials |
+
+Real NOAA airport records, 14 Indian stations. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).
 <!-- RESULTS:END -->
 
 Data caveats that apply to every number: airport METAR/SYNOP records (not IMD AWS records); humidity is derived from the dew point;
@@ -36,7 +44,12 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
   Bhuj, where a desert station warms 15 C across a 6-hour reporting gap. The causes and two untested remedies are in
   [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md). We did not tune on them.
 - **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
-  takes hours by design (it has to stay stuck longer than real weather can).
+  takes hours by design (it has to stay stuck longer than real weather can). On the eight unseen stations detection is lower than on DEV
+  for every type except frozen and dropout (table above).
+- **A simpler detector beats us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
+  pipeline (and level shifts on DEV) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong clocks. No single
+  simpler system covers all six types; the layers buy coverage. See "No single simpler system" in
+  [`results/REPORT.md`](results/REPORT.md) and [`docs/TECHNICAL_REPORT.md`](docs/TECHNICAL_REPORT.md).
 - **Small drift is invisible from one station.** The drift monitor sees a ramp of several times the service limit, not one times the limit;
   the power curve is in the results and is the honest statement of what "drift detection" means here.
 - **Not real-AWS validated.** Airport records round to whole degrees and whole hPa and carry derived humidity. A real AWS with 0.1
