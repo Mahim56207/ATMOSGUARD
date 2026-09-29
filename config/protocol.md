@@ -269,3 +269,34 @@ Thredbo in October 2023 (humidity -48.9 % in 120 minutes), remains: the daily cy
   one-command tool.
 - Detection of injected faults on these stations (`full`): frozen 100 %, spike 89 %, level shift 91 %, noise burst 83 %, dropout 93 %, clock 90 %. The Indian and Australian subsets are in `results/REPORT.md`.
 - Real extreme weather: FAULT on 0.0 % of 14,732 samples (4 of 134 windows, the four above); WEATHER 4.1 %, SUSPECT 14.1 % (SUSPECT is higher on the AWS, 17.6 %, in step with their higher false-alarm rate).
+
+## Amendment 4 (written before the FRESH3 stations were evaluated)
+Two limits were left after Amendment 3: no record tested was sub-hourly, and four Australian stations of the third set were flooded with false alarms (33, 26, 21, 8 % of clean samples) because their
+2016-2019 records were irregular, so no noise limit could be learned. A refit on the hourly years fixed it, but that check used the stations that revealed the problem. This amendment tests, once, on twelve
+stations nobody has looked at, a remedy for the second and reports the first. `evaluate_real.py --fresh3` refuses to run unless this amendment is in the committed `config/protocol.md` (guard
+`evaluate.guard_fresh3`, lock `data/fresh3/.fresh3_used`); a second run is refused; `replay.py` and `/datasets` refuse `data/fresh3/`.
+
+**The stations** (`data_tools/stations_fresh3.yaml`, files committed with this amendment): seven US automated weather stations (AWOS/ASOS) that report **every 20 minutes** at 0.1 C (Fitch H Beach MI, Pratt KS, Madison
+County AL, La Porte, Glasgow MT, George R Carr FL, Hutchinson KS; routine METAR at :15, :35 and :55, pressure = altimeter setting) and five Australian Bureau of Meteorology automatic stations with the irregular-then-hourly
+pattern (Weipa, Tennant Creek, Alice Springs, Learmonth, Broome). Rule fixed before any verdict was computed: at least 60 % of the expected reports carry temperature, dew point and pressure in both the training
+years (2016-2019) and the test years (2020-2024). The US stations came from a random sample of 90 stations of the US, Canada, Japan, the UK, Ireland, France, Spain and Italy (all with data in 2016 and 2024) scanned for a median cadence of 30 minutes or
+finer; of those with tenth-degree temperatures and routine METAR reports every 20 minutes, the seven with the most complete 2022 records were taken; whole-degree stations and the ones that only file irregular SPECI reports were left out. Coverage, cadence and
+resolution were the only things looked at. A second copy of each report one minute after the first (present in some years) is dropped: of any reports less than five minutes apart, the first is kept (`data_tools.isd`,
+`any_minute`, tested). This is the first sub-hourly record in the project. It is 20 minutes, not the 1-15 minutes of a typical AWS.
+
+**The remedy (`r6_warmup`).** For a station whose training years left any channel's noise limit unlearned, the unlearned limits (only those; learned ones are kept) are filled from the first stretch of the judged period
+in which the station reports regularly: 60 days in which at least 90 % of the days carry at least 90 % of the reports expected at the station's current cadence (median gap over the last year of the period). That stretch is chosen
+from timestamps only, never from values or verdicts; extreme-weather windows are cut out of it; it is treated as clean (a fault inside it is learned as normal, as in `atmos/autofit.py`). **Every configuration at such a station is
+judged only after the stretch ends** (so `full` and the remedy are compared on the same samples); at all other stations nothing changes and `r6_warmup` equals `full`. (`limits.complete_limits`, `evaluate_real.warm_stretch`, tested.)
+
+**Configurations** (phase `FRESH3`): `full`, the pipeline as shipped (remedies 1 and 3 on), `r6_warmup`, and the five baselines. No ablations.
+
+**Decision rule, registered now.** The remedy is adopted only if, on the twelve stations pooled unless stated: (a) over the stations where the warm-up applied, clean false alarms fall by at least 3 percentage points; (b) no
+injected-fault type's paired detection is lower than with `full` by more than 2 points; (c) real extreme-weather windows with a `FAULT` and their `FAULT` share are not higher; (d) the `SUSPECT` share in real extreme weather is not higher by
+more than 2 points. "Adopted" means `refit.py --complete` (fill only the unlearned limits from a stretch you name) is the documented fix that the `limits` notice points to and the shipped notice says the warm-up is validated;
+the pipeline does not change limits on its own. Otherwise the remedy is reported as tested and rejected. If the warm-up applies to no station, the remedy is reported as untested.
+
+**Reported whatever happens.** Every table for `full` on the seven 20-minute US stations and the five Australian ones, pooled and by group (the five numbers), which is the sub-hourly result; the stations where the warm-up applied and
+the stretch chosen for each; every station where anything is worse.
+
+**What this is not.** Still injected faults, still not IMD, 20-minute and not 1-15-minute cadence. The US stations are airport automated stations, not a meteorological service's AWS network.

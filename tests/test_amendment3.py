@@ -1,5 +1,6 @@
 """Amendment 3: two remedies behind flags that are off by default (an expected-change-aware step rule, a sustained one-channel offset
 check), and the FRESH2 configuration set. The flags do not change anything unless switched on."""
+import pandas as pd
 import pytest
 
 from atmos.config import load_settings
@@ -200,3 +201,45 @@ def test_limits_notice_says_when_a_noise_limit_was_not_learned_and_never_changes
     for r_ in hist:
         v = pipe.process(r_.model_copy(update={"station_id": "S1"}))
     assert v.verdict.value == "VALID" and any("noise limit" in n for n in v.notices)
+
+
+# ---- Amendment 4: the warm-up stretch and the FRESH3 configuration set ---------------------------------------------
+def _frame(irregular_until, days=400):
+    import pandas as pd
+    stamps = []
+    t = pd.Timestamp("2020-01-01")
+    end = t + pd.Timedelta(days=days)
+    cut = pd.Timestamp(irregular_until)
+    while t < end:
+        stamps.append(t)
+        if t < cut:
+            t += pd.Timedelta(hours=1 if len(stamps) % 2 else 2)         # the alternating 1 h / 2 h pattern, and only 16 hours a day
+            if t.hour >= 16:
+                t = t.normalize() + pd.Timedelta(days=1)
+        else:
+            t += pd.Timedelta(hours=1)
+    return pd.DataFrame({"timestamp": stamps})
+
+
+def test_warm_stretch_starts_at_the_first_regular_stretch_and_uses_timestamps_only():
+    import evaluate_real as er
+    f = _frame("2020-07-01")
+    lo, hi = pd.Timestamp("2020-01-01"), pd.Timestamp("2021-02-01")
+    start, end, cad = er.warm_stretch(f, lo, hi)
+    assert cad == 60.0 and start >= pd.Timestamp("2020-06-25") and (end - start).days == er.WARM_DAYS
+    never = er.warm_stretch(_frame("2030-01-01"), lo, hi)                       # never hourly: the cadence "it has now" is the irregular one
+    assert never is None or never[2] != 60.0
+
+
+def test_fresh3_configs_are_full_and_the_warm_up_variant_plus_baselines():
+    import evaluate_real as er
+    from atmos.limits import fit_limits
+    from atmos.mlmodel import IsolationModel, MahalanobisModel
+    from atmos.normality import NormalityTable
+    from tests.test_limits import rounded_series
+    s = er.real_settings(load_settings())
+    train = rounded_series(seed=5)
+    table, model = NormalityTable.fit(train, s), IsolationModel.fit(train, s)
+    lim, mahal = fit_limits(train, s, CAD), MahalanobisModel.fit(train, s, table)
+    names = [n for n, _, _ in er.build_configs(s, table, model, lim, train, "S1", float(CAD), mahal, "FRESH3", lim)]
+    assert names[:2] == ["full", "r6_warmup"] and "baseline_rules" in names and not any(n.startswith("no_") for n in names)

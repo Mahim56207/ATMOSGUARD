@@ -39,3 +39,20 @@ def test_from_and_to_cut_the_stretch(tmp_path):
     a = refit.read_stretch(p, "S", str(mid), None)
     b = refit.read_stretch(p, "S", None, str(mid))
     assert len(a) + len(b) == len(readings) and min(r.timestamp for r in a) >= mid
+
+
+def test_complete_keeps_saved_limits_and_fills_the_unlearned_one(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from atmos.limits import StationLimits, fit_limits
+    s = load_settings()
+    monkeypatch.setattr(refit, "model_path", lambda settings, st, kind, suffix: tmp_path / f"{st}_{kind}{suffix}")
+    readings = rounded_series(seed=5)
+    learned = fit_limits(readings, s, 60.0)
+    base = StationLimits("NEW1", 60.0, {ch: replace(c, noise_std=None) if ch == "humidity_pct" else c for ch, c in learned.channels.items()})
+    base.save(tmp_path / "NEW1_limits.json")
+    out = refit.complete(readings, "NEW1", s)
+    saved = StationLimits.load(tmp_path / "NEW1_limits.json")
+    assert out["noise_limit_learned"]["humidity_pct"] and saved.noise_std("humidity_pct") is not None
+    assert saved.noise_std("temperature_c") == learned.noise_std("temperature_c")
+    with pytest.raises(ValueError, match="no saved limits"):
+        refit.complete(readings, "OTHER", s)

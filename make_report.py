@@ -22,13 +22,15 @@ from make_summary import markdown_table
 
 REPO = Path(__file__).resolve().parent
 DOCS = REPO / "docs"
-PHASE_ORDER = ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH", "FRESH2", "FRESH2_INDIA", "FRESH2_AWS")
+PHASE_ORDER = ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH", "FRESH2", "FRESH2_INDIA", "FRESH2_AWS", "FRESH3", "FRESH3_US", "FRESH3_AUS")
 PHASE_SHORT = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "holdout in time (same six stations, 2022-2024)",
                "HOLDOUT_SPACE": "holdout in space (eight unseen stations)",
                "FRESH": "fresh stations (twelve more, sealed before the remedies were tested)",
                "FRESH2": "fresh-2 stations (a third set of twelve: five Indian airports, seven Australian automatic weather stations)",
                "FRESH2_INDIA": "fresh-2, the five Indian airport stations",
-               "FRESH2_AWS": "fresh-2, the seven Australian automatic weather stations"}
+               "FRESH2_AWS": "fresh-2, the seven Australian automatic weather stations",
+               "FRESH3": "fresh-3 stations (a fourth set of twelve: seven US 20-minute stations, five Australian AWS)",
+               "FRESH3_US": "fresh-3, the seven US 20-minute stations", "FRESH3_AUS": "fresh-3, the five Australian AWS"}
 
 REFERENCES = """\
 1. Smith, A., Lott, N., Vose, R. (2011). The Integrated Surface Database: recent developments and partnering with the National Climatic Data Center. *Bulletin of the American Meteorological Society* 92, 704-708.
@@ -107,7 +109,7 @@ def unseen_windows(summary: dict) -> str:
     """'3 of 98 on the eight holdout stations, 3 of 139 on the twelve fresh ones', from the tables."""
     parts = []
     for ph, label in (("HOLDOUT_SPACE", "on the eight holdout stations"), ("FRESH", "on the twelve fresh ones"),
-                      ("FRESH2", "on the twelve fresh-2 ones")):
+                      ("FRESH2", "on the twelve fresh-2 ones"), ("FRESH3", "on the twelve fresh-3 ones")):
         if ph in summary["phases"]:
             with_fault, windows = summary["phases"][ph]["extreme_weather"]["rows"][0]["windows with a FAULT"].split("/")
             parts.append(f"{with_fault} of {windows} {label}")
@@ -143,7 +145,7 @@ def results_section(summary: dict) -> str:
             continue
         p = summary["phases"][k]
         L += [head(p["title"]), "", f"*{p['subtitle']}* Stations: {', '.join(p['stations'])}.", ""]
-        for key in ("headline", "detection", "detection_ci", "detection_named", "remedies", "amendment3", "clean", "extreme_weather", "noaa", "drift", "by_station"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "remedies", "amendment3", "amendment4", "clean", "extreme_weather", "noaa", "drift", "by_station"):
             if key not in p:
                 continue
             t = p[key]

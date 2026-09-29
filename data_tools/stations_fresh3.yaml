@@ -1,0 +1,21 @@
+# The FRESH3 stations (Amendment 4 in config/protocol.md): twelve stations not used for anything before that amendment was written. Seven are US automated weather
+# stations (AWOS/ASOS) that report **every 20 minutes** at 0.1 C, the first sub-hourly, fine-resolution records in this project (routine METAR at :15, :35, :55;
+# pressure is the altimeter setting). Five are Australian Bureau of Meteorology automatic stations whose 2016-2019 records were irregular (about 16 reports a day with
+# alternating 1 h and 2 h gaps) and hourly all day from 2020, the pattern that left four FRESH2 stations without a learned noise limit. Selection rule, fixed before any
+# verdict was computed: at least 60 % of the expected reports carry temperature, dew point and pressure in both the training years (2016-2019) and the test years
+# (2020-2024). The US stations are those of a random sample of stations that reported at a 20-minute median cadence with tenth-degree values; the Australian ones were
+# downloaded earlier for a coverage scout and not used. Source: NOAA ISD (noaa-global-hourly-pds).
+years: {first: 2016, last: 2024}
+stations:
+  FHB: {file: '72028404877', name: 'Fitch H Beach Airport, Michigan', lat: 42.574, lon: -84.811, elevation_m: 267.6, climate_zone: humid continental Great Lakes, source: metar, cadence_minutes: 20, any_minute: true}
+  PTT: {file: '74543093978', name: 'Pratt Industrial Airport, Kansas', lat: 37.702, lon: -98.747, elevation_m: 595.0, climate_zone: 'central plains, tornado belt', source: metar, cadence_minutes: 20, any_minute: true}
+  MDS: {file: '72030763804', name: 'Madison County Executive Airport, Alabama', lat: 34.861, lon: -86.557, elevation_m: 230.1, climate_zone: humid subtropical southeast, source: metar, cadence_minutes: 20, any_minute: true}
+  LPO: {file: '72102900347', name: La Porte Municipal Airport, lat: 41.572, lon: -86.735, elevation_m: 247.2, climate_zone: humid continental, source: metar, cadence_minutes: 20, any_minute: true}
+  GGW: {file: '72232200361', name: 'Glasgow Municipal Airport, Montana', lat: 37.033, lon: -85.95, elevation_m: 218.2, climate_zone: 'semi-arid northern plains, extreme cold', source: metar, cadence_minutes: 20, any_minute: true}
+  GRC: {file: '72046700148', name: 'George R Carr Memorial Air Field, Florida', lat: 30.817, lon: -89.867, elevation_m: 36.6, climate_zone: 'humid subtropical, hurricane coast', source: metar, cadence_minutes: 20, any_minute: true}
+  HUT: {file: '72656904933', name: 'Hutchinson Municipal Butler Field, Kansas', lat: 44.859, lon: -94.382, elevation_m: 323.1, climate_zone: central plains, source: metar, cadence_minutes: 20, any_minute: true}
+  WEI: {file: '94170099999', name: Weipa Aero, lat: -12.683, lon: 141.917, elevation_m: 19.0, climate_zone: 'Cape York tropical, cyclone exposure', source: synop, cadence_minutes: 60}
+  TNC: {file: '94238099999', name: Tennant Creek Airport, lat: -19.633, lon: 134.183, elevation_m: 377.0, climate_zone: central Australian semi-arid, source: synop, cadence_minutes: 60}
+  ASP: {file: '94326099999', name: Alice Springs, lat: -23.807, lon: 133.902, elevation_m: 545.28, climate_zone: central Australian desert, source: synop, cadence_minutes: 60}
+  LRM: {file: '94302099999', name: Learmonth, lat: -22.236, lon: 114.089, elevation_m: 5.79, climate_zone: 'north-west coast, cyclone exposure', source: synop, cadence_minutes: 60}
+  BRM: {file: '94203099999', name: Broome International, lat: -17.945, lon: 122.232, elevation_m: 17.06, climate_zone: 'Kimberley coast, tropical', source: synop, cadence_minutes: 60}

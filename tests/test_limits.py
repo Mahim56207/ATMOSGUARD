@@ -130,3 +130,18 @@ def test_fit_refuses_two_stations(series, settings):
     mixed = series[:300] + [r.model_copy(update={"station_id": "OTHER"}) for r in series[300:600]]
     with pytest.raises(ValueError):
         fit_limits(mixed, settings, HOURLY)
+
+
+def test_complete_limits_fills_only_what_was_not_learned():
+    from dataclasses import replace
+    from atmos.limits import ChannelLimits, StationLimits, complete_limits, fit_limits
+    from atmos.config import load_settings
+    s = load_settings()
+    stretch = rounded_series(seed=8)
+    learned = fit_limits(stretch, s, 60.0)
+    base = StationLimits(learned.station_id, 60.0, {ch: replace(c, noise_std=None) if ch == "temperature_c" else c for ch, c in learned.channels.items()})
+    base.channels["pressure_hpa"].frozen_minutes = 12345.0                       # a learned value must survive
+    out = complete_limits(base, stretch, s, 60.0)
+    assert out.noise_std("temperature_c") == pytest.approx(learned.noise_std("temperature_c"))
+    assert out.channels["pressure_hpa"].frozen_minutes == 12345.0
+    assert out.noise_std("pressure_hpa") == base.noise_std("pressure_hpa")

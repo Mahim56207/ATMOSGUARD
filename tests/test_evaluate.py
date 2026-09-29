@@ -277,9 +277,20 @@ def test_fresh2_guard_needs_amendment_3_and_has_its_own_lock(cfg, repo, tmp_path
         ev.guard_fresh2(cfg, repo, tmp_path / "data")
 
 
+def test_fresh3_guard_needs_amendment_4_and_has_its_own_lock(cfg, repo, tmp_path):
+    with pytest.raises(ev.HoldoutError, match="Amendment 4"):
+        ev.guard_fresh3(cfg, repo, tmp_path / "data")
+    (repo / "config/protocol.md").write_text("# Protocol\nDone.\n\n## Amendment 4\nThe fourth set.\n")
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "amendment"], check=True)
+    ev.guard_fresh3(cfg, repo, tmp_path / "data")
+    assert (tmp_path / "data/fresh3/.fresh3_used").exists() and not (tmp_path / "data/fresh2/.fresh2_used").exists()
+    with pytest.raises(ev.HoldoutError, match="already used"):
+        ev.guard_fresh3(cfg, repo, tmp_path / "data")
+
+
 def test_replay_refuses_the_fresh_folder_like_the_holdout(cfg, tmp_path):
     import replay
-    for sealed in ("holdout", "fresh", "fresh2"):
+    for sealed in ("holdout", "fresh", "fresh2", "fresh3"):
         with pytest.raises(ValueError, match="Replay will not read it"):
             replay.check_path(tmp_path / "data" / sealed / "x.csv", cfg)
     replay.check_path(tmp_path / "data" / "fresh" / "x.csv", cfg, allow_holdout=True)      # the evaluation, behind its guard

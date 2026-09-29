@@ -40,7 +40,7 @@ from atmos.config import CONFIG_DIR, load_settings
 from atmos.fusion import Pipeline
 from atmos.injector import ALL_FAULT_TYPES, InjectionResult, inject, make_plan
 from atmos import healthscore
-from atmos.limits import StationLimits, fit_limits
+from atmos.limits import StationLimits, complete_limits, fit_limits
 from atmos.mlmodel import IsolationModel, MahalanobisModel, build_features
 from atmos.normality import NormalityTable
 from atmos.schema import CHANNELS, Reading
@@ -53,6 +53,9 @@ REAL_FRESH_DIR = REPO / "data" / "fresh" / "real"
 FRESH_EVENTS_JSON = REPO / "data" / "fresh" / "events.json"
 REAL_FRESH2_DIR = REPO / "data" / "fresh2" / "real"
 FRESH2_EVENTS_JSON = REPO / "data" / "fresh2" / "events.json"
+REAL_FRESH3_DIR = REPO / "data" / "fresh3" / "real"
+FRESH3_EVENTS_JSON = REPO / "data" / "fresh3" / "events.json"
+WARM_DAYS = 60                     # Amendment 4: days of regular reporting a station with an unlearned noise limit learns it from
 RESULTS_DIR = REPO / "results"
 TRAIN_END = pd.Timestamp("2020-01-01")          # training = everything before this
 DEV_END = pd.Timestamp("2022-01-01")
@@ -288,9 +291,16 @@ def amendment3_variants(base: dict) -> list[tuple[str, dict]]:
 
 def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, limits: StationLimits,
                   train: list[Reading], sid: str, cadence: float,
-                  mahal: Optional[MahalanobisModel] = None, phase: str = "DEV") -> list[tuple[str, str, Predictor]]:
+                  mahal: Optional[MahalanobisModel] = None, phase: str = "DEV",
+                  limits_alt: Optional[StationLimits] = None) -> list[tuple[str, str, Predictor]]:
     settings = pin_registered(copy.deepcopy(settings))          # `full`, the ablations and the baselines are the pipeline that was
-    if phase == "FRESH2":                                       # registered and reported (all remedies off), whatever the shipped default is now
+    if phase == "FRESH3":                                       # Amendment 4: `full` is the shipped pipeline (remedies 1 and 3 on); r6_warmup adds the warm-up limits
+        shipped = copy.deepcopy(settings)
+        shipped["health"]["frozen"]["ceiling_aware"] = True
+        shipped["health"]["step"]["expected_aware"] = True
+        cfgs = [("full", "full", pipeline_predictor(shipped, table, model, limits, sid, cadence, mahal)),
+                ("r6_warmup", "remedy", pipeline_predictor(shipped, table, model, limits_alt or limits, sid, cadence, mahal))]
+    elif phase == "FRESH2":                                     # registered and reported (all remedies off), whatever the shipped default is now
         shipped = copy.deepcopy(settings)
         shipped["health"]["frozen"]["ceiling_aware"] = True     # FRESH2's `full` is the pipeline as shipped before Amendment 3 (remedy 1 adopted)
         cfgs = [("full", "full", pipeline_predictor(shipped, table, model, limits, sid, cadence, mahal)),
@@ -300,12 +310,12 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
     else:
         cfgs = [("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
     for name, frozen, step in ((("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True))
-                               if phase != "FRESH2" else ()):
+                               if phase not in ("FRESH2", "FRESH3") else ()):
         variant = copy.deepcopy(settings)                       # the two remedies of docs/HOLDOUT_POSTMORTEM.md (off in "full")
         variant["health"]["frozen"]["ceiling_aware"] = frozen
         variant["limits"]["learned_step_cap"] = step
         cfgs.append((name, "remedy", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
-    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase != "FRESH2" else ()):
+    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase not in ("FRESH2", "FRESH3") else ()):
         variant = copy.deepcopy(settings)
         variant["layers"][layer] = False
         cfgs.append((f"no_{layer}", "ablation", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
@@ -530,6 +540,28 @@ class PhasePlan:
     allow_holdout: bool
 
 
+def warm_stretch(frame: pd.DataFrame, lo: pd.Timestamp, hi: pd.Timestamp) -> Optional[tuple[pd.Timestamp, pd.Timestamp, float]]:
+    """Amendment 4. The first WARM_DAYS days of the judged period in which the station reports regularly at the cadence it has now (at least 90 % of the expected
+    reports on at least 90 % of the days). Uses timestamps only, never the values or a verdict. Returns (start, end, cadence in minutes) or None."""
+    f = frame[(frame["timestamp"] >= lo) & (frame["timestamp"] < hi)]
+    if len(f) < 1000:
+        return None
+    recent = f[f["timestamp"] >= hi - pd.DateOffset(years=1)]
+    cad = float(recent["timestamp"].diff().dt.total_seconds().median() / 60.0)
+    if not cad or cad <= 0:
+        return None
+    per_day = 1440.0 / cad
+    days = f.groupby(f["timestamp"].dt.floor("D")).size()
+    days = days.reindex(pd.date_range(days.index.min(), days.index.max(), freq="D"), fill_value=0)
+    good = (days >= 0.9 * per_day).astype(int)
+    roll = good.rolling(WARM_DAYS).sum()
+    ok = roll[roll >= 0.9 * WARM_DAYS]
+    if ok.empty:
+        return None
+    end = ok.index[0] + pd.Timedelta(days=1)
+    return end - pd.Timedelta(days=WARM_DAYS), end, cad
+
+
 def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: list[dict],
                      parts: frozenset = frozenset({"detect", "events", "noaa", "drift", "latency"})) -> dict:
     s = real_settings(settings)
@@ -550,8 +582,19 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     mahal = MahalanobisModel.fit(train, s, table)
     fit_seconds = time.time() - t0
 
-    # ---- the evaluation period
+    # ---- Amendment 4: a station whose training record left a noise limit unlearned learns it from its first regular stretch, and every configuration is judged after it
+    warm_info, limits_warm = None, None
     lo, hi = plan.period
+    if plan.name == "FRESH3" and any(c.noise_std is None for c in limits.channels.values()):
+        ws = warm_stretch(df_eval_src, lo, hi)
+        if ws is not None:
+            wstart, wend, wcad = ws
+            wframe = df_eval_src[(df_eval_src["timestamp"] >= wstart) & (df_eval_src["timestamp"] < wend)]
+            wread = [r for c in cut_chunks(wframe, windows_all, min_rows=1) for r in to_readings(c)]
+            limits_warm = complete_limits(limits, wread, s, wcad)
+            warm_info = {"start": wstart.isoformat(), "end": wend.isoformat(), "cadence_minutes": wcad, "readings": len(wread),
+                         "noise_learned": {ch: c.noise_std is not None for ch, c in limits_warm.channels.items()}}
+            lo = wend
     if quick:
         hi = min(hi, lo + pd.DateOffset(years=1))
     period_df = df_eval_src[(df_eval_src["timestamp"] >= lo) & (df_eval_src["timestamp"] < hi)]
@@ -563,7 +606,7 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     rounds = 1 if quick else s["evaluate"]["injection_rounds"]
     faulted = make_faulted(clean, s, rounds, min_len=int(30 * 1440 / cadence))
 
-    configs = build_configs(s, table, model, limits, train, sid, cadence, mahal, plan.name)
+    configs = build_configs(s, table, model, limits, train, sid, cadence, mahal, plan.name, limits_warm)
     results = {}
     if parts & {"detect", "events"}:
         for name, kind, predict in configs:
@@ -590,7 +633,7 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     return {"station": sid, "phase": plan.name, "cadence_minutes": cadence, "train_rows": len(train),
             "fit_seconds": round(fit_seconds, 2), "clean_rows": sum(len(c) for c in clean),
             "event_rows_cut_noaa": event_rows_cut, "n_events": len(event_series),
-            "n_fault_series": len(faulted), "limits": {ch: vars(c) for ch, c in limits.channels.items()},
+            "n_fault_series": len(faulted), "limits": {ch: vars(c) for ch, c in limits.channels.items()}, "warm": warm_info,
             "latency_ms": {"median": round(float(np.median(lat)), 3) if lat else None,
                            "p95": round(float(np.percentile(lat, 95)), 3) if lat else None},
             "configs": results, **extra}
@@ -605,7 +648,7 @@ def _worker(args):
 # orchestration and report
 # ====================================================================================================
 def load_events(phase: str = "DEV") -> dict:
-    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON}.get(phase, EVENTS_JSON)
+    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON, "FRESH3": FRESH3_EVENTS_JSON}.get(phase, EVENTS_JSON)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -632,6 +675,10 @@ def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
         for sid in sealed:                                           # a third set, twelve stations, Indian airports and Australian AWS (Amendment 3)
             p = REAL_FRESH2_DIR / f"{sid}.csv"
             plans.append(PhasePlan("FRESH2", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
+    elif phase == "FRESH3":
+        for sid in sealed:                                           # a fourth set: seven US 20-minute stations and five Australian AWS with irregular training years (Amendment 4)
+            p = REAL_FRESH3_DIR / f"{sid}.csv"
+            plans.append(PhasePlan("FRESH3", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
     return plans
 
 
@@ -789,6 +836,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     g.add_argument("--holdout", action="store_true")
     g.add_argument("--fresh", action="store_true", help="the twelve FRESH stations (Amendment 2 in config/protocol.md)")
     g.add_argument("--fresh2", action="store_true", help="the twelve FRESH2 stations (Amendment 3 in config/protocol.md)")
+    g.add_argument("--fresh3", action="store_true", help="the twelve FRESH3 stations (Amendment 4 in config/protocol.md)")
     ap.add_argument("--quick", action="store_true", help="one year and one fault round: for tuning loops only")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stations", nargs="*", help="only these stations")
@@ -799,7 +847,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="reproduce a holdout run that was already made (the original lock file stays in git history)")
     args = ap.parse_args(argv)
     settings = load_settings()
-    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "DEV"
+    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "FRESH3" if args.fresh3 else "DEV"
+    if args.fresh3:
+        lock = REPO / "data" / "fresh3" / ev.FRESH3_LOCK_NAME
+        if args.force_rerun_holdout and lock.exists():
+            print(f"Re-running the FRESH3 evaluation to reproduce it. The first run is recorded in {lock}.")
+        else:
+            try:
+                ev.guard_fresh3(settings, REPO, REPO / "data")
+            except ev.HoldoutError as e:
+                print(f"Cannot run the FRESH3 evaluation: {e}")
+                return 2
     if args.fresh2:
         lock = REPO / "data" / "fresh2" / ev.FRESH2_LOCK_NAME
         if args.force_rerun_holdout and lock.exists():
@@ -837,7 +895,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                                                   "HOLDOUT_TIME": "HOLDOUT in time (DEV stations, 2022-2024)",
                                                                   "HOLDOUT_SPACE": "HOLDOUT in space (sealed stations, 2020-2024)",
                                                                   "FRESH": "FRESH (twelve stations nobody had looked at, 2020-2024)",
-                                                                  "FRESH2": "FRESH2 (a third set of twelve: Indian airports and Australian AWS, 2020-2024)"}[ph]))
+                                                                  "FRESH2": "FRESH2 (a third set of twelve: Indian airports and Australian AWS, 2020-2024)",
+                                                                  "FRESH3": "FRESH3 (a fourth set of twelve: seven US 20-minute stations and five Australian AWS, 2020-2024)"}[ph]))
     print("\n\n".join(text))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
