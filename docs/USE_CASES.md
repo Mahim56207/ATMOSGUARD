@@ -26,8 +26,8 @@ can see* at that station, so a technician knows what "no drift found" does and d
 
 ## 5. Sparse and remote networks (Ladakh, the Thar, the Andamans)
 Most operational QC compares a station with its neighbours or with a forecast model. That fails where the nearest station is
-hundreds of kilometres away. Every AtmosGuard check uses one station and its own history, and a new station can borrow its
-climate zone's normal pattern on day one.
+hundreds of kilometres away. Every AtmosGuard check uses one station and its own history, and a new station starts from a frozen
+table of its nearest other station on day one, then leans on its own history as it grows (the cold-start table in `results/REPORT.md`).
 
 ## Who acts on what
 | Output | Consumer | Action |
