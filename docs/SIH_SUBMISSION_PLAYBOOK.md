@@ -48,8 +48,10 @@ break-the-sensor-on-demand control. That maps to the criteria as follows.
 3. **Measure the current** in three states with a USB power meter (the energy table).
 4. **Record the backup demo video** from `docs/DEMO_RUNBOOK.md` with the venue's network off, and keep it on the laptop.
 5. **Rehearse with the Q&A** in `docs/JUDGE_QA.md`, out loud, with a stopwatch.
-6. **Optional but the strongest addition: real IMD or AWS data.** If any faculty or contact can share even a few weeks of a real AWS
-   record, put it in `data/real/` in the same CSV layout and run `python evaluate_real.py` on it.
+6. **Optional but the strongest addition: real IMD or AWS data.** If any faculty or contact can share a real AWS record (about two
+   years are needed so every month has data), run `python evaluate_csv.py their.csv --station NAME` and read
+   [`USE_YOUR_DATA.md`](USE_YOUR_DATA.md). It gives the same tables for that station. Even a shorter record is worth trying with `--quick`;
+   the script says how weak the result will be.
 7. **The PPT** - after you have read the results and decided what to lead with.
 
 ## The three claims to lead with, and the three not to make

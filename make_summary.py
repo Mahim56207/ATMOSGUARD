@@ -324,6 +324,16 @@ def judge_block(summary: dict) -> str:
         rows = summary["phases"][k]["headline"]["rows"]
         L.append(f"- **{label}:** clean data: {rows[0]['answer']}. Real extreme weather: {rows[1]['answer']}. "
                  f"Injected faults raised the alarm: {rows[2]['answer']}.")
+    sc = summary.get("scale")
+    if sc:
+        big = sc["pipeline"][-1]
+        L.append(f"- **Speed (simulated stations, one machine, in-process):** median {big['median_ms']} ms and 99th percentile "
+                 f"{big['p99_ms']} ms per reading with {big['stations']} stations, {big['readings_per_second']} readings/s.")
+        h = sc.get("http")
+        if h:
+            L.append(f"- **Speed through the real HTTP server (FastAPI + SQLite, {h['stations']} stations, {h['clients']} clients):** "
+                     f"median {h['median_ms']} ms, 95th percentile {h['p95_ms']} ms, {h['requests_per_second']} requests/s, "
+                     f"{h['errors']} errors.")
     return "\n".join(L)
 
 
