@@ -40,6 +40,19 @@ Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series wi
 | (faults injected) | 243 | 243 | 243 | 243 | 243 | 220 |
 | AtmosGuard: median minutes to the alarm | 480 | 0 | 0 | 420 | 0 | 1140 |
 
+### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 243 | 100.0% (98.4-100.0) | 95.1% (91.6-97.2) |
+| spike | 243 | 97.5% (94.7-98.9) | 12.3% (8.8-17.1) |
+| level shift | 243 | 97.1% (94.2-98.6) | 11.5% (8.1-16.1) |
+| noise burst | 243 | 77.8% (72.1-82.5) | 15.6% (11.6-20.7) |
+| dropout | 243 | 99.2% (97.0-99.8) | 99.2% (97.0-99.8) |
+| clock 3 h out | 220 | 96.8% (93.6-98.5) | 0.5% (0.1-2.5) |
+
 ### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
 
 A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
@@ -212,6 +225,19 @@ Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series wi
 | (faults injected) | 279 | 279 | 279 | 279 | 279 | 260 |
 | AtmosGuard: median minutes to the alarm | 480 | 0 | 0 | 420 | 0 | 1050 |
 
+### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 279 | 100.0% (98.6-100.0) | 95.0% (91.8-97.0) |
+| spike | 279 | 96.4% (93.5-98.0) | 14.7% (11.0-19.3) |
+| level shift | 279 | 98.2% (95.9-99.2) | 14.7% (11.0-19.3) |
+| noise burst | 279 | 79.2% (74.1-83.6) | 12.5% (9.2-16.9) |
+| dropout | 279 | 99.6% (98.0-99.9) | 99.6% (98.0-99.9) |
+| clock 3 h out | 260 | 96.9% (94.0-98.4) | 0.0% (0.0-1.5) |
+
 ### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
 
 A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
@@ -383,6 +409,19 @@ Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series wi
 | baseline: Mahalanobis distance only | 40% | 98% | 88% | 63% | 0% | 49% |
 | (faults injected) | 702 | 702 | 702 | 702 | 702 | 619 |
 | AtmosGuard: median minutes to the alarm | 480 | 0 | 0 | 360 | 0 | 1020 |
+
+### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 702 | 99.9% (99.2-100.0) | 95.9% (94.1-97.1) |
+| spike | 702 | 89.7% (87.3-91.8) | 17.0% (14.4-19.9) |
+| level shift | 702 | 89.0% (86.5-91.1) | 13.4% (11.1-16.1) |
+| noise burst | 702 | 67.4% (63.8-70.7) | 11.3% (9.1-13.8) |
+| dropout | 702 | 98.4% (97.2-99.1) | 98.4% (97.2-99.1) |
+| clock 3 h out | 619 | 83.5% (80.4-86.2) | 0.5% (0.2-1.4) |
 
 ### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
 
@@ -560,6 +599,19 @@ Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series wi
 | baseline: Mahalanobis distance only | 39% | 99% | 82% | 51% | 0% | 45% |
 | (faults injected) | 918 | 918 | 918 | 918 | 918 | 794 |
 | AtmosGuard: median minutes to the alarm | 420 | 0 | 0 | 420 | 0 | 1140 |
+
+### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 918 | 99.1% (98.3-99.6) | 89.4% (87.3-91.3) |
+| spike | 918 | 91.1% (89.0-92.7) | 18.1% (15.7-20.7) |
+| level shift | 918 | 80.3% (77.6-82.7) | 14.3% (12.2-16.7) |
+| noise burst | 918 | 57.3% (54.1-60.5) | 9.6% (7.8-11.7) |
+| dropout | 918 | 98.4% (97.3-99.0) | 98.4% (97.3-99.0) |
+| clock 3 h out | 794 | 85.1% (82.5-87.4) | 1.5% (0.9-2.6) |
 
 ### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
 

@@ -275,6 +275,14 @@ def phase_tables(agg: dict) -> dict:
                              "(T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.",
                   "rows": drift_rows},
     }
+    result["detection_ci"] = {"title": "1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)",
+                              "caption": "Faults are injected at random places; each row's interval says how much the percentage could move with another "
+                                         "draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a "
+                                         "guide, not a guarantee.",
+                              "rows": [{"fault type": TYPE_NAMES[ty], "injected": det[ty]["injected"],
+                                        "raised the alarm (fault-raised)": ci_pct(det[ty].get("detected_new", 0), det[ty]["injected"]),
+                                        "named FAULT": ci_pct(det[ty].get("named_fault", 0), det[ty]["injected"])}
+                                       for ty in er.REAL_TYPES if det[ty]["injected"]]}
     rr = remedy_rows(agg)
     if rr:
         result["remedies"] = {"title": "The two remedies from the post-mortem, judged by the decision rule registered in Amendment 2",
@@ -349,7 +357,7 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift"):
             if key not in ph:
                 continue
             t = ph[key]

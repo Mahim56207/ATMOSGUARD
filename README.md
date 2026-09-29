@@ -68,6 +68,9 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
 - **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
   takes hours by design (it has to stay stuck longer than real weather can). On the unseen stations (both sets) detection is lower than on DEV
   for spikes, level shifts, noise bursts and wrong clocks (table above).
+- **Most detections of spikes, level shifts, noise bursts and wrong clocks are `SUSPECT` (review), not `FAULT`.** `FAULT` is for frozen sensors, dropouts,
+  impossible values and a lone jumping channel; the table "How AtmosGuard names what it detects" in [`results/REPORT.md`](results/REPORT.md) gives the share named
+  `FAULT` for every type. "Detected" in the tables means an alarm of either kind.
 - **Simpler detectors beat us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
   pipeline (and level shifts on DEV and the fresh stations) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong
   clocks. The textbook range + step + persistence rules detect wrong clocks better than we do on both sets of unseen stations (and noise bursts on

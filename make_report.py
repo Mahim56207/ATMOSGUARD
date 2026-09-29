@@ -122,7 +122,7 @@ def results_section(summary: dict) -> str:
             continue
         p = summary["phases"][k]
         L += [head(p["title"]), "", f"*{p['subtitle']}* Stations: {', '.join(p['stations'])}.", ""]
-        for key in ("headline", "detection", "detection_named", "remedies", "clean", "extreme_weather", "noaa", "drift", "by_station"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "remedies", "clean", "extreme_weather", "noaa", "drift", "by_station"):
             if key not in p:
                 continue
             t = p[key]
