@@ -94,7 +94,7 @@ The dashboard has a **Live monitor**, a **Network** view (every station, most ur
 level shift, drift, noise, dropout), and watch the verdict, the reason and the health score react. **No server?**
 Open [`docs/demo/index.html`](docs/demo/index.html): a self-contained replay of six real events with the pipeline's actual verdicts.
 
-Also: `python -m pytest -q` (400+ tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -
+`make api`, `make dashboard`, `make replay`, `make test` do the same in one word each. Also: `python -m pytest -q` (400+ tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -
 full reproduction commands in [`docs/REPRODUCE.md`](docs/REPRODUCE.md).
 
 ## How it works
