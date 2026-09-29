@@ -8,6 +8,10 @@ A broken barometer and a cyclone look the same on a chart. AtmosGuard answers pe
 `VALID | WEATHER | SUSPECT | FAULT`: real weather is **escalated as an alert, never deleted as noise**, and every verdict comes
 with a plain-English reason, a health score and a service-date estimate. The raw value is never overwritten.
 
+![The real dashboard: a frozen barometer armed on top of a real thunderstorm outflow at Delhi. The red crosses are the injected fault (FAULT); the purple triangles are the real weather (WEATHER).](docs/screenshots/03_live_monitor_injected_fault_delhi.png)
+
+*The real dashboard on the real pipeline: at Delhi a frozen barometer is armed on top of a real thunderstorm outflow. The red crosses are the fault; the purple triangles are the real weather, escalated and not deleted.*
+
 ## What makes this submission different (and what it does not claim)
 - **We do not claim a new algorithm.** Physics checks, persistence tests, CUSUM, Isolation Forest and SHAP are standard. See
   [`docs/NOVELTY_AND_PRIOR_ART.md`](docs/NOVELTY_AND_PRIOR_ART.md) for what is standard, what we adapted (and from whom), and what is ours.
@@ -85,6 +89,8 @@ Also: `python -m pytest -q` (340+ tests) - `docker compose up --build` - `python
 full reproduction commands in [`docs/REPRODUCE.md`](docs/REPRODUCE.md).
 
 ## How it works
+![What one reading goes through](docs/figures/diagram_pipeline.png)
+
 ```
 ESP32 + BME280 (L0 on device)  -+
 Replay of real records + live   -+-> POST /ingest -> L0 physics -> L1 health -> L2 normality -> L3 Isolation Forest + Mahalanobis
