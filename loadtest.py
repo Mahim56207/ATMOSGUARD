@@ -49,14 +49,15 @@ def rss_mb() -> float:
         return float("nan")
 
 
-def station_series(settings: dict, i: int, days: int) -> list[Reading]:
-    """Fake weather with a station-specific mean and seed. Simulated: says nothing about real stations."""
+def station_series(settings: dict, i: int, days: int, station: Optional[str] = None) -> list[Reading]:
+    """Fake weather with a station-specific mean and seed. Simulated: says nothing about real stations.
+    `station` overrides the id, so the days that get judged carry the id of the station whose models judge them."""
     s = copy.deepcopy(settings)
     syn = s["evaluate"]["synthetic"]
     syn["temperature"]["mean"] = 12.0 + (i * 7 % 23)
     syn["pressure"]["mean"] = 1000.0 + (i * 5 % 20)
     syn["humidity"]["mean"] = 45.0 + (i * 3 % 30)
-    return ev.synthetic_series(s, days, seed=settings["seed"] + i, station=f"ST{i:03d}")
+    return ev.synthetic_series(s, days, seed=settings["seed"] + i, station=station or f"ST{i:03d}")
 
 
 def build_fleet(settings: dict, n: int, train_days: int = 12) -> tuple[dict, dict, dict, dict, dict, dict]:
@@ -70,7 +71,7 @@ def build_fleet(settings: dict, n: int, train_days: int = 12) -> tuple[dict, dic
         models[sid] = IsolationModel.fit(train, settings)
         limits[sid] = fit_limits(train, settings, cad)
         mahal[sid] = MahalanobisModel.fit(train, settings, tables[sid])
-        streams[sid] = station_series(settings, i + 10_000, 3)             # the days that get judged
+        streams[sid] = station_series(settings, i + 10_000, 3, station=sid)   # the days that get judged, under the SAME id
     return tables, models, limits, mahal, streams, {sid: {"cadence_minutes": cad} for sid in tables}
 
 
@@ -174,6 +175,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--http-stations", type=int, default=50)
     ap.add_argument("--http-clients", type=int, default=8)
     ap.add_argument("--no-http", action="store_true")
+    ap.add_argument("--no-forest-rows", action="store_true", help="skip the extra rows with the Isolation Forest layer off")
     ap.add_argument("--out", type=Path, default=REPO / "results" / "scale.json")
     args = ap.parse_args(argv)
     settings = load_settings()
@@ -184,6 +186,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         rows.append(r)
         print(f"{r['stations']:>9}{r['readings_per_second']:>12}{r['median_ms']:>11}{r['p95_ms']:>9}{r['p99_ms']:>9}"
               f"{r['memory_per_station_mb']:>12}{r['storage_per_station']['total_kb']:>19}", flush=True)
+    no_forest = []
+    if not args.no_forest_rows:
+        s_off = copy.deepcopy(settings)
+        s_off["layers"]["mlmodel"] = False
+        print("\nSame test with the Isolation Forest layer switched off (config flag):")
+        for n in (1, 50):
+            r = run_pipeline(s_off, n)
+            no_forest.append(r)
+            print(f"{r['stations']:>9}{r['readings_per_second']:>12}{r['median_ms']:>11}{r['p95_ms']:>9}{r['p99_ms']:>9}", flush=True)
     http = None
     if not args.no_http:
         http = run_http(settings, args.http_stations, args.http_clients)
@@ -192,7 +203,7 @@ def main(argv: Optional[list[str]] = None) -> int:
               f"p99 {http['p99_ms']} ms, errors {http['errors']}")
     out = {"note": "Simulated stations on one machine (a design check, not a deployment proof). "
                    f"cpu_count={os.cpu_count()}, python={sys.version.split()[0]}.",
-           "pipeline_by_station_count": rows, "http": http}
+           "pipeline_by_station_count": rows, "pipeline_without_isolation_forest": no_forest, "http": http}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(out, indent=1), encoding="utf-8")
     return 0

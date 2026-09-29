@@ -35,6 +35,19 @@ with a plain-English reason, a health score and a service-date estimate. The raw
 Real NOAA airport records, 14 Indian stations. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).
 <!-- RESULTS:END -->
 
+### A brand-new station, on its first day
+<!-- COLDSTART:START -->
+| days of own history | with a starter: clean false alarms | with a starter: FAULT on real extreme weather | with a starter: injected faults detected | own data only: clean false alarms | own data only: FAULT on real extreme weather | own data only: injected faults detected |
+|---|---|---|---|---|---|---|
+| 0 | 6.09% | 0.0% | 86.4% | 62.72% | 28.6% | 79.6% |
+| 30 | 5.79% | 0.0% | 85.8% | 16.53% | 4.97% | 84.0% |
+| 90 | 7.34% | 0.0% | 95.7% | 12.83% | 0.03% | 92.0% |
+| 365 | 4.17% | 0.0% | 97.5% | 5.3% | 0.0% | 96.9% |
+| 1460 | 1.88% | 0.0% | 96.3% | 1.88% | 0.0% | 96.3% |
+
+Leave-one-station-out on the six DEV stations, judged on each station's DEV years (2020-2021), which it never trained on. The starter is a frozen normality table and frozen limits from the nearest other station, blended out as the station's own history grows; no live data of another station is used. Injected faults here are frozen, spike and level shift only. Details: [`results/REPORT.md`](results/REPORT.md). (42 jobs, 8.7 minutes on 4 workers.)
+<!-- COLDSTART:END -->
+
 Data caveats that apply to every number: airport METAR/SYNOP records (not IMD AWS records); humidity is derived from the dew point;
 no labelled real faults exist, so detection is measured on injected faults; NOAA's flags are another automated system, not ground truth.
 

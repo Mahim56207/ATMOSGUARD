@@ -26,9 +26,11 @@ def _window(history: Sequence[Reading], minutes: float) -> list[Reading]:
     return [r for r in history if r.timestamp >= cutoff]
 
 
-def _allowed_step(ch: str, minutes_apart: float, settings: dict) -> float:
+def _allowed_step(ch: str, minutes_apart: float, settings: dict, learned_cap: Optional[float] = None) -> float:
+    """Allowed change between two readings. `learned_cap` (remedy 2) can only raise the configured cap, never lower it."""
     cfg = settings["health"]["step"]
-    return min(cfg["rate_per_min"][ch] * minutes_apart, cfg["cap"][ch])
+    cap = cfg["cap"][ch] if not learned_cap else max(cfg["cap"][ch], learned_cap)
+    return min(cfg["rate_per_min"][ch] * minutes_apart, cap)
 
 
 def _gap_limit_minutes(settings: dict, cadence_minutes: float) -> float:
@@ -48,6 +50,17 @@ def _trailing_run_minutes(history: Sequence[Reading], ch: str, epsilon: float, g
             break
         first = r
     return _minutes(first.timestamp, history[-1].timestamp)
+
+
+def _at_humidity_ceiling(history: Sequence[Reading], ch: str, window_minutes: float, cfg: dict) -> bool:
+    """Remedy 1. True when a frozen `ch` is explained by saturated air: humidity itself pinned at its ceiling, or temperature
+    still while humidity has been at its ceiling for the whole window. Pressure is independent of saturation, so a frozen
+    barometer stays a hard flag."""
+    if ch == "pressure_hpa":
+        return False
+    ceiling = cfg["ceiling"]["humidity_pct"]
+    rh = [r.humidity_pct for r in _window(history, window_minutes)]
+    return bool(rh) and all(v is not None and v >= ceiling for v in rh)
 
 
 def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float,
@@ -76,15 +89,22 @@ def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_mi
     if spread <= cfg["epsilon"][ch]:
         run = _trailing_run_minutes(history, ch, cfg["epsilon"][ch], _gap_limit_minutes(settings, cadence_minutes))
         hard = not learned or run >= cfg.get("hard_multiplier", 1.0) * window_min
+        saturated = hard and cfg.get("ceiling_aware") and _at_humidity_ceiling(history, ch, window_min, cfg)
+        if saturated:
+            hard = False
         return CheckResult(check=name, flagged=True, severity="hard" if hard else "soft",
                            reason=f"{ch} has not changed for {max(run, window_min):g} min (stuck at {values[-1]})."
-                                  + ("" if hard else " That is longer than usual for this station, but a long calm "
-                                                     "or a pressure plateau in a deep low can look like this."))
+                                  + ("" if hard and not saturated else
+                                     " Humidity is at its ceiling, and sustained heavy rain holds humidity (and, with it, the "
+                                     "temperature) still for a day or more, so this is a warning, not proof." if saturated else
+                                     " That is longer than usual for this station, but a long calm "
+                                     "or a pressure plateau in a deep low can look like this."))
     return CheckResult(check=name, flagged=False,
                        reason=f"{ch} changed by {spread:g} in the last {window_min:g} min, so it is not frozen.")
 
 
-def check_step(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float) -> CheckResult:
+def check_step(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float,
+               limits: Optional[StationLimits] = None) -> CheckResult:
     name = f"step:{ch}"
     if len(history) < 2:
         return CheckResult(check=name, flagged=False, reason=f"{ch}: only one reading, no step to check.")
@@ -97,7 +117,9 @@ def check_step(history: Sequence[Reading], ch: str, settings: dict, cadence_minu
     if dt > _gap_limit_minutes(settings, cadence_minutes):
         return CheckResult(check=name, flagged=False,
                            reason=f"{ch}: {dt:g} min since the last reading is a gap, so a step cannot be judged.")
-    allowed = _allowed_step(ch, dt, settings)
+    learned = limits.step_cap(ch) if (limits is not None and limits_active(settings)
+                                      and settings["limits"].get("learned_step_cap")) else None
+    allowed = _allowed_step(ch, dt, settings, learned)
     delta = b - a
     if abs(delta) > allowed:
         return CheckResult(check=name, flagged=True,
@@ -259,7 +281,7 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
     for ch in CHANNELS:
         results += [
             check_frozen(history, ch, settings, cadence_minutes, limits),
-            check_step(history, ch, settings, cadence_minutes),
+            check_step(history, ch, settings, cadence_minutes, limits),
             check_spike(history, ch, settings, cadence_minutes),
             check_noise(history, ch, settings, cadence_minutes, limits),
             check_drift(history, ch, (expected or {}).get(ch), settings, (sigma or {}).get(ch), cadence_minutes),

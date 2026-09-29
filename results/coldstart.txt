@@ -1,0 +1,60 @@
+42 jobs to run on 4 workers (0 already done)
+[1/42] DEL 1460 days: 54.4 s | elapsed 1 min | ETA 37 min
+[2/42] MAA 1460 days: 56.5 s | elapsed 1 min | ETA 19 min
+[3/42] CCU 1460 days: 57.2 s | elapsed 1 min | ETA 12 min
+[4/42] BBI 1460 days: 60.0 s | elapsed 1 min | ETA 10 min
+[5/42] JAI 1460 days: 55.7 s | elapsed 2 min | ETA 14 min
+[6/42] BBI  365 days: 56.7 s | elapsed 2 min | ETA 11 min
+[7/42] TRV 1460 days: 58.7 s | elapsed 2 min | ETA 10 min
+[8/42] MAA  365 days: 56.0 s | elapsed 2 min | ETA 8 min
+[9/42] CCU  365 days: 55.8 s | elapsed 3 min | ETA 10 min
+[10/42] JAI  365 days: 52.0 s | elapsed 3 min | ETA 9 min
+[11/42] DEL  365 days: 55.3 s | elapsed 3 min | ETA 8 min
+[12/42] TRV  365 days: 56.3 s | elapsed 3 min | ETA 7 min
+[13/42] BBI  180 days: 53.2 s | elapsed 4 min | ETA 8 min
+[14/42] MAA  180 days: 53.9 s | elapsed 4 min | ETA 7 min
+[15/42] DEL  180 days: 51.7 s | elapsed 4 min | ETA 7 min
+[16/42] CCU  180 days: 55.0 s | elapsed 4 min | ETA 6 min
+[17/42] JAI  180 days: 47.5 s | elapsed 4 min | ETA 7 min
+[18/42] BBI   90 days: 48.1 s | elapsed 5 min | ETA 6 min
+[19/42] TRV  180 days: 51.2 s | elapsed 5 min | ETA 5 min
+[20/42] MAA   90 days: 52.2 s | elapsed 5 min | ETA 5 min
+[21/42] CCU   90 days: 49.9 s | elapsed 5 min | ETA 5 min
+[22/42] JAI   90 days: 45.6 s | elapsed 5 min | ETA 5 min
+[23/42] DEL   90 days: 46.7 s | elapsed 5 min | ETA 4 min
+[24/42] TRV   90 days: 52.2 s | elapsed 5 min | ETA 4 min
+[25/42] BBI   30 days: 48.0 s | elapsed 6 min | ETA 4 min
+[26/42] MAA   30 days: 50.2 s | elapsed 6 min | ETA 4 min
+[27/42] CCU   30 days: 55.8 s | elapsed 6 min | ETA 3 min
+[28/42] DEL   30 days: 50.2 s | elapsed 6 min | ETA 3 min
+[29/42] JAI   30 days: 52.2 s | elapsed 7 min | ETA 3 min
+[30/42] TRV   30 days: 53.4 s | elapsed 7 min | ETA 3 min
+[31/42] BBI    7 days: 48.0 s | elapsed 7 min | ETA 2 min
+[32/42] MAA    7 days: 51.1 s | elapsed 7 min | ETA 2 min
+[33/42] JAI    7 days: 29.3 s | elapsed 8 min | ETA 2 min
+[34/42] DEL    7 days: 39.2 s | elapsed 8 min | ETA 2 min
+[35/42] CCU    7 days: 44.4 s | elapsed 8 min | ETA 2 min
+[36/42] TRV    7 days: 40.5 s | elapsed 8 min | ETA 1 min
+[37/42] BBI    0 days: 28.6 s | elapsed 8 min | ETA 1 min
+[38/42] MAA    0 days: 32.1 s | elapsed 8 min | ETA 1 min
+[39/42] CCU    0 days: 33.2 s | elapsed 8 min | ETA 1 min
+[40/42] DEL    0 days: 29.6 s | elapsed 8 min | ETA 25 s
+[41/42] JAI    0 days: 29.2 s | elapsed 8 min | ETA 12 s
+[42/42] TRV    0 days: 29.3 s | elapsed 9 min | ETA 0 s
+Cold start, leave-one-station-out, six DEV stations (real data). Starter = nearest other station's frozen table.
+ own days mode      clean alarms  clean FAULT  real-weather FAULT  WEATHER  detect (frozen/spike/step)
+        0 starter          6.09%        0.03%                0.0%   18.01%                       86.4%
+        0 own_only        62.72%       34.22%               28.6%     0.0%                       79.6%
+        7 starter          6.09%        0.03%                0.0%   18.01%                       86.4%
+        7 own_only        62.72%       34.22%               28.6%     0.0%                       79.6%
+       30 starter          5.79%        0.03%                0.0%   18.04%                       85.8%
+       30 own_only        16.53%        4.97%               4.97%    0.23%                       84.0%
+       90 starter          7.34%        0.04%                0.0%    21.5%                       95.7%
+       90 own_only        12.83%         0.2%               0.03%    9.91%                       92.0%
+      180 starter          4.92%        0.04%                0.0%   16.07%                       96.3%
+      180 own_only         4.29%        0.14%                0.0%   15.93%                       90.1%
+      365 starter          4.17%        0.01%                0.0%   15.02%                       97.5%
+      365 own_only          5.3%        0.01%                0.0%   20.24%                       96.9%
+     1460 starter          1.88%         0.0%                0.0%   10.73%                       96.3%
+     1460 own_only         1.88%         0.0%                0.0%   10.73%                       96.3%
+finished 42 jobs in 9 min; wrote results/coldstart.json

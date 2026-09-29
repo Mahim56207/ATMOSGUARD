@@ -48,7 +48,7 @@ def test_every_part_the_report_quotes_exists():
 @pytest.mark.skipif(not (REPO / "results" / "summary.json").exists(), reason="results/summary.json not built yet")
 def test_report_builds_from_the_committed_summary():
     summary = json.loads((REPO / "results" / "summary.json").read_text(encoding="utf-8"))
-    text = mr.build(summary, None)
+    text = mr.build(summary)
     for heading in ("## Abstract", "## 1. Introduction", "## 3. Method", "## 4. Results", "## 5. What the holdout found",
                     "## 6. Limitations", "## 7. Related work", "## References"):
         assert heading in text

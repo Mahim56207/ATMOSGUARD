@@ -42,6 +42,10 @@ health:            # L1  (all windows in minutes; starting points)
       temperature_c: 0.0
       pressure_hpa: 0.0
       humidity_pct: 0.0
+    ceiling_aware: false         # remedy 1 (docs/HOLDOUT_POSTMORTEM.md): humidity pinned at its ceiling, or temperature frozen while
+                                 # humidity is at its ceiling, is a SOFT flag at most (sustained heavy rain produces exactly this)
+    ceiling:
+      humidity_pct: 99.5         # at or above this the channel counts as saturated
   step:            # allowed change between two samples = min(rate_per_min * minutes_apart, cap)
     rate_per_min:
       temperature_c: 1.0
@@ -82,6 +86,10 @@ limits:            # station-learned limits (atmos/limits.py). Upper quantiles o
   noise_quantile: 0.999          # largest jitter estimate: this quantile of the clean window estimates
   noise_margin: 1.1
   min_noise_samples: 200
+  learned_step_cap: false        # remedy 2 (docs/HOLDOUT_POSTMORTEM.md): the step cap becomes max(configured cap, this station's learned cap)
+  step_quantile: 0.999           # learned cap: this quantile of |change| over one reporting interval (gaps up to the gap limit included)
+  step_margin: 1.1
+  min_step_samples: 500
 
 normality:         # L2: station x month x hour statistics  (starting points)
   min_samples_per_cell: 10       # cells with fewer samples are left out ("not enough data")

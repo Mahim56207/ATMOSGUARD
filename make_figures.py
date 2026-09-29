@@ -228,6 +228,7 @@ def fig_coldstart() -> None:
         ax.set_xticks(range(len(days)))
         ax.set_xticklabels([str(d) for d in days])
         ax.set_xlabel("days of the new station's own history", color=MUTED)
+        ax.set_ylim(0, 100 if key == "detect_pct" else None)          # start at zero: a truncated axis exaggerates the gain
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(axis="y", color=GRID, linewidth=0.6)
         ax.set_title(title, loc="left", fontsize=10, color=INK, fontweight="bold")
