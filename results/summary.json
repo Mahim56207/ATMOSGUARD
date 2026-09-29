@@ -3420,73 +3420,73 @@
    {
     "stations": 1,
     "readings": 288,
-    "readings_per_second": 130.9,
-    "median_ms": 7.383,
-    "p95_ms": 9.891,
-    "p99_ms": 11.591,
-    "rss_mb_after_fit": 221.7,
-    "rss_mb_after_run": 222.0,
-    "memory_per_station_mb": 5.99,
+    "readings_per_second": 923.8,
+    "median_ms": 0.921,
+    "p95_ms": 2.368,
+    "p99_ms": 2.787,
+    "rss_mb_after_fit": 222.1,
+    "rss_mb_after_run": 223.3,
+    "memory_per_station_mb": 6.92,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
      "mahalanobis_kb": 0.7,
-     "limits_json_kb": 0.6,
-     "total_kb": 1584.4
+     "limits_json_kb": 0.7,
+     "total_kb": 1584.5
     }
    },
    {
     "stations": 10,
     "readings": 2880,
-    "readings_per_second": 124.8,
-    "median_ms": 7.626,
-    "p95_ms": 10.956,
-    "p99_ms": 13.092,
-    "rss_mb_after_fit": 242.8,
-    "rss_mb_after_run": 242.8,
-    "memory_per_station_mb": 2.07,
+    "readings_per_second": 851.4,
+    "median_ms": 0.968,
+    "p95_ms": 2.553,
+    "p99_ms": 2.994,
+    "rss_mb_after_fit": 243.2,
+    "rss_mb_after_run": 254.0,
+    "memory_per_station_mb": 3.05,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
      "mahalanobis_kb": 0.7,
-     "limits_json_kb": 0.6,
-     "total_kb": 1584.4
+     "limits_json_kb": 0.7,
+     "total_kb": 1584.5
     }
    },
    {
     "stations": 50,
     "readings": 14400,
-    "readings_per_second": 124.8,
-    "median_ms": 7.638,
-    "p95_ms": 10.952,
-    "p99_ms": 13.594,
-    "rss_mb_after_fit": 330.0,
-    "rss_mb_after_run": 337.7,
-    "memory_per_station_mb": 1.9,
+    "readings_per_second": 836.6,
+    "median_ms": 0.968,
+    "p95_ms": 2.559,
+    "p99_ms": 3.065,
+    "rss_mb_after_fit": 330.5,
+    "rss_mb_after_run": 392.6,
+    "memory_per_station_mb": 2.99,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
      "mahalanobis_kb": 0.7,
-     "limits_json_kb": 0.6,
-     "total_kb": 1584.4
+     "limits_json_kb": 0.7,
+     "total_kb": 1584.5
     }
    },
    {
     "stations": 100,
     "readings": 28800,
-    "readings_per_second": 123.9,
-    "median_ms": 7.682,
-    "p95_ms": 10.978,
-    "p99_ms": 13.824,
-    "rss_mb_after_fit": 439.6,
-    "rss_mb_after_run": 457.3,
-    "memory_per_station_mb": 1.26,
+    "readings_per_second": 819.0,
+    "median_ms": 0.986,
+    "p95_ms": 2.555,
+    "p99_ms": 3.109,
+    "rss_mb_after_fit": 440.1,
+    "rss_mb_after_run": 565.8,
+    "memory_per_station_mb": 1.78,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
      "mahalanobis_kb": 0.7,
-     "limits_json_kb": 0.6,
-     "total_kb": 1584.4
+     "limits_json_kb": 0.7,
+     "total_kb": 1584.5
     }
    }
   ],
@@ -3495,46 +3495,46 @@
    "clients": 8,
    "requests": 3000,
    "errors": 0,
-   "requests_per_second": 58.5,
-   "median_ms": 133.12,
-   "p95_ms": 164.74,
-   "p99_ms": 189.15
+   "requests_per_second": 164.8,
+   "median_ms": 44.89,
+   "p95_ms": 59.17,
+   "p99_ms": 66.33
   },
   "pipeline_no_forest": [
    {
     "stations": 1,
     "readings": 288,
-    "readings_per_second": 1395.4,
-    "median_ms": 0.521,
-    "p95_ms": 1.948,
-    "p99_ms": 3.678,
-    "rss_mb_after_fit": 439.5,
-    "rss_mb_after_run": 439.5,
-    "memory_per_station_mb": -1.05,
+    "readings_per_second": 1536.9,
+    "median_ms": 0.499,
+    "p95_ms": 1.713,
+    "p99_ms": 2.071,
+    "rss_mb_after_fit": 544.1,
+    "rss_mb_after_run": 544.1,
+    "memory_per_station_mb": -0.62,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
      "mahalanobis_kb": 0.7,
-     "limits_json_kb": 0.6,
-     "total_kb": 1584.4
+     "limits_json_kb": 0.7,
+     "total_kb": 1584.5
     }
    },
    {
     "stations": 50,
     "readings": 14400,
-    "readings_per_second": 1430.1,
+    "readings_per_second": 1353.0,
     "median_ms": 0.526,
-    "p95_ms": 1.947,
-    "p99_ms": 2.346,
-    "rss_mb_after_fit": 428.5,
-    "rss_mb_after_run": 428.5,
-    "memory_per_station_mb": -0.22,
+    "p95_ms": 1.977,
+    "p99_ms": 2.395,
+    "rss_mb_after_fit": 537.0,
+    "rss_mb_after_run": 537.0,
+    "memory_per_station_mb": -0.12,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
      "mahalanobis_kb": 0.7,
-     "limits_json_kb": 0.6,
-     "total_kb": 1584.4
+     "limits_json_kb": 0.7,
+     "total_kb": 1584.5
     }
    }
   ]
