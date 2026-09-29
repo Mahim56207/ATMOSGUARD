@@ -142,7 +142,7 @@ const $ = id => document.getElementById(id);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const NS = 'http://www.w3.org/2000/svg';
 const CH = [{k:'T',label:'Temperature (°C)',c:'--t'},{k:'P',label:'Pressure (hPa)',c:'--p'},{k:'RH',label:'Relative humidity (%)',c:'--rh'}];
-let ev = D.events[0], upto = 0, timer = null;
+let ev = D.events[0], upto = D.events[0].samples.length - 1, timer = null;   // opens showing the whole event; Play replays it
 
 function el(tag, attrs, parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
 function marker(v,x,y,parent){
@@ -175,7 +175,7 @@ function draw(){
   $('now').innerHTML=`<div><b>Time (UTC)</b><span>${s.t}</span></div><div><b>Temperature</b><span>${s.T}</span></div><div><b>Pressure</b><span>${s.P}</span></div><div><b>Humidity</b><span>${s.RH==null?'—':s.RH}</span></div><div><b>Verdict</b><span class="verdict" style="color:${s.v==='FAULT'?'var(--fault)':s.v==='SUSPECT'?'var(--suspect)':s.v==='WEATHER'?'var(--weather)':'var(--text)'}">${s.v}</span></div><div><b>Confidence (agreement)</b><span>${s.c.toFixed(2)}</span></div>`;
   $('reason').textContent=s.reason+(s.notices&&s.notices.length?'  Notice: '+s.notices.join(' '):'')+(s.noaa?'  (NOAA flagged this value: '+(s.noaa===2?'erroneous':'suspect')+'.)':'');
 }
-function setEvent(i){ev=D.events[i];upto=0;stop();$('story').textContent=`${ev.station}: ${ev.story}`;const c=ev.counts;$('counts').textContent=`${ev.samples.length} readings: ${c.VALID} VALID, ${c.WEATHER} WEATHER, ${c.SUSPECT} SUSPECT, ${c.FAULT} FAULT`;draw()}
+function setEvent(i){ev=D.events[i];upto=ev.samples.length-1;stop();$('story').textContent=`${ev.station}: ${ev.story}`;const c=ev.counts;$('counts').textContent=`${ev.samples.length} readings: ${c.VALID} VALID, ${c.WEATHER} WEATHER, ${c.SUSPECT} SUSPECT, ${c.FAULT} FAULT`;draw()}
 function stop(){if(timer){clearInterval(timer);timer=null;$('play').textContent='Play'}}
 function tick(){if(upto>=ev.samples.length-1){stop();return}upto++;draw()}
 D.events.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.id.replace(/_/g,' ');$('ev').appendChild(o)});
