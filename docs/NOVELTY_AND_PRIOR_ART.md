@@ -75,7 +75,7 @@ never "does not exist".
 
 ## 5. The field on this problem statement (what judges will see side by side)
 
-Read from the public repositories (their READMEs, not run):
+Read from the public repositories (their READMEs, not run; a further search on 29 September 2026 found the four entries at the end of the table, and no entry with a locked holdout, a baseline or an ablation):
 
 | Entry | Real data? | Metrics | Baselines / ablation | Notes |
 |---|---|---|---|---|
@@ -89,6 +89,10 @@ Read from the public repositories (their READMEs, not run):
 | SkyGuard (vaibhav1874) | Open-Meteo ERA5 (reanalysis, not a station) | none | none | ensemble 35/35/30 |
 | VAYU-GUARD (Aditya123CSE) | synthetic | none | none | 7 tests |
 | ATML (Suryanshsaraf) | Jena, Chicago, Numenta | recall 59.6 %, F1 0.73 | LOF, dense AE | not the AWS problem's data |
+| SkyGuard AI (anushreegoli28) | NOAA GHCNh, one station (Boston Logan), faults injected | "precision 100 %", "false-positive rate 0.0 %" on 150 injected ticks | none stated | physics ensemble + Isolation Forest, single station |
+| Sky_Guard (VHARSHILJOSEPH) | IMD AWS data "with approved access", plus injected faults; volume not stated | none stated | none | uses neighbouring-station evidence; says its confidences "require empirical validation" |
+| SkyGuard-AI (Kaviyakanagaraj77) | its own generator (states IMD data are not downloadable) | overall precision 0.50, recall 0.71, F1 0.59, on the same synthetic data used for development | none stated | five layers including neighbours, SHAP, fleet-wide detection, web app |
+| SkyGuardAI (KATHIR-EEE) | not stated | none | none stated | Isolation Forest + z-score + an external weather API as reference |
 
 None of them, as far as their READMEs show, has: a locked holdout, a real-cyclone false-alarm number, an ablation on real
 data, an agreement check against operational QC flags, or a stated list of what it cannot do.
