@@ -30,6 +30,20 @@ Run `python make_summary.py ... --readme README.md` to fill this block from the 
 Data caveats that apply to every number: airport METAR/SYNOP records (not IMD AWS records); humidity is derived from the dew point;
 no labelled real faults exist, so detection is measured on injected faults; NOAA's flags are another automated system, not ground truth.
 
+## Known limits (read before relying on any number)
+- **Real extreme weather is not always safe.** On the eight stations never used for tuning, 3 of 98 extreme-weather windows contain a
+  `FAULT` verdict (0.3 % of those samples): two at Visakhapatnam, where sustained torrential rain pins derived humidity at 100 %, and one at
+  Bhuj, where a desert station warms 15 C across a 6-hour reporting gap. The causes and two untested remedies are in
+  [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md). We did not tune on them.
+- **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
+  takes hours by design (it has to stay stuck longer than real weather can).
+- **Small drift is invisible from one station.** The drift monitor sees a ramp of several times the service limit, not one times the limit;
+  the power curve is in the results and is the honest statement of what "drift detection" means here.
+- **Not real-AWS validated.** Airport records round to whole degrees and whole hPa and carry derived humidity. A real AWS with 0.1
+  resolution is easier in some ways and untested in others. [`docs/USE_YOUR_DATA.md`](docs/USE_YOUR_DATA.md) gives the one command that
+  produces the same numbers for a real AWS record.
+- **The firmware has been compiled against stubs and its L0 logic compared with the Python; it has not run on hardware.**
+
 ## Run it (one minute, no internet, no downloads)
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
@@ -76,6 +90,8 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | What we do not claim / failure modes | [`docs/WHAT_WE_DO_NOT_CLAIM.md`](docs/WHAT_WE_DO_NOT_CLAIM.md), [`docs/FAILURE_MODES.md`](docs/FAILURE_MODES.md) |
 | Use cases (cyclones, NWP, aviation, maintenance, sparse networks) | [`docs/USE_CASES.md`](docs/USE_CASES.md) |
 | Data provenance and limits | [`docs/DATA.md`](docs/DATA.md) |
+| Run the evaluation on your own (real AWS) record | [`docs/USE_YOUR_DATA.md`](docs/USE_YOUR_DATA.md) |
+| What the holdout found, and what we did not do about it | [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md) |
 | Hardware node, BOM, energy (estimate, not measurement) | [`docs/HARDWARE.md`](docs/HARDWARE.md) |
 | Demo script and contingencies | [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md) |
 | Likely judge questions and honest answers | [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) |
@@ -84,7 +100,7 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Repository map
 `atmos/` the pipeline - `api.py` FastAPI - `dashboard.py` Streamlit - `evaluate_real.py` the real-data evaluation -
-`evaluate_coldstart.py` new-station study - `loadtest.py` scale test - `data_tools/` NOAA download, split, event rules -
+`evaluate_coldstart.py` new-station study - `evaluate_csv.py` the same evaluation on your CSV - `loadtest.py` scale test - `data_tools/` NOAA download, split, event rules -
 `firmware/node/` ESP32 sketch and the portable L0 header - `train.py` per-station models - `make_summary.py`,
 `make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real` (sealed until the single run), `data/demo` -
 `models/` trained station artifacts - `tests/` 340+ tests.
