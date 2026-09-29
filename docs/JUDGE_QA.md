@@ -20,8 +20,8 @@ support.** Numbers below are from `results/REPORT.md`; say which split you are q
 
 **1. How is this different from the standard WMO checks?**
 The range, step and persistence checks are standard and we include them. Three things differ. (a) Fixed limits fail on real data:
-on real Bhubaneswar reports (whole degrees, whole hPa) a fixed-limit version alarmed on about two thirds of clean readings and called
-real cyclones faults. We learn the frozen-run and noise limits per station from its own clean history (an idea HadISD uses for streaks;
+on real airport reports (whole degrees, whole hPa) a fixed-limit version alarmed on 63 % of clean readings on the six DEV stations (the row
+"without station-learned limits") and called real cyclones faults. We learn the frozen-run and noise limits per station from its own clean history (an idea HadISD uses for streaks;
 ours adds resolution detection and a two-tier flag). (b) Real weather is a verdict, not a mistake: a coherent multi-channel change is
 escalated as `WEATHER`. (c) We measured all of it against the textbook rules on the same real data; the rules baseline calls almost
 every real extreme-weather window a fault.
@@ -34,8 +34,8 @@ scored so that only alarms the fault itself raised count. Real-fault validation 
 
 **3. What happens during a cyclone?**
 Pressure falls tens of hPa, humidity rises, temperature drops: several channels move together, so the reading is escalated as
-`WEATHER` and kept, never deleted. On Cyclones Fani, Vardah, Amphan (and Tauktae, Michaung, Remal, Biparjoy in the holdout) the number of
-`FAULT` verdicts is what we report. Live: replay `data/demo/fani_BBI_2019-05.csv`. A pressure plateau inside the low used to read as a
+`WEATHER` and kept, never deleted. On the cyclone windows judged in the tables (Amphan in DEV; Tauktae, Biparjoy, Michaung and Remal in the holdouts) the number of
+`FAULT` verdicts is what we report. Fani and Vardah fall in the training years, so they are demo material, not a reported number. Live: replay `data/demo/fani_BBI_2019-05.csv`. A pressure plateau inside the low used to read as a
 frozen barometer; that was a real bug real data found and we fixed it.
 
 ## Novelty
@@ -59,7 +59,7 @@ detection (background alarms inside long fault windows had inflated it); the pip
 rerun reproduced the first run's registered numbers exactly.
 
 **Your DEV numbers are better than holdout, aren't they?** DEV is where we tuned and looked at failures, so it is the optimistic set. We
-report all three splits side by side; see `results/REPORT.md`.
+report all four splits (DEV, holdout in time, holdout in space, fresh stations) side by side; see `results/REPORT.md`.
 
 **The holdout showed failures. What did you do about them?** We did not tune on it. We wrote the post-mortem (`docs/HOLDOUT_POSTMORTEM.md`), proposed two
 remedies, registered a decision rule (Amendment 2), sealed twelve more stations nobody had looked at, and ran them once. By the rule, the ceiling-aware frozen
@@ -89,7 +89,7 @@ are about 1 % of station-days. **A constant offset from day one?** No single-sta
 **Why single-station only?** The places India needs this most (Ladakh, the Thar, the Andamans) have no neighbour within hundreds of km.
 With neighbours we would do better, and that is future work; the cold-start module borrows a frozen table, not live data.
 **Why airport data, not IMD?** IMD AWS data are not public. The pipeline takes any CSV in the same layout; if a faculty contact can share
-even weeks of real AWS data, run `evaluate_real.py` on it. **Why four verdicts?** Quality control and severe-weather alerting come out of one
+even a few years of real AWS data, run `evaluate_csv.py` on it (or upload it in the dashboard). **Why four verdicts?** Quality control and severe-weather alerting come out of one
 engine, and mixed evidence must not delete a real extreme.
 **What if a real weather event looks exactly like a fault (a real one-channel jump)?** Rule 2 would call it a fault; that is why "quiet" now
 means the other channels actually did not move, and why we report the `FAULT` rate on real extreme weather separately so the cost is visible.
