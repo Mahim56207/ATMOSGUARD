@@ -1,6 +1,6 @@
 """FastAPI service.
 
-Endpoints: /ingest /latest /alerts /health /explain /replay /inject /datasets /metrics /status
+Endpoints: /ingest /latest /alerts /health /fleet /explain /replay /inject /datasets /metrics /status
 
 /ingest runs the full pipeline (physics, health, normality, ML, fusion) and stores the raw reading,
 the verdict and the checks side by side. /health gives the sensor health score, projected service
@@ -164,6 +164,31 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
         if station_id and reports[station_id] is None:
             raise HTTPException(404, f"No readings yet for station {station_id}.")
         return {"stations": {sid: (r.model_dump(mode="json") if r else None) for sid, r in reports.items()}}
+
+    @app.get("/fleet")
+    def fleet():
+        """The network view: one line per station with its newest verdict, health score (overall and per channel), open ticket,
+        projected service date and how many alerts it raised recently. Every station is judged on its own; this only lists them."""
+        rows = []
+        for sid in sorted(set(pipeline.stations_seen()) | set(store.stations())):
+            latest = store.latest(sid, 1)
+            rec = latest[0] if latest else None
+            verdict = rec.verdict if rec is not None else None
+            rep = pipeline.health_report(sid)
+            rows.append({
+                "station_id": sid,
+                "last_time": rec.reading.timestamp.isoformat() if rec else None,
+                "verdict": verdict.verdict.value if verdict else None,
+                "confidence": verdict.confidence if verdict else None,
+                "reason": verdict.reason if verdict else None,
+                "health_score": rep.score if rep else None,
+                "channel_scores": {ch: c.score for ch, c in rep.channels.items()} if rep else {},
+                "service_date": rep.service_date.isoformat() if rep and rep.service_date else None,
+                "ticket": ({"priority": rep.ticket.priority, "channels": rep.ticket.channels, "reason": rep.ticket.reason}
+                           if rep and rep.ticket else None),
+                "recent_alerts": len(store.alerts(sid, 200)),
+            })
+        return {"stations": rows}
 
     @app.get("/status")
     def status():

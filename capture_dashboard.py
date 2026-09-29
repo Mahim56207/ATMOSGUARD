@@ -54,6 +54,11 @@ def chromium() -> Optional[str]:
     return next((str(p) for p in Path("/opt/pw-browsers").glob("chromium-*/chrome-linux/chrome")), None)
 
 
+def select_station(page, name: str) -> None:
+    page.locator('[data-testid="stSidebar"] [data-testid="stSelectbox"]').first.click()
+    page.get_by_role("option", name=name).click()
+
+
 def main() -> int:
     try:
         sync_playwright = importlib.import_module("playwright.sync_api").sync_playwright
@@ -70,7 +75,8 @@ def main() -> int:
     try:
         wait_for(f"{API}/status")
         wait_for(f"{UI}/_stcore/health")
-        replay_and_wait("data/demo/vardah_MAA_2016-12.csv", 240)
+        for csv, n in (("data/demo/vardah_MAA_2016-12.csv", 240), ("data/demo/fani_BBI_2019-05.csv", 200), ("data/demo/amphan_CCU_2020-05.csv", 200)):
+            replay_and_wait(csv, n)
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=chromium(), args=["--no-sandbox"])
             ctx = browser.new_context(viewport={"width": 1500, "height": 1450}, record_video_dir=str(tmp / "video"),
@@ -78,6 +84,7 @@ def main() -> int:
             page = ctx.new_page()
             page.goto(UI)
             page.get_by_role("tab", name="Live monitor").wait_for(timeout=60000)
+            select_station(page, "MAA")
             page.wait_for_timeout(6000)
             page.screenshot(path=str(SHOTS / "01_live_monitor_cyclone_vardah.png"))
 
@@ -90,10 +97,13 @@ def main() -> int:
             replay_and_wait("data/demo/outflow_DEL_2021-04.csv", 200)
             page.reload()
             page.get_by_role("tab", name="Live monitor").wait_for(timeout=60000)
-            page.locator('[data-testid="stSidebar"] [data-testid="stSelectbox"]').first.click()
-            page.get_by_role("option", name="DEL").click()
+            select_station(page, "DEL")
             page.wait_for_timeout(6000)
             page.screenshot(path=str(SHOTS / "03_live_monitor_injected_fault_delhi.png"))
+
+            page.get_by_role("tab", name="Network").click()
+            page.wait_for_timeout(3000)
+            page.screenshot(path=str(SHOTS / "06_network.png"))
 
             page.get_by_role("tab", name="Evaluation").click()
             page.wait_for_timeout(3500)

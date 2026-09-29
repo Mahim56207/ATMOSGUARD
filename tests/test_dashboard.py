@@ -100,6 +100,9 @@ def _fake_get(records, report, status):
             body = [r.model_dump(mode="json") for r in reversed(records) if r.verdict.verdict.value != "VALID"]
         elif path == "/health":
             body = {"stations": {"S1": report}}
+        elif path == "/fleet":
+            body = {"stations": [{"station_id": "S1", "verdict": "VALID", "health_score": 97.0, "channel_scores": {"temperature_c": 100.0},
+                                  "recent_alerts": 3, "last_time": "2026-01-01T12:00:00", "reason": "All checks passed."}]}
         elif path == "/datasets":
             body = {"datasets": ["data/real/dev/BBI.csv"]}
         elif path in ("/metrics", "/explain"):
@@ -188,7 +191,7 @@ def test_streamlit_control_panel_lists_faults_channels_and_datasets(records, cfg
     fault_box = next(b for b in at.selectbox if b.label == "Fault")
     assert list(fault_box.options) == list(db.FAULT_TYPES)
     assert "data/real/dev/BBI.csv" in next(b for b in at.selectbox if b.label == "File").options
-    assert [t.label for t in at.tabs] == ["Live monitor", "Control panel", "Evaluation", "How it decides"]
+    assert [t.label for t in at.tabs] == ["Live monitor", "Network", "Control panel", "Evaluation", "How it decides"]
 
 
 def test_arm_fault_button_posts_to_inject(records, cfg, monkeypatch):

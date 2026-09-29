@@ -87,7 +87,7 @@ pip install -r requirements.txt
 uvicorn api:app --port 8000 &                           # loads the six trained stations from models/
 streamlit run dashboard.py                              # http://localhost:8501
 ```
-Then open the dashboard's **Control panel**: replay a real cyclone (`data/demo/`), **break the sensor on demand** (frozen, spike,
+The dashboard has a **Live monitor**, a **Network** view (every station, most urgent first), the **Control panel**, the **Evaluation** tables and **How it decides**. In the **Control panel**: replay a real cyclone (`data/demo/`), **break the sensor on demand** (frozen, spike,
 level shift, drift, noise, dropout), and watch the verdict, the reason and the health score react. **No server?**
 Open [`docs/demo/index.html`](docs/demo/index.html): a self-contained replay of six real events with the pipeline's actual verdicts.
 

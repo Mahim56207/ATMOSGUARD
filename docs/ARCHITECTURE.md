@@ -72,7 +72,7 @@ optional imputed value are stored beside the raw reading.
 | `atmos/impute.py` | estimate + band for a missing or faulty value |
 | `atmos/livefault.py` | live fault injection behind `POST /inject` |
 | `atmos/injector.py` | offline fault injection with a ground-truth log |
-| `api.py` | FastAPI: `/ingest /latest /alerts /health /replay /inject /datasets /metrics /status` |
+| `api.py` | FastAPI: `/ingest /latest /alerts /health /fleet /explain /replay /inject /datasets /metrics /status` (`/fleet` lists every station with its newest verdict, health score and ticket, for the dashboard's Network tab; each station is still judged on its own) |
 | `dashboard.py` | Streamlit |
 | `evaluate_real.py` | the real-data evaluation (DEV / HOLDOUT) |
 | `data_tools/` | NOAA ISD download, parse, dataset split, event windows |
