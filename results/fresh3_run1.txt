@@ -1,0 +1,72 @@
+### FRESH3 (a fourth set of twelve: seven US 20-minute stations and five Australian AWS, 2020-2024)
+stations: FHB, PTT, MDS, LPO, GGW, GRC, HUT, WEI, TNC, ASP, LRM, BRM
+
+1a) Detection of injected faults, by type: the fault raised the alarm  (paired: the same sample was NOT an alarm on the un-faulted series)
+   config                           frozen       spike        step       noise     dropout clock_shift
+   full                             100.0%       84.0%       95.0%       99.6%       88.2%       96.2%
+   r6_warmup                        100.0%       97.2%       93.4%       93.5%       99.4%       95.4%
+   baseline_range                     0.0%       13.6%       12.6%       15.6%        0.0%        0.0%
+   baseline_rules                   100.0%       89.8%       92.0%       87.0%        0.0%       93.8%
+   baseline_climatology              11.4%       10.2%       13.8%        4.6%        0.0%       38.5%
+   baseline_isolation_forest          6.0%       15.5%       22.1%       41.8%        0.0%       78.2%
+   baseline_mahalanobis              65.9%       99.9%       97.6%       92.5%        0.0%       85.2%
+   (faults injected)                  1143        1143        1143        1143        1143         967
+   full: median delay to the fault-raised alarm (min)         280           0           0         100           0         420
+
+1b) The same, by the REGISTERED criterion in config/protocol.md: any alarm from the first faulty sample to the last plus 60 min.
+    Background false alarms also land inside long fault windows, so 1b flatters long faults (frozen 48 h, clock shift 4 days) and every system.
+   config                           frozen       spike        step       noise     dropout clock_shift
+   full                             100.0%       99.5%       99.7%      100.0%      100.0%       96.2%
+   r6_warmup                        100.0%       98.9%       94.3%       94.1%      100.0%       95.4%
+   baseline_range                     0.0%       13.6%       12.6%       15.6%        0.0%        0.0%
+   baseline_rules                   100.0%       91.8%       96.4%       91.8%       18.4%       93.9%
+   baseline_climatology              14.7%       11.0%       16.0%        7.0%        0.8%       38.9%
+   baseline_isolation_forest         17.6%       16.4%       34.6%       50.0%        0.7%       78.2%
+   baseline_mahalanobis              75.9%      100.0%       98.0%       94.5%        0.9%       85.4%
+
+2) False alarms on clean real data  (no faults injected, extreme-weather windows and NOAA-flagged values removed)
+   config                       any alarm  FAULT only   WEATHER   samples
+   full                              9.7%        0.0%      1.2%   1026508
+   r6_warmup                         2.6%        0.0%      1.4%   1026508
+   baseline_range                    0.0%        0.0%         -   1026508
+   baseline_rules                    5.1%        5.1%         -   1026508
+   baseline_climatology              0.7%        0.0%         -   1026508
+   baseline_isolation_forest         0.8%        0.0%         -   1026508
+   baseline_mahalanobis              0.7%        0.0%         -   1026508
+
+3) Real extreme weather  (no faults injected). A FAULT here is a failure: real weather called a broken sensor.
+   config                         FAULT   SUSPECT   WEATHER    VALID    windows with a FAULT
+   full                            0.1%     12.8%      3.0%    84.1%                   5/160
+   r6_warmup                       0.1%      4.9%      3.6%    91.4%                   5/160
+   baseline_range                  0.0%      0.0%         -   100.0%                   0/160
+   baseline_rules                  6.4%      0.0%         -    93.6%                 157/160
+   baseline_climatology            0.0%      1.7%         -    98.3%                   0/160
+   baseline_isolation_forest       0.0%      1.7%         -    98.3%                   0/160
+   baseline_mahalanobis            0.0%      1.6%         -    98.4%                   0/160
+
+   full pipeline, by kind of extreme weather:
+   kind      samples    FAULT   SUSPECT   WEATHER   windows with FAULT
+   cold         8727     0.1%     18.7%      1.8%                 1/30
+   heat        10828     0.0%      8.4%      4.8%                 0/32
+   low         13786     0.3%     13.3%      3.1%                 3/41
+   sharp       11991     0.0%     11.9%      2.3%                 1/57
+
+4) Agreement with NOAA's own quality flags on the raw record  (another automated system, NOT ground truth)
+   NOAA-flagged values: 845  (erroneous: 0)
+   AtmosGuard alarmed on 50.4% of them, and on n/a of the erroneous ones
+   escalated at all (FAULT, SUSPECT or WEATHER) on 59.9% of the flagged values, and on 11.3% of the values NOAA did not flag
+   AtmosGuard alarmed on 10.0% of the 1071872 values NOAA did not flag
+
+5) Slow drift, judged by the health score  (daily-mean Theil-Sen, autocorrelation-aware test)
+   A ramp over 45 days is added to one channel of a clean real chunk; severity = offset at the end of the ramp in
+   multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). Detected = significant with the right sign.
+   severity                 temperature                  pressure                  humidity
+             detected  day  offset/limitdetected  day  offset/limitdetected  day  offset/limit
+   none             2.4% (false claims)       2.4% (false claims)      14.3% (false claims)
+   1x limit         1.2%    30    12.0x       1.2%    18     2.7x       3.6%   149     7.5x
+   2x limit         1.2%    30    12.5x       1.2%    18     3.1x       4.8%   112     6.8x
+   4x limit         4.8%    45     6.0x       9.5%    68     4.7x      10.7%    52     6.3x
+   8x limit        13.1%    38     9.6x      25.0%    47     6.2x      44.0%    53     9.2x
+   on clean data with NO drift injected: significant drift claimed on 0.6% of 17824 station-days (per channel: 0.2%); a maintenance ticket was open on 0.7% of them
+
+6) Speed (full pipeline, one reading): median 1.17 ms, worst station 95th percentile 3.76 ms

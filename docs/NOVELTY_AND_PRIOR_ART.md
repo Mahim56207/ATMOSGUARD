@@ -113,7 +113,7 @@ data, an agreement check against operational QC flags, or a stated list of what 
 > AtmosGuard integrates physics-based T/P/RH coherence, per-station statistical normality, station-learned health limits
 > and unsupervised multivariate ML into one explainable pipeline for a single station with no neighbours, and it treats
 > genuine extreme weather as its own escalated verdict. We do not claim any technique is new. Our contribution is the
-> integration and the evidence: 26 real Indian stations, a holdout sealed in time and in space, false alarms on real cyclones
+> integration and the evidence: 50 real stations (31 Indian airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes), a holdout sealed in time and in space, false alarms on real cyclones
 > reported separately, baselines and an ablation on the same data, agreement with NOAA's quality flags, and the failures the
 > real data exposed. We state plainly what we cannot claim: long-term drift validation, performance on labelled real faults,
 > single-sensor humidity response time, and small offsets with no reference.
