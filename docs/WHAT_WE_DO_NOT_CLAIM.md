@@ -27,7 +27,18 @@ also true of the repository as it stands.
 - **Long-term drift behaviour is not validated.** Real calibration drift plays out over months and years; we tested ramps
   of 45 days.
 - **The holdout was run once.** The result is whatever it was, including if it is worse than DEV. `data/holdout/.holdout_used`
-  records when, and the protocol was committed before.
+  records when, and the protocol was committed before. It was read a second time (`holdout_run2`) only to re-score detection under Amendment 1;
+  every registered number reproduced exactly (`python compare_runs.py`).
+- **The shipped default is not exactly what the holdout ran.** After the fresh-station test, one remedy (the ceiling-aware frozen rule) was adopted by a
+  rule registered before that test. The evaluation's `full` configuration still forces it off, so every reported number reproduces; the remedy's own numbers
+  are on the fresh stations only, and it changed nothing on DEV. The frozen pipeline still gets a `FAULT` in 3 of 98 and 3 of 139 real extreme-weather windows on
+  unseen stations.
+- **Detection is lower on unseen stations than on DEV,** and most detections of spikes, level shifts, noise bursts and wrong clocks are `SUSPECT`, not `FAULT`.
+  Simpler detectors beat the full pipeline on some fault types (see `results/REPORT.md`).
+- **The cold-start study covers six stations,** each borrowing from its nearest neighbour among the other five. A new station in a climate none of them share may
+  need more of its own history.
+- **"Learn from the first half of the file" trusts that half.** Bring your own CSV learns a new station from the first half of its file; a stuck sensor or a storm in
+  that half is learned as normal. `evaluate_csv.py` is the careful offline version.
 
 ## About novelty
 - **No technique here is new.** Physics checks, persistence tests, CUSUM, Isolation Forest and SHAP are standard. See
