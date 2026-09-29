@@ -47,7 +47,7 @@ break-the-sensor-on-demand control. That maps to the criteria as follows.
    come up in one command on yours, fix it or drop the claim.
 2. **Flash the ESP32** (`docs/HARDWARE.md`), let it run for an hour, press the fault controls from the dashboard. If anything
    fails, `simnode.py` gives the same readings. The real Arduino/ESP32 toolchain could not be downloaded where this was built, so the sketch
-   was type-checked against stubs only.
+   was type-checked against stubs and executed against a simulator only (`tests/test_firmware_sim.py`); `HARDWARE_TEST_LOG.md` is the checklist.
 3. **Measure the current** in three states with a USB power meter (the energy table).
 4. **Record the backup demo video with your own voice.** A silent screen recording of the real dashboard is already in
    `docs/demo/dashboard_walkthrough.webm`; follow `docs/DEMO_RUNBOOK.md` and keep a copy on the laptop with the venue's network off.
@@ -58,7 +58,8 @@ break-the-sensor-on-demand control. That maps to the criteria as follows.
    the script says how weak the result will be.
 7. **The PPT.** Content is planned slide by slide in [`SLIDE_PLAN.md`](SLIDE_PLAN.md), with the figure, diagram or screenshot for each slide in
    `docs/figures/` and `docs/screenshots/`. Copy numbers from the generated block in `JUDGE_QA.md`, never from memory.
-8. **Read the three windows the frozen pipeline still calls a FAULT** ([`HOLDOUT_POSTMORTEM.md`](HOLDOUT_POSTMORTEM.md)) so you can say them before a judge does.
+8. **Read the windows the pipeline still calls a FAULT** ([`HOLDOUT_POSTMORTEM.md`](HOLDOUT_POSTMORTEM.md); one remains after the last adopted remedy) and the 13.6 % false alarms on the Australian stations (Amendment 3 outcome in `config/protocol.md`) so you can say them before a judge does.
+9. **Everything that was done and how to submit it:** [`HANDOFF_FOR_PPT.md`](HANDOFF_FOR_PPT.md).
 
 ## The three claims to lead with, and the three not to make
 Lead with: (1) the false-alarm rate on **real** cyclones and heat waves, reported separately from injected faults;

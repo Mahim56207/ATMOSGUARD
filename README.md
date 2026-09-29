@@ -146,6 +146,7 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | A message to request a real IMD AWS record, and what to run when it arrives | [`docs/IMD_DATA_REQUEST.md`](docs/IMD_DATA_REQUEST.md) |
 | Demo script and contingencies | [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md) |
 | Likely judge questions and honest answers | [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) |
+| **Start here if you are making the deck: everything that was done, what to submit, how** | [`docs/HANDOFF_FOR_PPT.md`](docs/HANDOFF_FOR_PPT.md) |
 | Submission playbook (criteria -> artifacts, what is left for the team) | [`docs/SIH_SUBMISSION_PLAYBOOK.md`](docs/SIH_SUBMISSION_PLAYBOOK.md) |
 | One-page summary for a handout or upload (numbers computed from the results) | [`docs/AtmosGuard_one_page.pdf`](docs/AtmosGuard_one_page.pdf) |
 | Portal text, pitch scripts and a slide-by-slide plan (content only) | [`docs/SUBMISSION_TEXT.md`](docs/SUBMISSION_TEXT.md), [`docs/SLIDE_PLAN.md`](docs/SLIDE_PLAN.md) |
