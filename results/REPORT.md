@@ -775,6 +775,28 @@ Each station judged on its own record.
 | RPR | 180 | 3.0% | 0.0% | 0.0% | 0/13 | 20.9% | 71% |
 | JDH | 180 | 3.9% | 0.2% | 0.4% | 1/13 | 12.6% | 66% |
 
+## How big must a fault be? (DEV, injected)
+
+How big must a fault be? Spikes, level shifts and noise bursts of 0.25 to 4 times the configured size, injected into clean real data of the six DEV stations (the tuning set, so an envelope study and not a held-out result). A detection is an alarm the fault itself raised. The 1x row is a separate random draw (two faults of each type per series, one round), so it is close to but not identical with the main table.
+
+| system | size (x the configured fault) | spike | level shift | noise burst |
+|---|---|---|---|---|
+| AtmosGuard | 0.25x | 13% | 2% | 11% |
+| AtmosGuard | 0.5x | 70% | 26% | 28% |
+| AtmosGuard | 1x | 94% | 94% | 87% |
+| AtmosGuard | 2x | 98% | 100% | 100% |
+| AtmosGuard | 4x | 98% | 100% | 100% |
+| textbook range + step + persistence | 0.25x | 6% | 0% | 13% |
+| textbook range + step + persistence | 0.5x | 54% | 24% | 24% |
+| textbook range + step + persistence | 1x | 70% | 78% | 69% |
+| textbook range + step + persistence | 2x | 98% | 94% | 100% |
+| textbook range + step + persistence | 4x | 98% | 100% | 100% |
+| Mahalanobis distance only | 0.25x | 9% | 0% | 2% |
+| Mahalanobis distance only | 0.5x | 91% | 26% | 24% |
+| Mahalanobis distance only | 1x | 100% | 100% | 83% |
+| Mahalanobis distance only | 2x | 100% | 100% | 100% |
+| Mahalanobis distance only | 4x | 100% | 100% | 100% |
+
 ## A new station on day one (cold start)
 
 Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table from the nearest other station. Injected faults: frozen, spike, level shift.

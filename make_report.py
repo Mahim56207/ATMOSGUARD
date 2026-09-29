@@ -149,6 +149,9 @@ def results_section(summary: dict) -> str:
             L += [f"Real HTTP server (FastAPI + SQLite), {h['stations']} stations, {h['clients']} concurrent clients: "
                   f"{h['requests_per_second']} requests/s, median {h['median_ms']} ms, p95 {h['p95_ms']} ms, p99 {h['p99_ms']} ms, "
                   f"errors {h['errors']}.", ""]
+    if summary.get("sensitivity"):
+        c = summary["sensitivity"]
+        L += [head("How big must a fault be? (DEV, injected)"), "", c["note"], ""] + markdown_table(c["rows"])
     if summary.get("coldstart"):
         c = summary["coldstart"]
         L += [head("A new station on day one (cold start)"), "", c["note"], ""]

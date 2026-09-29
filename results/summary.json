@@ -3526,6 +3526,120 @@
    }
   }
  },
+ "sensitivity": {
+  "note": "How big must a fault be? Spikes, level shifts and noise bursts of 0.25 to 4 times the configured size, injected into clean real data of the six DEV stations (the tuning set, so an envelope study and not a held-out result). A detection is an alarm the fault itself raised. The 1x row is a separate random draw (two faults of each type per series, one round), so it is close to but not identical with the main table.",
+  "rows": [
+   {
+    "system": "AtmosGuard",
+    "size (x the configured fault)": "0.25x",
+    "spike": "13%",
+    "level shift": "2%",
+    "noise burst": "11%"
+   },
+   {
+    "system": "AtmosGuard",
+    "size (x the configured fault)": "0.5x",
+    "spike": "70%",
+    "level shift": "26%",
+    "noise burst": "28%"
+   },
+   {
+    "system": "AtmosGuard",
+    "size (x the configured fault)": "1x",
+    "spike": "94%",
+    "level shift": "94%",
+    "noise burst": "87%"
+   },
+   {
+    "system": "AtmosGuard",
+    "size (x the configured fault)": "2x",
+    "spike": "98%",
+    "level shift": "100%",
+    "noise burst": "100%"
+   },
+   {
+    "system": "AtmosGuard",
+    "size (x the configured fault)": "4x",
+    "spike": "98%",
+    "level shift": "100%",
+    "noise burst": "100%"
+   },
+   {
+    "system": "textbook range + step + persistence",
+    "size (x the configured fault)": "0.25x",
+    "spike": "6%",
+    "level shift": "0%",
+    "noise burst": "13%"
+   },
+   {
+    "system": "textbook range + step + persistence",
+    "size (x the configured fault)": "0.5x",
+    "spike": "54%",
+    "level shift": "24%",
+    "noise burst": "24%"
+   },
+   {
+    "system": "textbook range + step + persistence",
+    "size (x the configured fault)": "1x",
+    "spike": "70%",
+    "level shift": "78%",
+    "noise burst": "69%"
+   },
+   {
+    "system": "textbook range + step + persistence",
+    "size (x the configured fault)": "2x",
+    "spike": "98%",
+    "level shift": "94%",
+    "noise burst": "100%"
+   },
+   {
+    "system": "textbook range + step + persistence",
+    "size (x the configured fault)": "4x",
+    "spike": "98%",
+    "level shift": "100%",
+    "noise burst": "100%"
+   },
+   {
+    "system": "Mahalanobis distance only",
+    "size (x the configured fault)": "0.25x",
+    "spike": "9%",
+    "level shift": "0%",
+    "noise burst": "2%"
+   },
+   {
+    "system": "Mahalanobis distance only",
+    "size (x the configured fault)": "0.5x",
+    "spike": "91%",
+    "level shift": "26%",
+    "noise burst": "24%"
+   },
+   {
+    "system": "Mahalanobis distance only",
+    "size (x the configured fault)": "1x",
+    "spike": "100%",
+    "level shift": "100%",
+    "noise burst": "83%"
+   },
+   {
+    "system": "Mahalanobis distance only",
+    "size (x the configured fault)": "2x",
+    "spike": "100%",
+    "level shift": "100%",
+    "noise burst": "100%"
+   },
+   {
+    "system": "Mahalanobis distance only",
+    "size (x the configured fault)": "4x",
+    "spike": "100%",
+    "level shift": "100%",
+    "noise burst": "100%"
+   }
+  ],
+  "timing": {
+   "wall_minutes": 3.0,
+   "workers": 4
+  }
+ },
  "coldstart": {
   "note": "Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table from the nearest other station. Injected faults: frozen, spike, level shift.",
   "rows": [

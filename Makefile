@@ -19,7 +19,7 @@ replay:           ## replay Cyclone Vardah (Chennai) through the running API
 	$(PY) replay.py data/demo/vardah_MAA_2016-12.csv --speed 0
 
 results:          ## rebuild the tables, README blocks and Q&A numbers from the committed result files
-	$(PY) make_summary.py results/dev_run4.json results/holdout_run2.json results/fresh_run1.json --scale results/scale.json --coldstart results/coldstart.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md
+	$(PY) make_summary.py results/dev_run4.json results/holdout_run2.json results/fresh_run1.json --scale results/scale.json --coldstart results/coldstart.json --sensitivity results/sensitivity.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md
 
 report: results   ## figures, the technical report (Markdown and Word, needs pypandoc_binary for the Word file) and the offline replay page
 	$(PY) make_figures.py
