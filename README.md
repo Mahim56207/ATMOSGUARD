@@ -179,6 +179,9 @@ station with no reference. Long-term drift validation. Calibrated confidence (it
 has run on hardware or that any energy figure is measured. That humidity response time works in the field. Full list:
 [`docs/WHAT_WE_DO_NOT_CLAIM.md`](docs/WHAT_WE_DO_NOT_CLAIM.md).
 
+## Licence
+Code and documents: [Apache License 2.0](LICENSE) (permissive, with an explicit patent grant; keep the copyright and NOTICE lines). The weather data are derived from NOAA's Integrated Surface Database and keep the terms described in [`NOTICE`](NOTICE).
+
 ## Input rules
 CSV columns `timestamp, temperature_c, pressure_hpa, humidity_pct` (+ optional `station_id`); an empty cell is a missing value.
 Timestamps are UTC (a timestamp with a zone is converted). NaN or infinite is stored as missing and judged as a dropout. Absurd
