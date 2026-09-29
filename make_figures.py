@@ -100,14 +100,15 @@ def _events_fault(c: dict) -> tuple[float, int, int]:
 
 
 def fig_baselines(aggs: dict) -> None:
-    order = ["full", "baseline_rules", "baseline_mahalanobis", "baseline_climatology", "baseline_isolation_forest", "baseline_range", "no_limits"]
-    phases = [p for p in ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH") if p in aggs]
+    full_order = ["full", "baseline_rules", "baseline_mahalanobis", "baseline_climatology", "baseline_isolation_forest", "baseline_range", "no_limits"]
+    phases = [p for p in ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH", "FRESH2") if p in aggs]
     if not phases:
         return
     fig, axes = plt.subplots(len(phases), 3, figsize=(14, 3.3 * len(phases) + 0.6), squeeze=False)
-    titles = {"DEV": "DEV", "HOLDOUT_TIME": "holdout in time", "HOLDOUT_SPACE": "holdout in space", "FRESH": "fresh stations"}
+    titles = {"DEV": "DEV", "HOLDOUT_TIME": "holdout in time", "HOLDOUT_SPACE": "holdout in space", "FRESH": "fresh stations", "FRESH2": "fresh-2 stations"}
     for r, ph in enumerate(phases):
         cfg = aggs[ph]["configs"]
+        order = [n for n in full_order if n in cfg]                    # FRESH2 has no ablations
         y = np.arange(len(order))[::-1]
         measures = [
             ("false alarms on clean data (%)", [100 * cfg[n]["clean"]["alarm"] / cfg[n]["clean"]["n"] for n in order], "{:.1f}%"),

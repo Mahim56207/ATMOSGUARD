@@ -209,6 +209,25 @@ def check_gap(history: Sequence[Reading], settings: dict, cadence_minutes: float
     return CheckResult(check="gap", flagged=False, reason=f"{dt:g} min since the last reading, no gap.")
 
 
+def check_limits_fit(limits: Optional[StationLimits], settings: dict, cadence_minutes: float) -> CheckResult:
+    """Informational: are this station's learned limits usable at the cadence it reports at now? Never changes a verdict.
+
+    Found on the FRESH2 stations: four Australian AWS reported 16 hours a day with alternating 1 h and 2 h gaps in 2016-2019 and hourly, all day, from 2020. No noise
+    limit could be learned from that (no run of equally spaced readings), the fixed floor was used, and it alarms on 0.1-resolution data (13-33 % false alarms at those four)."""
+    if limits is None or not limits_active(settings):
+        return CheckResult(check="limits", flagged=False, reason="No station-learned limits to check.")
+    problems = []
+    unlearned = [ch for ch in CHANNELS if limits.noise_std(ch) is None]
+    if unlearned:
+        problems.append(f"the noise limit of {', '.join(unlearned)} was not learned (too few runs of equally spaced readings in the training data), so the fixed floor is "
+                        "used, which can alarm on fine-resolution stations")
+    if limits.cadence_minutes and abs(cadence_minutes / limits.cadence_minutes - 1.0) > 0.25:
+        problems.append(f"the limits were learned at a {limits.cadence_minutes:g} min cadence and the station now reports every {cadence_minutes:g} min")
+    if problems:
+        return CheckResult(check="limits", flagged=True, reason="Station limits may not fit this data: " + "; and ".join(problems) + ". Refit them (python train.py) on a stretch at the current cadence.")
+    return CheckResult(check="limits", flagged=False, reason="Station-learned limits fit the current cadence.")
+
+
 def check_timestamp(history: Sequence[Reading], settings: dict, now: Optional[datetime] = None) -> CheckResult:
     cur = history[-1].timestamp
     if len(history) >= 2 and cur <= history[-2].timestamp:
@@ -341,7 +360,7 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
     if not layer_enabled(settings, "health") or not history:
         return []
     results = [check_timestamp(history, settings, now), check_dropout(history),
-               check_gap(history, settings, cadence_minutes)]
+               check_gap(history, settings, cadence_minutes), check_limits_fit(limits, settings, cadence_minutes)]
     for ch in CHANNELS:
         results += [
             check_frozen(history, ch, settings, cadence_minutes, limits),

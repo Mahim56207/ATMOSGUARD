@@ -49,7 +49,9 @@ health:            # L1  (all windows in minutes; starting points)
     ceiling:
       humidity_pct: 99.5         # at or above this the channel counts as saturated
   step:            # allowed change between two samples = min(rate_per_min * minutes_apart, cap)
-    expected_aware: false        # remedy 3 (Amendment 3): judge only the part of a change that the station's usual daily cycle does not explain
+    expected_aware: true         # remedy 3 (Amendment 3): judge only the part of a change that the station's usual daily cycle does not explain.
+                                 # ADOPTED by the rule registered in Amendment 3, on the twelve FRESH2 stations (results/fresh2_run1.*). The evaluation's
+                                 # `registered` and earlier `full` configurations force it off so every earlier number reproduces.
     rate_per_min:
       temperature_c: 1.0
       pressure_hpa: 0.5
@@ -65,7 +67,8 @@ health:            # L1  (all windows in minutes; starting points)
       temperature_c: 0.5
       pressure_hpa: 0.5
       humidity_pct: 3.0
-  offset:          # remedy 4 (Amendment 3): a sustained one-channel offset (soft). Off by default.
+  offset:          # remedy 4 (Amendment 3): a sustained one-channel offset (soft). REJECTED by the rule registered in Amendment 3 (level-shift
+                   # detection +1 point against the +5 required, clean false alarms +0.48 points); stays off.
     enabled: false
     window_minutes: 720          # stretched to hold at least min_samples readings
     min_samples: 4
@@ -152,7 +155,7 @@ pipeline:
   warmup_max_readings: 2000      # on start, this many stored readings per station are replayed to rebuild the history
 
 fusion:            # verdict logic (starting points). Rules run in the order given in the guide.
-  informational_checks: [gap]                         # reported as a notice on the reading; never changes the verdict
+  informational_checks: [gap, limits]                         # reported as a notice on the reading; never changes the verdict
   fault_checks: [range, dew_point, frozen, dropout]   # rule 1: a HARD flag from these -> FAULT
   jump_checks: [step, spike]                          # rule 2: a jump on ONE channel, others quiet -> FAULT
   quiet_fraction: 0.5                                 # "quiet" = moved by at most this share of the step allowance over the last two intervals

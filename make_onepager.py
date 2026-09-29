@@ -18,7 +18,8 @@ REPO = Path(__file__).resolve().parent
 OUT_HTML = REPO / "docs" / "AtmosGuard_one_page.html"
 OUT_PDF = REPO / "docs" / "AtmosGuard_one_page.pdf"
 PHASES = (("DEV", "DEV", "6 stations, 2020-21, tuned here"), ("HOLDOUT_TIME", "Holdout in time", "same 6, 2022-24"),
-          ("HOLDOUT_SPACE", "Holdout in space", "8 unseen stations"), ("FRESH", "Fresh stations", "12 more, sealed first"))
+          ("HOLDOUT_SPACE", "Holdout in space", "8 unseen stations"), ("FRESH", "Fresh stations", "12 more, sealed first"),
+          ("FRESH2", "Fresh 2", "12 more: 5 airports, 7 AWS"))
 REPO_URL = "github.com/Mahim56207/ATMOSGUARD"
 
 
@@ -47,7 +48,7 @@ def build(aggs: dict) -> str:
     body = "".join(
         f"<tr><td><b>{esc(r['split'])}</b> <span>{esc(r['sub'])}</span></td><td>{r['clean']:.1f}%</td><td>{esc(r['windows'])}</td>"
         f"<td>{r['det']:.0f}%</td><td class='b'>{r['rules_clean']:.1f}%</td><td class='b'>{esc(r['rules_windows'])}</td></tr>" for r in rows)
-    unseen = " and ".join(r["windows"] for r in rows if r["split"] in ("Holdout in space", "Fresh stations"))
+    unseen = " and ".join(r["windows"] for r in rows if r["split"] in ("Holdout in space", "Fresh stations", "Fresh 2"))
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>AtmosGuard, one page</title>
 <style>
@@ -139,7 +140,7 @@ footer {{ margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; 
 <section class="box"><h2 style="color:var(--red)">Where it fails (we say it first)</h2>
   <ul class="two">
     <li>Detection is on injected faults; the data are airport records, not IMD AWS records.</li>
-    <li>{unseen} real extreme-weather windows on the unseen stations (holdout, fresh) still get a FAULT: a 47 % humidity jump in two hours, a 16 C jump across a reporting gap.</li>
+    <li>{unseen} real extreme-weather windows on the unseen stations (holdout, fresh, fresh 2, pipeline as frozen for each) got a FAULT: a 47 % humidity jump in two hours, a 16 C jump across a reporting gap, a 49 % humidity drop in a dry air mass. The step remedy adopted on the last set takes it from 4 windows to 1.</li>
     <li>Noise bursts are the weakest class; small drift and constant offsets are invisible from one station.</li>
     <li>Simpler detectors beat us on some fault types (spikes; wrong clocks on unseen stations) but miss others and call real weather a fault.</li>
     <li>Most spike, level-shift, noise and clock detections are SUSPECT (review), not FAULT.</li>

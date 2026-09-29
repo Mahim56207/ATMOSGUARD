@@ -19,9 +19,9 @@ def settings_with(**flags):
     return s
 
 
-def test_new_flags_are_off_in_the_shipped_default():
+def test_remedy_3_was_adopted_and_remedy_4_was_rejected_by_the_rule_registered_in_amendment_3():
     s = load_settings()
-    assert s["health"]["step"]["expected_aware"] is False and s["health"]["offset"]["enabled"] is False
+    assert s["health"]["step"]["expected_aware"] is True and s["health"]["offset"]["enabled"] is False
 
 
 # ---- remedy 3: expected-change-aware step --------------------------------------------------------------------
@@ -179,3 +179,24 @@ def test_both_is_adopted_only_if_each_is():
     a = _adopt(ms.amendment3_rows(_agg(r3_expected_step=dict(windows_with_fault=2, fault_n=15), r4_offset=dict(step=(86, 100), alarm=28))))
     b = _adopt(ms.amendment3_rows(_agg(r4_offset=dict(step=(86, 100), alarm=28))))
     assert a[both] == "yes" and b[both] == "no"
+
+
+# ---- the informational limits-fit notice ------------------------------------------------------------------------
+def test_limits_notice_says_when_a_noise_limit_was_not_learned_and_never_changes_the_verdict():
+    from atmos.fusion import Pipeline
+    from atmos.health import check_limits_fit
+    from atmos.limits import ChannelLimits, StationLimits
+    s = load_settings()
+    ok = StationLimits("S1", 60.0, {c: ChannelLimits(noise_std=1.0, frozen_minutes=300.0) for c in CH})
+    assert not check_limits_fit(ok, s, 60.0).flagged
+    partial = StationLimits("S1", 60.0, {"temperature_c": ChannelLimits(noise_std=None), "pressure_hpa": ChannelLimits(noise_std=1.0), "humidity_pct": ChannelLimits(noise_std=1.0)})
+    r = check_limits_fit(partial, s, 60.0)
+    assert r.flagged and "temperature_c" in r.reason and "Refit" in r.reason
+    assert check_limits_fit(ok, s, 180.0).flagged                        # learned at hourly, now 3-hourly
+    assert not check_limits_fit(None, s, 60.0).flagged
+    assert "limits" in s["fusion"]["informational_checks"]
+    pipe = Pipeline(s, {"S1": {"cadence_minutes": 60}}, limits={"S1": partial})
+    hist = make_history(6, cadence=60, station="S1") if "station" in make_history.__code__.co_varnames else make_history(6, cadence=60)
+    for r_ in hist:
+        v = pipe.process(r_.model_copy(update={"station_id": "S1"}))
+    assert v.verdict.value == "VALID" and any("noise limit" in n for n in v.notices)
