@@ -83,7 +83,7 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
   [`docs/figures/fig_detectability.png`](docs/figures/fig_detectability.png) (DEV stations, injected faults).
 - **Constant offsets and slow drift are invisible from one station, and visible with neighbours.** The single-station drift monitor sees a ramp of several times the service limit. The optional peer layer
   ([`docs/PEER_LAYER.md`](docs/PEER_LAYER.md)) compares a station with three or more neighbours within 250 km: on two disjoint clusters of Australian AWS it finds a 2 hPa offset 91-96 % of the time within
-  21 days where the station alone finds 0-4 %. It needs a dense network, misses offsets of half a unit, is weak on humidity, and was measured on injected faults.
+  21 days where the station alone finds 0-4 %. On 31 Indian airport stations with the radius widened to 600 km (the spacing India has) it finds a 2 hPa offset 91 % of the time against 21 % alone, but gains nothing on humidity and has more false alarms (2-4 % of days). It needs neighbours, misses offsets of half a unit, and was measured on injected faults.
 - **No IMD record, and no sub-hourly record, has been tested.** IMD AWS records are not public and the hosts that might serve one are blocked where this was built ([`docs/IMD_DATA_REQUEST.md`](docs/IMD_DATA_REQUEST.md)
   is a draft request). Fresh-2 adds seven real Australian Bureau of Meteorology automatic weather stations at 0.1 C and 0.1 hPa (hourly), which is real AWS data at fine resolution but not IMD and not 1-15 minute cadence.
   [`docs/USE_YOUR_DATA.md`](docs/USE_YOUR_DATA.md) gives the one command that produces the same numbers for a real AWS record.
