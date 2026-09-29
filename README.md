@@ -128,12 +128,13 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | Demo script and contingencies | [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md) |
 | Likely judge questions and honest answers | [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) |
 | Submission playbook (criteria -> artifacts, what is left for the team) | [`docs/SIH_SUBMISSION_PLAYBOOK.md`](docs/SIH_SUBMISSION_PLAYBOOK.md) |
+| Portal text, pitch scripts and a slide-by-slide plan (content only) | [`docs/SUBMISSION_TEXT.md`](docs/SUBMISSION_TEXT.md), [`docs/SLIDE_PLAN.md`](docs/SLIDE_PLAN.md) |
 | Research: humidity response time (tau_RH), where it works and where it does not | [`research/tau_rh.py`](research/tau_rh.py) |
 
 ## Repository map
 `atmos/` the pipeline - `api.py` FastAPI - `dashboard.py` Streamlit - `evaluate_real.py` the real-data evaluation -
 `evaluate_coldstart.py` new-station study - `evaluate_csv.py` the same evaluation on your CSV - `loadtest.py` scale test - `data_tools/` NOAA download, split, event rules -
-`firmware/node/` ESP32 sketch and the portable L0 header - `train.py` per-station models - `make_summary.py`,
+`make_report.py` (technical report from the results), `make_diagrams.py` and `capture_dashboard.py` (slide assets), `compare_runs.py` (did a rerun reproduce?) - `firmware/node/` ESP32 sketch and the portable L0 header - `train.py` per-station models - `make_summary.py`,
 `make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real` (sealed until the single run), `data/demo` -
 `models/` trained station artifacts - `tests/` 340+ tests.
 

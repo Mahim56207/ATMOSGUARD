@@ -14,7 +14,7 @@ repository yet.)
   worked on state-government problems; the 2024 and 2025 winner write-ups describe **working full-stack prototypes,
   real-time demos, and hardware prototypes built with Arduino/IoT sensors** as what impressed judges, including teams that
   demonstrated despite connectivity problems.
-- **The field on this problem statement is crowded.** At least ten public repositories target it (survey in
+- **The field on this problem statement is crowded.** At least fourteen public repositories target it (survey in
   `docs/NOVELTY_AND_PRIOR_ART.md`). Read from their READMEs, almost all are synthetic-only or have no metrics; none shows a
   locked holdout, a real-cyclone false-alarm figure, an ablation on real data, or a list of what it cannot do. Judges who see
   several entries side by side will remember the one with evidence and honesty.
