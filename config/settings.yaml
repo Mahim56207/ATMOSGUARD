@@ -220,6 +220,7 @@ api:               # operational settings for the service (api.py)
   rate_limit_per_minute: 0       # POST /ingest per client address, per minute (0 = off)
   retention_days: 0              # 0 keeps everything. Otherwise whole records older than this are deleted (raw values are otherwise never deleted)
   purge_every: 1000              # readings between retention checks
+  upload_max_bytes: 20000000     # largest CSV that POST /replay/upload accepts
 
 replay:
   data_dir: data                 # /replay only reads CSV files inside this folder (relative to the repo root)

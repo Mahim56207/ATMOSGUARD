@@ -233,6 +233,16 @@ def delete(api_url: str, path: str, params: Optional[dict] = None):
 FAULT_TYPES = ("frozen", "spike", "step", "drift", "noise", "dropout")
 
 
+def upload_body(name: str, data: bytes, station: str, speed: float, limit: int, learn: bool = True) -> dict:
+    """The JSON the API's /replay/upload expects, from an uploaded file."""
+    body = {"filename": name, "text": data.decode("utf-8-sig"), "speed": float(speed), "learn_fraction": 0.5 if learn else 0.0}
+    if station:
+        body["station_id"] = station
+    if limit:
+        body["limit"] = int(limit)
+    return body
+
+
 VERDICT_RANK = {"FAULT": 0, "SUSPECT": 1, "WEATHER": 2, "VALID": 3, None: 4}
 
 
@@ -329,6 +339,26 @@ def render_controls(api_url: str, station: str, status: dict) -> None:
             st.error(e.response.json().get("detail", str(e)))
     if b2.button("Stop replay", key="replay_stop"):
         delete(api_url, "/replay")
+
+    st.subheader("Bring your own CSV")
+    st.caption("A CSV with timestamp (UTC), temperature_c, pressure_hpa, humidity_pct (station_id optional). It is judged through the same "
+               "pipeline, live. The server keeps a copy under data/uploads/.")
+    uploaded = st.file_uploader("CSV file", type="csv", key="upload_file")
+    v1, v2, v3 = st.columns([2, 1, 1])
+    up_station = v1.text_input("Station id (only if the CSV has no station_id column)", value="", key="upload_station")
+    up_speed = v2.number_input("Speed (0 = fastest)", min_value=0.0, value=0.0, key="upload_speed")
+    up_limit = v3.number_input("Readings (0 = all)", min_value=0, value=0, key="upload_limit")
+    up_learn = st.checkbox("A station the server has no models for learns from the first half of the file, then the second half is judged", value=True, key="upload_learn")
+    if st.button("Judge this file", key="upload_go", disabled=uploaded is None) and uploaded is not None:
+        try:
+            out = post(api_url, "/replay/upload", upload_body(uploaded.name, uploaded.getvalue(), up_station, up_speed, up_limit, up_learn))
+            st.success(f"Judging {out['total']} readings from {uploaded.name}. Switch to the Live monitor tab and pick the station.")
+            for note in out.get("notes", []):
+                st.info(note)
+        except httpx.HTTPStatusError as e:
+            st.error(e.response.json().get("detail", str(e)))
+        except UnicodeDecodeError:
+            st.error("The file is not text (UTF-8). Save it as CSV and try again.")
 
 
 def render_evaluation(api_url: str) -> None:
