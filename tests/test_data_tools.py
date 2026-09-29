@@ -151,3 +151,42 @@ def test_summary_builds_from_the_committed_dev_results():
     assert len(ph["headline"]["rows"]) == 5 and ph["detection"]["rows"][0]["configuration"] == "AtmosGuard (full)"
     assert "FAULT on" in ph["headline"]["rows"][1]["answer"]
     assert "# AtmosGuard evaluation results" in ms.to_markdown(summary)
+
+
+# ---- paired detection ------------------------------------------------------------------------------------
+def test_an_alarm_that_was_already_there_does_not_count_as_detecting_the_fault(settings):
+    from atmos.injector import FaultEvent, InjectionResult
+    from tests.conftest import make_history
+    s = er.real_settings(settings)
+    orig = make_history(30, cadence=60)
+    faulted = list(orig)
+    res = InjectionResult(faulted, [None] * 30, [FaultEvent("frozen", "temperature_c", "a", "b", 10, 14, {})])
+
+    def predictor(alarm_at):
+        def predict(readings):
+            fault_series = readings is faulted
+            return [er.Pred("SUSPECT" if i in alarm_at[fault_series] else "VALID") for i in range(len(readings))]
+        return predict
+    # the un-faulted series already alarms at sample 12; the faulted one alarms at 12 only
+    r = er.count_detection([(faulted, res, orig)], predictor({True: {12}, False: {12}}), s, 60.0)["frozen"]
+    assert r["detected"] == 1 and r["detected_new"] == 0                   # registered criterion counts it, paired does not
+    # the faulted series alarms at 13 too: a NEW alarm, so the fault raised it
+    r = er.count_detection([(faulted, res, orig)], predictor({True: {12, 13}, False: {12}}), s, 60.0)["frozen"]
+    assert r["detected"] == 1 and r["detected_new"] == 1 and r["delays_new_min"] == [180.0]
+    # nothing alarms: nothing detected either way
+    r = er.count_detection([(faulted, res, orig)], predictor({True: set(), False: set()}), s, 60.0)["frozen"]
+    assert r["detected"] == 0 and r["detected_new"] == 0 and r["injected"] == 1
+
+
+def test_memoize_returns_the_same_predictions_for_the_same_series_and_can_be_cleared():
+    calls = []
+
+    def predict(readings):
+        calls.append(1)
+        return [er.Pred("VALID")] * len(readings)
+    m = er.memoize(predict)
+    series = [object()] * 3
+    assert m(series) is m(series) and len(calls) == 1
+    m.clear()
+    m(series)
+    assert len(calls) == 2

@@ -95,3 +95,23 @@ clock shift 96.8 %, noise burst 80.7 %.
 - No labelled real faults exist: detection is on injected faults.
 - Windows chosen by rule can still contain a real sensor fault that neither we nor NOAA flagged.
 - The DEV stations were also used to look at failure cases, which is why they are the optimistic numbers.
+
+## Amendment 1 (written after `holdout_run1` finished; the pipeline was not touched)
+`results/holdout_run1.*` was produced under the criterion registered above and is kept unedited. Afterwards we found a flaw in how
+**detection is scored**, not in the pipeline: "any alarm in the fault window" also credits background false alarms (about 2 % of
+samples) that land inside long windows. Over a 4-day clock-shift window that alone gives about an 84 % chance of some alarm, and the
+simpler baselines get the same free credit (the climatology-only baseline "detects" 53-61 % of clock shifts almost entirely from its
+background alarms). The scoring is corrected and both scores are reported:
+
+- **Registered criterion** (unchanged): any `FAULT` or `SUSPECT` from the first faulty sample to the last plus 60 minutes.
+- **Corrected criterion (now the primary detection table):** the same window, but an alarm counts only if the *same sample* was not an alarm on the
+  un-faulted series ("the fault raised it"). Also reported: how often the alarm is a `FAULT` (named) and how often a miss made samples look like
+  `WEATHER` (the risk of the coherent-level route).
+
+To score it, DEV (`dev_run4`) and the holdout (`holdout_run2`, run with `--force-rerun-holdout`; the original lock file stays in git history) were run
+again on the same code. Nothing about the pipeline or its settings changed between `holdout_run1` and `holdout_run2`
+(`git diff 9cd24f1 HEAD -- atmos config/settings.yaml` shows only a new `explain.py`, an optional retention method and an `api:` block). The rerun is deterministic, so
+its registered-criterion numbers must equal `holdout_run1`'s; `results/RUNS.md` records whether they do.
+
+`holdout_run1` also showed what a holdout is for: on the eight unseen stations 3 of 98 real extreme-weather windows contain a `FAULT` verdict (0.3 % of
+their samples), where DEV had none. No change was made in response. It is listed as a limitation and analysed in `docs/TECHNICAL_REPORT.md`.

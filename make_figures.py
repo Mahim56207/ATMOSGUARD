@@ -90,7 +90,7 @@ def fig_events() -> None:
 
 
 def _det_mean(c: dict) -> float:
-    r = [100 * c["detection"][t]["detected"] / c["detection"][t]["injected"] for t in er.REAL_TYPES if c["detection"][t]["injected"]]
+    r = [100 * c["detection"][t].get("detected_new", 0) / c["detection"][t]["injected"] for t in er.REAL_TYPES if c["detection"][t]["injected"]]
     return float(np.mean(r)) if r else float("nan")
 
 
@@ -144,11 +144,11 @@ def fig_ablation(aggs: dict) -> None:
     pal = ["#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7", "#e6a10a", "#8a8a80"]
     x = np.arange(len(names))
     for i, t in enumerate(er.REAL_TYPES):
-        vals = [100 * cfg[n]["detection"][t]["detected"] / max(cfg[n]["detection"][t]["injected"], 1) for n in names]
+        vals = [100 * cfg[n]["detection"][t].get("detected_new", 0) / max(cfg[n]["detection"][t]["injected"], 1) for n in names]
         ax.bar(x + (i - len(er.REAL_TYPES) / 2 + 0.5) * w, vals, w, label=t.replace("_", " "), color=pal[i])
     ax.set_xticks(x)
     ax.set_xticklabels([labels[n] for n in names], fontsize=9)
-    ax.set_ylabel("injected faults detected (%)", color=MUTED)
+    ax.set_ylabel("injected faults whose alarm the fault raised (%)", color=MUTED)
     ax.legend(ncol=6, frameon=False, fontsize=9, loc="lower center", bbox_to_anchor=(0.5, 1.0))
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(axis="y", color=GRID, linewidth=0.6)

@@ -159,6 +159,22 @@ class Pred:
 Predictor = Callable[[list[Reading]], list[Pred]]
 
 
+def memoize(predict: Predictor) -> Predictor:
+    """Remember the predictions for a series (by identity). A clean chunk is judged once for the false-alarm count and is
+    then reused as the un-faulted reference for the paired detection score."""
+    cache: dict[int, tuple[list[Reading], list[Pred]]] = {}
+
+    def wrapped(readings: list[Reading]) -> list[Pred]:
+        hit = cache.get(id(readings))
+        if hit is not None and hit[0] is readings:
+            return hit[1]
+        out = predict(readings)
+        cache[id(readings)] = (readings, out)
+        return out
+    wrapped.clear = cache.clear                      # type: ignore[attr-defined]
+    return wrapped
+
+
 def pipeline_predictor(settings: dict, table: NormalityTable, model: IsolationModel, limits: StationLimits,
                        sid: str, cadence: float, mahal: Optional[MahalanobisModel] = None) -> Predictor:
     def predict(readings: list[Reading]) -> list[Pred]:
@@ -258,7 +274,7 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
              ("baseline_climatology", "baseline", baseline_climatology(table, settings)),
              ("baseline_isolation_forest", "baseline", baseline_iforest(model)),
              ("baseline_mahalanobis", "baseline", baseline_mahalanobis(train))]
-    return cfgs
+    return [(name, kind, memoize(p)) for name, kind, p in cfgs]
 
 
 # ====================================================================================================
@@ -294,25 +310,40 @@ def count_events(events: list[EventSeries], predict: Predictor) -> dict:
             for k, c in by_kind.items()}
 
 
-def count_detection(faulted: list[tuple[list[Reading], InjectionResult]], predict: Predictor, settings: dict,
-                    cadence: float) -> dict:
+def count_detection(faulted: list[tuple[list[Reading], InjectionResult, list[Reading]]], predict: Predictor,
+                    settings: dict, cadence: float) -> dict:
+    """Two scores per fault type.
+      detected      : the registered criterion. Any alarm from the first faulty sample to the last plus the grace.
+      detected_new  : the fault is what raised it. An alarm counts only if the same sample was NOT an alarm on the
+                      un-faulted series. Background false alarms (about 2 % of samples) land inside long fault windows
+                      (a 4-day window: an 84 % chance of some alarm), so the first score flatters long faults and every
+                      system, baselines included; the second does not."""
     grace = math.ceil(settings["evaluate"]["detection_grace_minutes"] / cadence)
-    out: dict[str, dict] = {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}
-    for readings, res in faulted:
-        preds = predict(readings)
+    out: dict[str, dict] = {t: {"detected": 0, "detected_new": 0, "injected": 0, "delays_min": [], "delays_new_min": [],
+                                "named_fault": 0, "masked_as_weather": 0} for t in REAL_TYPES}
+    for readings, res, original in faulted:
+        preds, base = predict(readings), predict(original)
         for e in res.events:
-            window = preds[e.start_index: e.end_index + 1 + grace]
-            hit = next((i for i, p in enumerate(window) if is_alarm(p)), None)
+            lo, hi = e.start_index, e.end_index + 1 + grace
             o = out[e.fault_type]
             o["injected"] += 1
+            hit = next((i for i, p in enumerate(preds[lo:hi]) if is_alarm(p)), None)
+            new = next((i for i, (p, b) in enumerate(zip(preds[lo:hi], base[lo:hi])) if is_alarm(p) and not is_alarm(b)), None)
             if hit is not None:
                 o["detected"] += 1
                 o["delays_min"].append(hit * cadence)
+            if new is not None:
+                o["detected_new"] += 1
+                o["delays_new_min"].append(new * cadence)
+                o["named_fault"] += any(p.verdict == "FAULT" and b.verdict != "FAULT" for p, b in zip(preds[lo:hi], base[lo:hi]))
+            elif any(p.verdict == "WEATHER" and b.verdict != "WEATHER" for p, b in zip(preds[lo:hi], base[lo:hi])):
+                o["masked_as_weather"] += 1                    # not raised as an alarm, but the fault made samples look like weather
     return out
 
 
 def make_faulted(chunks: list[list[Reading]], settings: dict, rounds: int, min_len: int
-                 ) -> list[tuple[list[Reading], InjectionResult]]:
+                 ) -> list[tuple[list[Reading], InjectionResult, list[Reading]]]:
+    """(faulted series, ground-truth log, the un-faulted series it came from)."""
     out = []
     for rnd in range(rounds):
         for idx, series in enumerate(chunks):
@@ -322,7 +353,7 @@ def make_faulted(chunks: list[list[Reading]], settings: dict, rounds: int, min_l
             plan = make_plan(series, settings, seed=seed, types=REAL_TYPES)
             if plan:
                 res = inject(series, settings, plan, seed=seed)
-                out.append((res.readings, res))
+                out.append((res.readings, res, series))
     return out
 
 
@@ -499,7 +530,9 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
             results[name] = {"kind": kind, "clean": count_clean(clean, predict),
                              "events": count_events(event_series, predict) if "events" in parts else {},
                              "detection": count_detection(faulted, predict, s, cadence) if "detect" in parts else
-                             {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}}
+                             {t: {"detected": 0, "detected_new": 0, "injected": 0, "delays_min": [], "delays_new_min": []}
+                              for t in REAL_TYPES}}
+            predict.clear()                                    # free the remembered predictions of this configuration
     full = configs[0][2]
     extra = {"drift_power": drift_power(clean, s, table, cadence) if "drift" in parts else {},
              "drift_false": (drift_false_alarms(clean, s, table, model, limits, sid, cadence) if "drift" in parts else {}),
@@ -577,7 +610,7 @@ def aggregate(rows: list[dict], phase: str) -> dict:
     names = list(sel[0]["configs"]) if sel else []
     out = {}
     for n in names:
-        det = {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}
+        det = {t: {"detected": 0, "detected_new": 0, "injected": 0, "delays_min": [], "delays_new_min": []} for t in REAL_TYPES}
         clean = Counter()
         events: dict[str, Counter] = defaultdict(Counter)
         for r in sel:
@@ -585,8 +618,12 @@ def aggregate(rows: list[dict], phase: str) -> dict:
             clean.update(c["clean"])
             for t, d in c["detection"].items():
                 det[t]["detected"] += d["detected"]
+                det[t]["detected_new"] += d.get("detected_new", 0)
                 det[t]["injected"] += d["injected"]
                 det[t]["delays_min"] += d["delays_min"]
+                det[t]["delays_new_min"] += d.get("delays_new_min", [])
+                det[t]["named_fault"] = det[t].get("named_fault", 0) + d.get("named_fault", 0)
+                det[t]["masked_as_weather"] = det[t].get("masked_as_weather", 0) + d.get("masked_as_weather", 0)
             for k, d in c["events"].items():
                 events[k].update(d)
         out[n] = {"kind": sel[0]["configs"][n]["kind"], "clean": dict(clean), "detection": det,
@@ -615,20 +652,26 @@ def format_phase(agg: dict, title: str) -> str:
     cfgs = agg["configs"]
     if not cfgs:                                        # a --parts run without the verdict tables
         cfgs = {"full": {"kind": "full", "clean": {"n": 0, "alarm": 0, "fault": 0, "weather": 0}, "events": {},
-                         "detection": {t: {"detected": 0, "injected": 0, "delays_min": []} for t in REAL_TYPES}}}
+                         "detection": {t: {"detected": 0, "detected_new": 0, "injected": 0, "delays_min": [], "delays_new_min": []}
+                                       for t in REAL_TYPES}}}
     w = max(len(n) for n in cfgs) + 2
     L = [f"### {title}", f"stations: {', '.join(agg['stations'])}", ""]
-    L.append("1) Detection of injected faults, by type  (alarm = FAULT or SUSPECT, from fault start to end + grace)")
+    L.append("1a) Detection of injected faults, by type: the fault raised the alarm  (paired: the same sample was NOT an alarm on the un-faulted series)")
     L.append(f"   {'config':<{w}}" + "".join(f"{t:>12}" for t in REAL_TYPES))
     for n, c in cfgs.items():
-        L.append(f"   {n:<{w}}" + "".join(f"{_pct(c['detection'][t]['detected'], c['detection'][t]['injected']):>12}"
+        L.append(f"   {n:<{w}}" + "".join(f"{_pct(c['detection'][t].get('detected_new', 0), c['detection'][t]['injected']):>12}"
                                           for t in REAL_TYPES))
     first = next(iter(cfgs.values()))
     L.append(f"   {'(faults injected)':<{w}}" + "".join(f"{first['detection'][t]['injected']:>12}" for t in REAL_TYPES))
     full = cfgs["full"]["detection"]
-    med = {t: (float(np.median(full[t]["delays_min"])) if full[t]["delays_min"] else None) for t in REAL_TYPES}
-    L.append(f"   {'full: median delay to first alarm (min)':<{w}}" +
+    med = {t: (float(np.median(full[t].get("delays_new_min", []))) if full[t].get("delays_new_min") else None) for t in REAL_TYPES}
+    L.append(f"   {'full: median delay to the fault-raised alarm (min)':<{w}}" +
              "".join(f"{('-' if med[t] is None else f'{med[t]:.0f}'):>12}" for t in REAL_TYPES))
+    L += ["", "1b) The same, by the REGISTERED criterion in config/protocol.md: any alarm from the first faulty sample to the last plus 60 min.",
+          "    Background false alarms also land inside long fault windows, so 1b flatters long faults (frozen 48 h, clock shift 4 days) and every system.",
+          f"   {'config':<{w}}" + "".join(f"{t:>12}" for t in REAL_TYPES)]
+    for n, c in cfgs.items():
+        L.append(f"   {n:<{w}}" + "".join(f"{_pct(c['detection'][t]['detected'], c['detection'][t]['injected']):>12}" for t in REAL_TYPES))
     L += ["", "2) False alarms on clean real data  (no faults injected, extreme-weather windows and NOAA-flagged values removed)",
           f"   {'config':<{w}}{'any alarm':>11}{'FAULT only':>12}{'WEATHER':>10}{'samples':>10}"]
     for n, c in cfgs.items():

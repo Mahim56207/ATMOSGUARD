@@ -104,7 +104,7 @@ def one_station(args) -> dict:
             det = er.count_detection(faulted, pred, s, cadence)
             tot = {k: sum(d.get(k, 0) for d in ev_.values()) for k in ("n", "FAULT", "SUSPECT", "WEATHER")}
             rows.append({"station": sid, "days": D, "mode": mode, "own_days": own_days, "clean": c, "events": tot,
-                         "detection": {t: [det[t]["detected"], det[t]["injected"]] for t in TYPES}})
+                         "detection": {t: [det[t]["detected_new"], det[t]["injected"]] for t in TYPES}})
     return {"station": sid, "borrowed_from": near, "rows": rows}
 
 
