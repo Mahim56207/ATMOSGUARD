@@ -133,6 +133,7 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 FRESH_LOCK_NAME = ".fresh_used"
+FRESH2_LOCK_NAME = ".fresh2_used"
 
 
 def guard_holdout(settings: dict, repo_dir: Optional[Path] = None, data_dir: Optional[Path] = None,
@@ -157,6 +158,11 @@ def guard_holdout(settings: dict, repo_dir: Optional[Path] = None, data_dir: Opt
     lock.parent.mkdir(parents=True, exist_ok=True)
     lock.write_text(json.dumps({"used_at": datetime.now(timezone.utc).isoformat(), "protocol_commit": commit}),
                     encoding="utf-8")
+
+
+def guard_fresh2(settings: dict, repo_dir: Optional[Path] = None, data_dir: Optional[Path] = None) -> None:
+    """The guard for the FRESH2 stations: as for FRESH, plus Amendment 3 must be in the committed protocol."""
+    guard_holdout(settings, repo_dir, data_dir, folder="fresh2", lock_name=FRESH2_LOCK_NAME, require_text="## Amendment 3")
 
 
 def guard_fresh(settings: dict, repo_dir: Optional[Path] = None, data_dir: Optional[Path] = None) -> None:

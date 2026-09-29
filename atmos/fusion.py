@@ -220,8 +220,10 @@ class Pipeline:
         """Samples to keep. The health checks need a few hours (a station-learned frozen window can be longer);
         the clock check (T1) needs a full day."""
         h, w = self.settings["health"], self.settings["fusion"]["weather"]
+        off = h.get("offset") or {}
         minutes = max(*h["frozen"]["window_minutes"].values(), h["noise"]["window_minutes"],
-                      h["cusum"]["window_minutes"], w["direction_window_minutes"])
+                      h["cusum"]["window_minutes"], w["direction_window_minutes"],
+                      off["window_minutes"] if off.get("enabled") else 0.0)
         if station_limits is not None and limits_mod.limits_active(self.settings):
             minutes = max(minutes, station_limits.longest_frozen_window() * h["frozen"].get("hard_multiplier", 1.0))
         if with_clock_window and layer_enabled(self.settings, "timing"):

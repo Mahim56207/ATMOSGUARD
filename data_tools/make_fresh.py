@@ -18,7 +18,8 @@ from typing import Optional
 from . import isd, make_dataset
 
 REPO = isd.REPO
-CATALOG = Path(__file__).resolve().parent / "stations_fresh.yaml"
+SETS = {"fresh": ("stations_fresh.yaml", "fresh"), "fresh2": ("stations_fresh2.yaml", "fresh2")}    # catalog file, folder under data/
+CATALOG = Path(__file__).resolve().parent / SETS["fresh"][0]
 OUT_DIR = REPO / "data" / "fresh" / "real"
 EVENTS = REPO / "data" / "fresh" / "events.json"
 
@@ -26,8 +27,12 @@ EVENTS = REPO / "data" / "fresh" / "events.json"
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Fetch and build the FRESH stations.")
     ap.add_argument("cmd", choices=("fetch", "build"))
+    ap.add_argument("--set", choices=tuple(SETS), default="fresh", help="fresh (Amendment 2) or fresh2 (Amendment 3)")
     args = ap.parse_args(argv)
-    cat = isd.load_catalog(CATALOG)
+    catalog_file, folder = SETS[args.set]
+    OUT_DIR = REPO / "data" / folder / "real"
+    EVENTS = REPO / "data" / folder / "events.json"
+    cat = isd.load_catalog(Path(__file__).resolve().parent / catalog_file)
     first, last = cat["years"]["first"], cat["years"]["last"]
     if args.cmd == "fetch":
         res = isd.fetch_all([s["file"] for s in cat["stations"].values()], list(range(first, last + 1)))

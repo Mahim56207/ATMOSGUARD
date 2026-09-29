@@ -181,3 +181,57 @@ step cap is what flags the jump when a clock goes wrong; the rule registered fir
 on DEV for level shift, noise bursts and clocks, in line with the first holdout, and two simpler systems are better at some fault types on these stations: a
 Mahalanobis-only detector on spikes and level shifts, and the textbook rules on wrong clocks (94 % against 85 %) and noise bursts (63 % against 57 %), at 8.4 % false
 alarms and a FAULT in 134 of 139 real extreme-weather windows.
+
+## Amendment 3 (written before the FRESH2 stations were evaluated)
+The limitations list in the README named what remained after Amendment 2: two step-rule windows that still get a `FAULT` on real extreme weather, weaker detection of
+level shifts on unseen stations than on DEV, records that are airport METAR and not automatic weather stations, and no evidence at fine reporting resolution. This amendment
+sets up one more evaluation, on a third set of stations nobody has looked at, of two further remedies designed after reading DEV and the explanations of the earlier
+`FAULT` windows. `evaluate_real.py --fresh2` refuses to run unless this amendment is in the committed `config/protocol.md` (guard `evaluate.guard_fresh2`, lock file
+`data/fresh2/.fresh2_used`); a second run is refused; `replay.py` and `/datasets` refuse `data/fresh2/`.
+
+**The stations.** Twelve stations not used for training, tuning, DEV, the holdout, FRESH, the demo or any post-mortem, listed in `data_tools/stations_fresh2.yaml`:
+five Indian airport stations (Hyderabad, Bengaluru, Calicut, Madurai, Vijayawada; hourly METAR, whole degrees) and seven Australian Bureau of Meteorology automatic
+weather stations reporting SYNOP hourly at **0.1 C and 0.1 hPa** (Cape Wessel AWS on the monsoon coast, Lady Elliot Island and Willis Island in the Coral Sea on the
+cyclone track, Giles in the central desert, Cape Otway on the Bass Strait storm track, Thredbo AWS in the Alps, Mount Crawford AWS in the South Australian ranges). Rule
+fixed before any verdict was computed: at least 60 % of the expected hourly reports carry temperature, dew point and pressure in both the training years (2016-2019)
+and the test years (2020-2024); then a spread of climates. Candidates that failed it (Agartala, Bhopal, Varanasi, Milingimbi, Cape Moreton, Mount Hotham, Hindmarsh
+Island and others) were not used. Coverage was the only thing looked at (and the reporting resolution of the temperature column, to describe the set). The station
+files are committed with this amendment, so the set is frozen before the run.
+
+**The remedies**, both behind flags that are off by default and forced off in `registered`:
+- **Remedy 3, expected-change-aware step rule** (`health.step.expected_aware`). The step check judges only the part of a change between two consecutive readings that the
+  station's own smoothed daily cycle (the L2 normality table) does not explain, and only when that makes the change smaller, so it can relax a flag and never add one. Reason:
+  an arid station warms 15 C between two reports six hours apart on a clear day, and a fixed cap calls it a jump (Bhuj, Jodhpur); a learned cap (remedy 2) fixed that but
+  cost clock-shift detection, because it also relaxed the jump that a wrong clock produces.
+- **Remedy 4, sustained one-channel offset** (`health.offset.*`, a soft flag, so at most `SUSPECT`). Over the last 12 hours (at least 4 readings, no gaps) the median
+  departure of one channel from its own month-hour normal is at least 2.5 standard deviations while both other channels' median departures are below 1.0. A weather system that
+  moves the level of one channel usually moves another, which is why the others must stay near normal. The parameters were chosen on DEV (`quick` runs, six stations, one
+  fault round; grid of five settings) for a false-alarm cost below 0.5 points; DEV cannot show a gain (level-shift detection is already 98 % there), which is the reason for
+  testing on data nobody has looked at. A fifth remedy considered (a short-window noise tier) was dropped before this amendment: at hourly cadence it is the same window as the
+  existing check, so it changes nothing on DEV and could not be tested on this set, which is all hourly.
+
+**Configurations** (`evaluate_real.build_configs`, phase `FRESH2`): `full`, the pipeline as shipped before this amendment (remedy 1 on, everything else off); `registered`,
+every remedy off, for continuity with the earlier phases; `r3_expected_step`, `r4_offset`, `r34_both` (the shipped pipeline with those flags on); and the five baselines.
+The ablations are not repeated on this set (they were run on three others).
+
+**The data and the numbers.** As for the holdout in space and for FRESH: each station is trained on its own 2016-2019 record (extreme-weather windows and NOAA-flagged
+values removed) and judged on 2020-2024; extreme-weather windows come from the same objective rules (`data/fresh2/events.json`); detection under the paired criterion of
+Amendment 1 with the registered criterion beside it. Reported for the twelve stations pooled, and separately for the five Indian airports and the seven Australian AWS.
+
+**Decision rule, registered now.** Each remedy is judged alone against `full` on the twelve stations pooled:
+- *Remedy 3* is adopted only if (a) the number of real extreme-weather windows containing a `FAULT` is **lower** than with `full`, and the share of `FAULT` samples in those
+  windows is not higher; (b) paired detection is not lower than with `full` by more than 2 percentage points for any injected-fault type; (c) false alarms on clean data do
+  not rise by more than 0.2 points.
+- *Remedy 4* is adopted only if (a) windows with a `FAULT` and their `FAULT` share are not higher than with `full`; (b) paired detection is not lower by more than 2 points
+  for any type; (c) false alarms on clean data do not rise by more than 0.5 points; (d) paired level-shift detection is **higher by at least 5 points**; (e) the share of
+  `SUSPECT` samples inside real extreme-weather windows does not rise by more than 2 points (it must not just flag storms).
+- `r34_both` is reported and is adopted only if both are.
+"Adopted" means the flag is switched on in `config/settings.yaml` and the result is described as validated on unseen stations. Otherwise the remedy is reported as tested
+and rejected and the default stays. Nothing else is changed after the run.
+
+**What is reported whatever happens.** Every table for every station and configuration, including any station where a remedy is worse, and the Indian-only and AWS-only
+subtables, which answer separately whether the pipeline holds on fine-resolution automatic-station records.
+
+**What this is not.** It is a set of real records with injected faults again, not labelled real faults. The Australian records are SYNOP reports of automatic weather
+stations, not IMD data (which no reachable host serves), at hourly cadence: a 1 to 15 minute cadence at 0.1 resolution is still untested. It is not a repeat of the earlier
+holdouts, and `full` on these stations is one more out-of-sample number for the shipped pipeline.

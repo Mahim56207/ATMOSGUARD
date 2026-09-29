@@ -49,6 +49,7 @@ health:            # L1  (all windows in minutes; starting points)
     ceiling:
       humidity_pct: 99.5         # at or above this the channel counts as saturated
   step:            # allowed change between two samples = min(rate_per_min * minutes_apart, cap)
+    expected_aware: false        # remedy 3 (Amendment 3): judge only the part of a change that the station's usual daily cycle does not explain
     rate_per_min:
       temperature_c: 1.0
       pressure_hpa: 0.5
@@ -64,6 +65,12 @@ health:            # L1  (all windows in minutes; starting points)
       temperature_c: 0.5
       pressure_hpa: 0.5
       humidity_pct: 3.0
+  offset:          # remedy 4 (Amendment 3): a sustained one-channel offset (soft). Off by default.
+    enabled: false
+    window_minutes: 720          # stretched to hold at least min_samples readings
+    min_samples: 4
+    z_median: 2.5                # median departure of the channel over the window, in standard deviations of its own month-hour cell
+    others_below: 1.0            # both other channels' median departures must be below this
   gaps:
     gap_cadence_multiplier: 3    # gap if time since last sample > this x station cadence
   timestamps:
