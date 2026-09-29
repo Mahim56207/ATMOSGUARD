@@ -38,6 +38,7 @@ Retrain the six station models from the committed real data (deterministic, abou
 | The same evaluation on your own station CSV | `python evaluate_csv.py your.csv --station NAME` | 5-15 min | prints (see `docs/USE_YOUR_DATA.md`) |
 | Offline demo page | `python make_offline_demo.py` | 1 min | `docs/demo/index.html` |
 | Figures | `python make_figures.py` | 1 min | `docs/figures/*.png` |
+| Diagrams, one-page PDF, dashboard screenshots and video | `python make_diagrams.py`, `python make_onepager.py`, `python capture_dashboard.py` (Playwright and a Chromium) | 3 min | `docs/figures/diagram_*`, `docs/AtmosGuard_one_page.*`, `docs/screenshots/`, `docs/demo/*.webm` |
 | Humidity response-time research | `python research/tau_rh.py study` and `selftest` | seconds | prints |
 | Synthetic plumbing check (not a result) | `python evaluate.py --synthetic` | 1 min | prints |
 
