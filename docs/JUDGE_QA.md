@@ -70,8 +70,8 @@ The tables, the rule and the three windows that still get a FAULT are all in the
 cap that scales with the reporting gap is the next candidate, and it would need a third set of unseen stations to be judged honestly.
 
 **A simpler detector beats you on some fault types. Why use yours?** It does, and we show it: a Mahalanobis-only detector is better on spikes and blind to frozen
-sensors, dropouts and clocks; the textbook rules are better on wrong clocks and blind to dropouts, and they call a FAULT on 134 of 139 real extreme-weather windows and
-alarm on 8 % of clean data. The point is coverage of all six fault types without calling a cyclone a broken sensor. The table is "No single simpler system" in `results/REPORT.md`.
+sensors, dropouts and clocks; the textbook rules are better on wrong clocks on the unseen stations and blind to dropouts, and on the fresh stations they call a FAULT on 134 of 139 real extreme-weather windows and
+alarm on 8 % of clean data (5 to 7 % on the other splits). The point is coverage of all six fault types without calling a cyclone a broken sensor. The table is "No single simpler system" in `results/REPORT.md`.
 
 **What is your false-alarm rate, and is it acceptable?** Report both: "any alarm" (`FAULT` or `SUSPECT`; `SUSPECT` means "review", the
 reading is kept) and `FAULT` alone. In operations the useful reading is per thousand readings: multiply the percentage by ten.
