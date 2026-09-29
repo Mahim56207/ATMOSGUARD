@@ -65,6 +65,7 @@ optional imputed value are stored beside the raw reading.
 | `atmos/health.py` | L1 checks (frozen two-tier, step, spike, noise, gap, timestamp, CUSUM) |
 | `atmos/limits.py` | station-learned frozen and noise limits, resolution detection |
 | `atmos/normality.py` | L2 table, smooth expected value |
+| `atmos/autofit.py` | Learns a new station from the first part of its own uploaded file (normality table, Isolation Forest, Mahalanobis, learned limits), so a CSV somebody brings is judged with per-station models; used by `POST /replay/upload` |
 | `atmos/mlmodel.py` | L3 Isolation Forest and the Mahalanobis model. A live reading is scored by a vectorised routine whose numbers are bit-identical to scikit-learn's (`tests/test_fast_forest.py`), about 25 times faster per reading; whole series in the evaluation still go through scikit-learn in one batch |
 | `atmos/timing.py` | T1 clock phase, T2 co-jump |
 | `atmos/fusion.py` | verdict rules, `Pipeline` (state per station) |
@@ -72,7 +73,7 @@ optional imputed value are stored beside the raw reading.
 | `atmos/impute.py` | estimate + band for a missing or faulty value |
 | `atmos/livefault.py` | live fault injection behind `POST /inject` |
 | `atmos/injector.py` | offline fault injection with a ground-truth log |
-| `api.py` | FastAPI: `/ingest /latest /alerts /health /fleet /explain /replay /inject /datasets /metrics /status` (`/fleet` lists every station with its newest verdict, health score and ticket, for the dashboard's Network tab; each station is still judged on its own) |
+| `api.py` | FastAPI: `/ingest /latest /alerts /health /fleet /explain /replay /replay/upload /inject /datasets /metrics /status` (`/fleet` lists every station with its newest verdict, health score and ticket, for the dashboard's Network tab; each station is still judged on its own) |
 | `dashboard.py` | Streamlit |
 | `evaluate_real.py` | the real-data evaluation (DEV / HOLDOUT) |
 | `data_tools/` | NOAA ISD download, parse, dataset split, event windows |
