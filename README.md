@@ -66,8 +66,8 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
   reporting gap). Causes and remedies: [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md). The saturation kind is fixed by the adopted
   remedy; the two step kinds are not (the remedy that fixes them cost more than it gave, by the rule we registered first).
 - **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
-  takes hours by design (it has to stay stuck longer than real weather can). On the eight unseen stations detection is lower than on DEV
-  for every type except frozen and dropout (table above).
+  takes hours by design (it has to stay stuck longer than real weather can). On the unseen stations (both sets) detection is lower than on DEV
+  for spikes, level shifts, noise bursts and wrong clocks (table above).
 - **Simpler detectors beat us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
   pipeline (and level shifts on DEV and the fresh stations) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong
   clocks. The textbook range + step + persistence rules detect wrong clocks better than we do on both sets of unseen stations (and noise bursts on
@@ -91,7 +91,7 @@ Then open the dashboard's **Control panel**: replay a real cyclone (`data/demo/`
 level shift, drift, noise, dropout), and watch the verdict, the reason and the health score react. **No server?**
 Open [`docs/demo/index.html`](docs/demo/index.html): a self-contained replay of six real events with the pipeline's actual verdicts.
 
-Also: `python -m pytest -q` (340+ tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -
+Also: `python -m pytest -q` (400+ tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -
 full reproduction commands in [`docs/REPRODUCE.md`](docs/REPRODUCE.md).
 
 ## How it works
@@ -107,7 +107,7 @@ fault injection                                       -> timing (clock, co-jump)
 | Layer | What it checks |
 |---|---|
 | L0 physics | ranges, dew point <= temperature, wet-bulb (soft flag only). Closed-form; also runs on the ESP32 |
-| L1 health | frozen (limit learned per station, two tiers), step, spike, noise (limit learned per station), gaps (a notice), CUSUM |
+| L1 health | frozen (limit learned per station, two tiers, soft when the air is saturated), step, spike, noise (limit learned per station), gaps (a notice), CUSUM |
 | L2 normality | is this normal for THIS station, in THIS month, at THIS hour? |
 | L3 | Isolation Forest, and a Mahalanobis distance of (departure from normal, rate of change) that names the channel that drove it |
 | Timing | T1 clock phase (a 3-hour clock error), T2 same-instant jump on several channels |
@@ -121,7 +121,7 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 ## Evidence and documents
 | | |
 |---|---|
-| Results (all tables, DEV and both holdouts) | [`results/REPORT.md`](results/REPORT.md), raw JSON in `results/` |
+| Results (all tables: DEV, both holdouts, the fresh stations, cold start, speed) | [`results/REPORT.md`](results/REPORT.md), raw JSON in `results/` |
 | Protocol, split, tuning log | [`config/protocol.md`](config/protocol.md) |
 | Technical report | [`docs/TECHNICAL_REPORT.md`](docs/TECHNICAL_REPORT.md) |
 | Novelty and prior art | [`docs/NOVELTY_AND_PRIOR_ART.md`](docs/NOVELTY_AND_PRIOR_ART.md) |
@@ -141,8 +141,8 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 `atmos/` the pipeline - `api.py` FastAPI - `dashboard.py` Streamlit - `evaluate_real.py` the real-data evaluation -
 `evaluate_coldstart.py` new-station study - `evaluate_csv.py` the same evaluation on your CSV - `loadtest.py` scale test - `data_tools/` NOAA download, split, event rules -
 `make_report.py` (technical report from the results), `make_diagrams.py` and `capture_dashboard.py` (slide assets), `compare_runs.py` (did a rerun reproduce?) - `firmware/node/` ESP32 sketch and the portable L0 header - `train.py` per-station models - `make_summary.py`,
-`make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real` (sealed until the single run), `data/demo` -
-`models/` trained station artifacts - `tests/` 340+ tests.
+`make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real` and `data/fresh/real` (each sealed until its single run), `data/demo` -
+`models/` trained station artifacts - `tests/` 400+ tests.
 
 ## Standard practice (not our invention)
 Physics checks, persistence (frozen-value) checks including station-learned thresholds (HadISD), CUSUM, Theil-Sen and
