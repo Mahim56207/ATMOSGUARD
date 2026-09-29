@@ -315,7 +315,22 @@ def station_rows(rows: list[dict], phase: str) -> list[dict]:
     return out
 
 
-def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optional[dict] = None) -> dict:
+def sensitivity_rows(sens: dict) -> list[dict]:
+    """Detection against fault size: one row per system and size, one column per swept fault type."""
+    names = {"spike": "spike", "step": "level shift", "noise": "noise burst"}
+    rows = []
+    for key, label in sens["systems"].items():
+        for m in sens["multipliers"]:
+            cells = sens["pooled"][key][str(m)]
+            row = {"system": label, "size (x the configured fault)": f"{m:g}x"}
+            for ty in sens["swept"]:
+                d, n = cells[ty]
+                row[names[ty]] = pct(d, n, 0)
+            rows.append(row)
+    return rows
+
+
+def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optional[dict] = None, sens: Optional[dict] = None) -> dict:
     phases = {}
     for label, res in results.items():
         for ph in dict.fromkeys(r["phase"] for r in res["stations"]):
@@ -328,6 +343,12 @@ def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optiona
     out = {"note": "Real NOAA ISD airport records (METAR and SYNOP), 2016-2024. RH is derived from dew point. Injected faults are "
                    "injected. NOAA agreement is not ground truth. See docs/WHAT_WE_DO_NOT_CLAIM.md.",
            "phases": phases}
+    if sens:
+        out["sensitivity"] = {"note": "How big must a fault be? Spikes, level shifts and noise bursts of 0.25 to 4 times the configured size, injected into "
+                                      "clean real data of the six DEV stations (the tuning set, so an envelope study and not a held-out result). "
+                                      "A detection is an alarm the fault itself raised. The 1x row is a separate random draw (two faults of each type per "
+                                      "series, one round), so it is close to but not identical with the main table.",
+                              "rows": sensitivity_rows(sens), "timing": sens.get("timing", {})}
     if cold:
         out["coldstart"] = {"note": "Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table "
                                     "from the nearest other station. Injected faults: frozen, spike, level shift.",
@@ -368,6 +389,9 @@ def to_markdown(summary: dict) -> str:
                 table(t["by_kind"])
         L += [f"### {ph['by_station']['title']}", "", ph["by_station"]["caption"], ""]
         table(ph["by_station"]["rows"])
+    if "sensitivity" in summary:
+        L += ["## How big must a fault be? (DEV, injected)", "", summary["sensitivity"]["note"], ""]
+        table(summary["sensitivity"]["rows"])
     if "coldstart" in summary:
         L += ["## A new station on day one (cold start)", "", summary["coldstart"]["note"], ""]
         table(summary["coldstart"]["rows"])
@@ -503,6 +527,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("results", nargs="+", type=Path, help="JSON files written by evaluate_real.py --out")
     ap.add_argument("--scale", type=Path, default=None, help="JSON written by loadtest.py")
     ap.add_argument("--coldstart", type=Path, default=None, help="JSON written by evaluate_coldstart.py")
+    ap.add_argument("--sensitivity", type=Path, default=None, help="JSON written by evaluate_sensitivity.py")
     ap.add_argument("--out-dir", type=Path, default=er.RESULTS_DIR)
     ap.add_argument("--readme", type=Path, default=None, help="refresh the block between the RESULTS markers in this README")
     ap.add_argument("--numbers", type=Path, nargs="*", default=[], help="refresh the block between the NUMBERS markers in these files")
@@ -510,7 +535,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     results = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in args.results}
     scale = json.loads(args.scale.read_text(encoding="utf-8")) if args.scale and args.scale.exists() else None
     cold = json.loads(args.coldstart.read_text(encoding="utf-8")) if args.coldstart and args.coldstart.exists() else None
-    summary = build_summary(results, scale, cold)
+    sens = json.loads(args.sensitivity.read_text(encoding="utf-8")) if args.sensitivity and args.sensitivity.exists() else None
+    summary = build_summary(results, scale, cold, sens)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     (args.out_dir / "REPORT.md").write_text(to_markdown(summary), encoding="utf-8")

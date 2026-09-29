@@ -76,6 +76,9 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
   clocks. The textbook range + step + persistence rules detect wrong clocks better than we do on both sets of unseen stations (and noise bursts on
   the fresh ones), at 5 to 8 % false alarms and a FAULT in nearly every real extreme-weather window. No single simpler system covers all six types without
   paying for it elsewhere; the layers buy coverage. See "No single simpler system" in [`results/REPORT.md`](results/REPORT.md).
+- **Small faults are missed.** Detection climbs steeply with the size of a spike, level shift or noise burst: below about half of the size we
+  inject (a level shift of 5 C, 5 hPa or 20 % RH), most are missed, and at the full size most are found. The curve, against two simpler systems, is
+  [`docs/figures/fig_detectability.png`](docs/figures/fig_detectability.png) (DEV stations, injected faults).
 - **Small drift is invisible from one station.** The drift monitor sees a ramp of several times the service limit, not one times the limit;
   the power curve is in the results and is the honest statement of what "drift detection" means here.
 - **Not real-AWS validated.** Airport records round to whole degrees and whole hPa and carry derived humidity. A real AWS with 0.1

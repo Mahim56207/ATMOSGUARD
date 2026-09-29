@@ -196,6 +196,37 @@ def fig_remedies(aggs: dict) -> None:
     plt.close(fig)
 
 
+def fig_detectability() -> None:
+    """Detection against the size of the injected fault, AtmosGuard and two simpler systems (DEV, injected)."""
+    p = RES / "sensitivity.json"
+    if not p.exists():
+        return
+    d = json.loads(p.read_text(encoding="utf-8"))
+    mult = d["multipliers"]
+    names = {"spike": "spike", "step": "level shift", "noise": "noise burst"}
+    colors = {"full": C["full"], "baseline_rules": C["base"], "baseline_mahalanobis": C["warn"]}
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True)
+    for ax, ty in zip(axes, d["swept"]):
+        for key, label in d["systems"].items():
+            y = [100 * d["pooled"][key][str(m)][ty][0] / max(d["pooled"][key][str(m)][ty][1], 1) for m in mult]
+            ax.plot(range(len(mult)), y, marker="o", lw=2.4 if key == "full" else 1.6, color=colors[key], label=label)
+        ax.axhline(50, color=GRID, lw=1)
+        ax.set_xticks(range(len(mult)))
+        ax.set_xticklabels([f"{m:g}x" for m in mult])
+        ax.set_xlabel("size of the injected fault (1x = the size used elsewhere)", color=MUTED, fontsize=9)
+        ax.set_ylim(0, 105)
+        ax.set_title(names[ty], loc="left", fontsize=11, color=INK, fontweight="bold")
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="y", color=GRID, linewidth=0.6)
+    axes[0].set_ylabel("faults whose alarm the fault raised (%)", color=MUTED)
+    axes[0].legend(frameon=False, fontsize=8.5, loc="lower right")
+    fig.suptitle("How big must a fault be? Detection against fault size on the six DEV stations (injected faults, tuning set)", x=0.01, ha="left",
+                 fontsize=12, fontweight="bold", color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(OUT / "fig_detectability.png", dpi=150)
+    plt.close(fig)
+
+
 def fig_drift(aggs: dict) -> None:
     ph = "HOLDOUT_TIME" if "HOLDOUT_TIME" in aggs else "DEV" if "DEV" in aggs else None
     if ph is None:
@@ -282,6 +313,7 @@ def main() -> int:
     fig_baselines(aggs)
     fig_ablation(aggs)
     fig_remedies(aggs)
+    fig_detectability()
     fig_drift(aggs)
     fig_scale()
     fig_coldstart()
