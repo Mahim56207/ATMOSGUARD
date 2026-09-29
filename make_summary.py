@@ -81,8 +81,8 @@ def phase_tables(agg: dict) -> dict:
          "answer": f"FAULT on {ci_pct(ev_full['FAULT'], ev_full['n'])} of {ev_full['n']} samples "
                    f"({ev_full['windows_with_fault']} of {ev_full['windows']} windows); "
                    f"WEATHER on {pct(ev_full['WEATHER'], ev_full['n'])}, SUSPECT on {pct(ev_full['SUSPECT'], ev_full['n'])}"},
-        {"question": "Injected faults detected (each type on its own; injected, not real)",
-         "answer": "; ".join(f"{TYPE_NAMES[t]} {pct(det[t]['detected'], det[t]['injected'], 0)}"
+        {"question": "Injected faults whose alarm the fault raised (each type on its own; injected, not real)",
+         "answer": "; ".join(f"{TYPE_NAMES[t]} {pct(det[t].get('detected_new', 0), det[t]['injected'], 0)}"
                               for t in er.REAL_TYPES if det[t]["injected"])},
         {"question": "Agreement with NOAA's own quality flags (another automated system, not ground truth)",
          "answer": f"escalated (FAULT, SUSPECT or WEATHER) on {pct(n.get('flagged_escalated', 0), n.get('flagged', 0))} of {n.get('flagged', 0)} NOAA-flagged values "
@@ -93,21 +93,33 @@ def phase_tables(agg: dict) -> dict:
                    f"an injected ramp reaching 8x the service limit was found in "
                    f"{pct(sum(drift.get(f'{ch}|8', {}).get('detected', 0) for ch in er.CHANNELS), sum(drift.get(f'{ch}|8', {}).get('trials', 0) for ch in er.CHANNELS), 0)} of trials"},
     ]
-    detection_rows = []
-    for name, c in cfgs.items():
-        row = {"configuration": FULL_NAMES.get(name, name)}
+    def det_rows(key: str, delays_key: str) -> list[dict]:
+        rows = []
+        for name, c in cfgs.items():
+            row = {"configuration": FULL_NAMES.get(name, name)}
+            for t in er.REAL_TYPES:
+                d = c["detection"][t]
+                row[TYPE_NAMES[t]] = pct(d.get(key, 0), d["injected"], 0)
+            rows.append(row)
+        injected_row = {"configuration": "(faults injected)"}
         for t in er.REAL_TYPES:
-            d = c["detection"][t]
-            row[TYPE_NAMES[t]] = pct(d["detected"], d["injected"], 0)
-        detection_rows.append(row)
-    injected_row = {"configuration": "(faults injected)"}
-    for t in er.REAL_TYPES:
-        injected_row[TYPE_NAMES[t]] = str(det[t]["injected"])
-    detection_rows.append(injected_row)
-    med = {"configuration": "AtmosGuard: median minutes to first alarm"}
-    for t in er.REAL_TYPES:
-        med[TYPE_NAMES[t]] = "-" if not det[t]["delays_min"] else f"{np.median(det[t]['delays_min']):.0f}"
-    detection_rows.append(med)
+            injected_row[TYPE_NAMES[t]] = str(det[t]["injected"])
+        rows.append(injected_row)
+        med = {"configuration": "AtmosGuard: median minutes to the alarm"}
+        for t in er.REAL_TYPES:
+            v = det[t].get(delays_key, [])
+            med[TYPE_NAMES[t]] = "-" if not v else f"{np.median(v):.0f}"
+        rows.append(med)
+        return rows
+    named_rows = []
+    for label, key in (("raised an alarm (FAULT or SUSPECT)", "detected_new"), ("of which named FAULT", "named_fault"),
+                       ("missed, but made some samples look like WEATHER", "masked_as_weather")):
+        row = {"AtmosGuard, injected faults": label}
+        for t in er.REAL_TYPES:
+            row[TYPE_NAMES[t]] = pct(det[t].get(key, 0), det[t]["injected"], 0)
+        named_rows.append(row)
+    detection_rows = det_rows("detected_new", "delays_new_min")
+    registered_rows = det_rows("detected", "delays_min")
 
     clean_rows = []
     for name, c in cfgs.items():
@@ -158,10 +170,18 @@ def phase_tables(agg: dict) -> dict:
     return {
         "stations": agg["stations"],
         "headline": {"title": "Headline", "caption": "Five separate numbers. They are never merged.", "rows": headline},
-        "detection": {"title": "1. Detection of injected faults, by type",
-                      "caption": "Alarm = FAULT or SUSPECT, from the first faulty sample to the last plus 60 minutes. "
-                                 "The faults are injected, not real. Ablation rows switch one layer off; baseline rows "
-                                 "are simpler systems on the same data.", "rows": detection_rows},
+        "detection": {"title": "1. Detection of injected faults, by type (the fault raised the alarm)",
+                      "caption": "Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault "
+                                 "(paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. "
+                                 "Ablation rows switch one layer off; baseline rows are simpler systems on the same data.",
+                      "rows": detection_rows},
+        "detection_named": {"title": "1c. How AtmosGuard names what it detects, and the WEATHER-masking check",
+                            "caption": "A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level "
+                                       "WEATHER route: a fault that was not alarmed but made samples look like real weather.", "rows": named_rows},
+        "detection_registered": {"title": "1b. The same, by the criterion registered in the protocol (any alarm in the window)",
+                                 "caption": "Background false alarms (about 2 % of samples) also fall inside long fault windows, so this "
+                                            "flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. "
+                                            "Kept because it was registered before the holdout.", "rows": registered_rows},
         "clean": {"title": "2. False alarms on clean real data",
                   "caption": "No fault injected. Extreme-weather windows and NOAA-flagged values removed.", "rows": clean_rows},
         "extreme_weather": {"title": "3. Real extreme weather (nothing injected)",
@@ -178,6 +198,24 @@ def phase_tables(agg: dict) -> dict:
     }
 
 
+def station_rows(rows: list[dict], phase: str) -> list[dict]:
+    """One line per station for the full pipeline: how far the headline numbers move between stations."""
+    out = []
+    for r in rows:
+        if r["phase"] != phase:
+            continue
+        c = r["configs"]["full"]
+        ev = _events_total(c)
+        det = c["detection"]
+        got = sum(det[t].get("detected_new", 0) for t in er.REAL_TYPES)
+        inj = sum(det[t]["injected"] for t in er.REAL_TYPES)
+        out.append({"station": r["station"], "cadence (min)": int(r["cadence_minutes"]),
+                    "clean any alarm": pct(c["clean"]["alarm"], c["clean"]["n"]), "clean FAULT": pct(c["clean"]["fault"], c["clean"]["n"]),
+                    "extreme weather FAULT": pct(ev["FAULT"], ev["n"]), "windows with a FAULT": f"{ev['windows_with_fault']}/{ev['windows']}",
+                    "extreme weather WEATHER": pct(ev["WEATHER"], ev["n"]), "injected faults detected": pct(got, inj, 0)})
+    return out
+
+
 def build_summary(results: dict[str, dict], scale: Optional[dict]) -> dict:
     phases = {}
     for label, res in results.items():
@@ -185,7 +223,9 @@ def build_summary(results: dict[str, dict], scale: Optional[dict]) -> dict:
             agg = er.aggregate(res["stations"], ph)
             title, sub = PHASE_TITLES[ph]
             phases[ph] = {"title": title, "subtitle": sub, "generated": res["generated"],
-                          "quick": res.get("quick", False), **phase_tables(agg)}
+                          "quick": res.get("quick", False), **phase_tables(agg),
+                          "by_station": {"title": "By station (full pipeline)", "caption": "Each station judged on its own record.",
+                                         "rows": station_rows(res["stations"], ph)}}
     out = {"note": "Real NOAA ISD airport records (METAR and SYNOP), 2016-2024. RH is derived from dew point. Injected faults are "
                    "injected. NOAA agreement is not ground truth. See docs/WHAT_WE_DO_NOT_CLAIM.md.",
            "phases": phases}
@@ -210,13 +250,15 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_named", "detection_registered", "clean", "extreme_weather", "noaa", "drift"):
             t = ph[key]
             L += [f"### {t['title']}", "", t["caption"], ""]
             table(t["rows"])
             if key == "extreme_weather":
                 L += ["Full pipeline, by kind of extreme weather:", ""]
                 table(t["by_kind"])
+        L += [f"### {ph['by_station']['title']}", "", ph["by_station"]["caption"], ""]
+        table(ph["by_station"]["rows"])
     if "scale" in summary:
         L += ["## Scale (simulated stations, one machine)", "", summary["scale"]["note"], ""]
         table([{"stations": r["stations"], "readings/s": r["readings_per_second"], "median ms": r["median_ms"],
