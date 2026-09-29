@@ -39,7 +39,7 @@ frozen barometer; that was a real bug real data found and we fixed it.
 
 ## Novelty
 **Is this just Isolation Forest plus rules, like the other teams?** The techniques are standard and we say so
-(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (14 real stations, a holdout sealed in time and space, run once with the
+(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (26 real stations, a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, run once with the
 protocol committed first, baselines and an ablation on the same data, false alarms on real cyclones) and honest engineering results
 (learned limits, the graded frozen flag, the isolated-trend drift rule, the quiet-channel fix). In the ablation the Isolation Forest earns
 almost nothing; the Mahalanobis layer does the work, and we kept the forest because the problem statement lists it.

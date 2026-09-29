@@ -161,7 +161,7 @@ def build(summary: dict) -> str:
         "AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no "
         "neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own "
         "verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an "
-        "evidence standard: 14 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
+        "evidence standard: 26 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
         "in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on "
         "the same data, and the failures kept on record. Headline results:", "",
         abstract(summary), "",

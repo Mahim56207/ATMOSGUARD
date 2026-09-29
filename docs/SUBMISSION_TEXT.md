@@ -66,7 +66,7 @@ with what is standard, adapted and ours: `docs/NOVELTY_AND_PRIOR_ART.md` and the
 ## What is novel (the exact sentence)
 > AtmosGuard integrates physics-based T/P/RH coherence, per-station statistical normality, station-learned health limits and unsupervised
 > multivariate ML into one explainable pipeline for a single station with no neighbours, and it treats genuine extreme weather as its own
-> escalated verdict. We do not claim any technique is new. Our contribution is the integration and the evidence: 14 real Indian stations,
+> escalated verdict. We do not claim any technique is new. Our contribution is the integration and the evidence: 26 real Indian stations,
 > a holdout sealed in time and in space, false alarms on real cyclones reported separately, baselines and an ablation on the same data,
 > agreement with NOAA's quality flags, and the failures the real data exposed.
 
@@ -77,7 +77,7 @@ single station with no reference cannot see small drift or a constant offset pre
 
 ## 30-second pitch
 "A broken barometer and a cyclone look the same on a chart. AtmosGuard tells them apart from one station's own temperature, pressure and
-humidity, and it never deletes a storm: real weather is escalated as an alert. We tested it on real records from 14 Indian stations with a
+humidity, and it never deletes a storm: real weather is escalated as an alert. We tested it on real records from 26 Indian stations with a
 holdout we sealed and ran once, and we report the false-alarm rate on real cyclones separately from the injected-fault scores. We also tell
 you what it cannot do. Break the sensor yourself: this is the control panel."
 
