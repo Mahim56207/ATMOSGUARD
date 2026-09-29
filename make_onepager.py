@@ -19,7 +19,8 @@ OUT_HTML = REPO / "docs" / "AtmosGuard_one_page.html"
 OUT_PDF = REPO / "docs" / "AtmosGuard_one_page.pdf"
 PHASES = (("DEV", "DEV", "6 stations, 2020-21, tuned here"), ("HOLDOUT_TIME", "Holdout in time", "same 6, 2022-24"),
           ("HOLDOUT_SPACE", "Holdout in space", "8 unseen stations"), ("FRESH", "Fresh stations", "12 more, sealed first"),
-          ("FRESH2", "Fresh 2", "12 more: 5 airports, 7 AWS"))
+          ("FRESH2", "Fresh 2", "12 more: 5 airports, 7 AWS"),
+          ("FRESH3", "Fresh 3", "12 more: 7 US 20-min, 5 AWS"))
 REPO_URL = "github.com/Mahim56207/ATMOSGUARD"
 
 
@@ -48,7 +49,7 @@ def build(aggs: dict) -> str:
     body = "".join(
         f"<tr><td><b>{esc(r['split'])}</b> <span>{esc(r['sub'])}</span></td><td>{r['clean']:.1f}%</td><td>{esc(r['windows'])}</td>"
         f"<td>{r['det']:.0f}%</td><td class='b'>{r['rules_clean']:.1f}%</td><td class='b'>{esc(r['rules_windows'])}</td></tr>" for r in rows)
-    unseen = " and ".join(r["windows"] for r in rows if r["split"] in ("Holdout in space", "Fresh stations", "Fresh 2"))
+    unseen = " and ".join(r["windows"] for r in rows if r["split"] in ("Holdout in space", "Fresh stations", "Fresh 2", "Fresh 3"))
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>AtmosGuard, one page</title>
 <style>
@@ -107,7 +108,7 @@ footer {{ margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; 
   <section>
     <h2>How we know (no new algorithm claimed)</h2>
     <ul>
-      <li>26 real Indian airport stations (NOAA ISD, 2016-24): cyclones, heat and cold waves, outflows.</li>
+      <li>50 real stations (NOAA ISD, 2016-24): 31 Indian airports, 12 Australian automatic weather stations, 7 US automated stations reporting every 20 minutes; cyclones, heat and cold waves, outflows.</li>
       <li>Protocol committed first; holdout sealed in time and space, run once, lock file.</li>
       <li>The holdout showed failures: we registered a rule, sealed 12 more stations, ran once: one remedy adopted, one rejected.</li>
       <li>Baselines and an ablation on the same data; NOAA's own flags; one command per result.</li>

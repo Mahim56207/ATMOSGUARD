@@ -165,12 +165,14 @@ def format_text(res: dict, summ: dict) -> str:
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Peer-layer study (offsets and drift seen with and without neighbours).")
     ap.add_argument("--out", type=Path, default=None)
-    ap.add_argument("--cluster", choices=("nsw", "vic"), default="nsw")
+    ap.add_argument("--cluster", choices=("nsw", "vic", "india"), default="nsw")
+    ap.add_argument("--radius-km", type=float, default=250.0)
     ap.add_argument("--window-days", type=int, default=7)
     ap.add_argument("--quantile", type=float, default=0.999)
     ap.add_argument("--margin", type=float, default=1.2)
     args = ap.parse_args(argv)
-    global DATA, CATALOG, WINDOW_H, QUANTILE, MARGIN
+    global DATA, CATALOG, WINDOW_H, QUANTILE, MARGIN, RADIUS_KM
+    RADIUS_KM = args.radius_km
     DATA, CATALOG = REPO / "data" / "peers" / args.cluster, REPO / "data_tools" / f"stations_peers_{args.cluster}.yaml"
     WINDOW_H, QUANTILE, MARGIN = args.window_days * 24, args.quantile, args.margin
     settings = load_settings()

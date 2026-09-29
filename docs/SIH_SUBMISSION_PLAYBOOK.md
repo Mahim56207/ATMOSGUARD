@@ -20,7 +20,7 @@ repository yet.)
   several entries side by side will remember the one with evidence and honesty.
 
 ## Our position, in one paragraph
-Not "a new algorithm" (we say plainly it is not) but the strongest **evidence**: 26 real Indian stations, a holdout sealed in
+Not "a new algorithm" (we say plainly it is not) but the strongest **evidence**: 50 real stations (31 Indian airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes), a holdout sealed in
 time and in space with the protocol committed first, false alarms on real cyclones reported separately, baselines and an
 ablation on the same data, agreement with NOAA's quality flags, the failures real data exposed and how they were fixed, a
 detectability floor stated for drift, edge code that is compiled and tested against the Python, and a live

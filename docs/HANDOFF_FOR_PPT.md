@@ -6,7 +6,7 @@ Written for the person who makes the final deck. The deck itself is deliberately
 
 ## 1. What AtmosGuard is, in three sentences
 A monitor for one automatic weather station that uses only temperature, pressure and humidity. It decides for every reading whether it is `VALID`, real `WEATHER` (escalated, never deleted),
-`SUSPECT` (review) or `FAULT` (broken sensor), with a plain-English reason and the raw value kept. Its evidence standard is the point: real data from 38 stations, sealed holdouts, rules registered before each test, baselines, and every failure kept on record.
+`SUSPECT` (review) or `FAULT` (broken sensor), with a plain-English reason and the raw value kept. Its evidence standard is the point: real data from 50 stations, sealed holdouts, rules registered before each test, baselines, and every failure kept on record.
 
 ## 2. What was built
 | Part | Where |
@@ -28,6 +28,7 @@ A monitor for one automatic weather station that uses only temperature, pressure
 | Holdout, eight unseen stations (sealed in time and space, run once) | 8 | 2.9 % | 3 of 98 | 100, 90, 89, 67, 98, 84 |
 | Fresh, twelve more unseen stations (Amendment 2) | 12 | 2.5 % | 3 of 139 | 99, 91, 80, 57, 98, 85 |
 | **Fresh-2, twelve more (Amendment 3): 5 Indian airports + 7 Australian automatic weather stations at 0.1 resolution** | 12 | **9.3 %** (3.2 % airports, 13.6 % Australian AWS) | 4 of 134 (1 of 134 with the adopted remedy) | 100, 89, 91, 83, 93, 90 |
+| **Fresh-3, twelve more (Amendment 4): 7 US automated stations reporting every 20 minutes at 0.1 C + 5 Australian AWS with irregular training years** | 12 | 9.7 % pooled: **2.7 % on the seven 20-minute stations**, 45.4 % on the five irregular Australian ones | 5 of 160 (3 of 103 on the 20-minute stations) | pooled 100, 84, 95, 100, 88, 96; 20-minute stations 100, 97, 99, 100, 99, 94 |
 
 Also measured: baselines and an ablation on every split (textbook rules give 5-8 % false alarms and a FAULT in nearly every real extreme-weather window); agreement with NOAA's quality flags; slow-drift power;
 cold start on day one; detection against fault size; speed (about 1 ms per reading on one core, 45 ms median through the real HTTP server). Injected faults are always labelled injected.
@@ -37,15 +38,16 @@ cold start on day one; detection against fault size; speed (about 1 ms per readi
 2. **The firmware sketch runs on a laptop simulator** (virtual clock, scripted sensor, dropping Wi-Fi, recording HTTP client); what it sends is accepted by the real API. Flags, null-not-zero for a dead sensor, the 30-minute offline queue and the clock guard are tested.
 3. **Amendment 3, registered before the run:** two new remedies tested once on twelve sealed stations. By the rule written first, the **expected-change-aware step rule is adopted** (windows with a FAULT 4 to 1 of 134, nothing else moved) and the **sustained-offset check is rejected** (+1 point of level-shift detection against +5 required).
 4. **A failure the new data exposed, reported, not hidden:** four Australian AWS had irregular reporting in their training years, so no noise limit could be learned and the fixed floor alarmed (33, 26, 21 and 8 % of clean samples). Refitted on the hourly years, false alarms fall to 2.6 % (post-hoc, not sealed evidence). The pipeline now prints an informational notice when limits do not fit, and `refit.py` is the one-command fix.
-5. **The optional peer layer:** on two disjoint clusters of twelve Australian AWS, a 2 hPa offset is found in 91-96 % of trials within 21 days with neighbours, 0-4 % alone (2 C: 86-88 % against 1-9 %). It needs a dense network and was measured on injected faults.
+5. **The optional peer layer:** on two disjoint clusters of twelve Australian AWS, a 2 hPa offset is found in 91-96 % of trials within 21 days with neighbours, 0-4 % alone (2 C: 86-88 % against 1-9 %). It needs neighbours and was measured on injected faults. On 31 Indian airport stations, at the 600 km spacing India has, it finds a 2 hPa offset in 91 % of trials against 21 % alone (nothing gained on humidity).
 6. Regression check: the full DEV evaluation with the shipped default reproduces the earlier numbers exactly (30,587 values, 0 differences). Documents, technical report (Markdown and Word), figures, one-pager, offline demo and dashboard screenshots were regenerated from the results.
 
 ## 5. What is NOT done, and the exact words for it
+- **The fourth sealed set (Amendment 4) tested a limits warm-up for stations with irregular training records:** it cut false alarms at five such stations from 45.4 % to 1.8 % but cost 6 points of noise-burst detection, so by the rule written first it is **rejected** (available as `refit.py --complete`, not a default). It also gives the first sub-hourly evidence: seven real US automated stations reporting every 20 minutes, 2.7 % clean false alarms, 94-100 % of injected faults detected by type.
 - **No real labelled faults** (none reachable): "detection is measured on injected faults, labelled injected".
-- **No IMD record and no 1-15 minute data tested:** "IMD AWS records are not public; we tested Indian airport METAR and Australian Bureau of Meteorology automatic stations at 0.1 resolution, hourly; `evaluate_csv.py` runs the same evaluation on an IMD file in one command".
+- **No IMD record and no 1-15 minute data tested (the fastest real record is 20 minutes):** "IMD AWS records are not public; we tested Indian airport METAR and Australian Bureau of Meteorology automatic stations at 0.1 resolution, hourly; `evaluate_csv.py` runs the same evaluation on an IMD file in one command".
 - **The ESP32 has not run on the chip** and no energy figure is measured: "the sketch runs against a simulator whose output the real API accepts; the checklist to flash it is `docs/HARDWARE_TEST_LOG.md`".
 - **Small drift and constant offsets are invisible from one station;** the peer layer helps only with three or more neighbours.
-- **One real extreme-weather window still gets a FAULT** (Thredbo, Oct 2023, humidity -48.9 % in two hours), and false alarms are 13.6 % on the four-station cadence case until a refit.
+- **One real extreme-weather window still gets a FAULT** (Thredbo, Oct 2023, humidity -48.9 % in two hours), and false alarms are 13.6 % (fresh-2) and 45 % (fresh-3) at stations whose training years were irregular unless refitted. Also: temperature pinned at 0 C for 9 hours in freezing rain gets a FAULT (two US stations, January 2024).
 - **The Docker build was done in an environment whose proxy needed its CA injected;** on a normal machine nothing extra is needed. It is not part of CI.
 Full list: `docs/WHAT_WE_DO_NOT_CLAIM.md`. Say these first; judges who find them themselves lose trust, judges who hear them gain it.
 

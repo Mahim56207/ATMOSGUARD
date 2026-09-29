@@ -56,7 +56,7 @@ footer { margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; d
   <section>
     <h2>How we know (no new algorithm claimed)</h2>
     <ul>
-      <li>26 real Indian airport stations (NOAA ISD, 2016-24): cyclones, heat and cold waves, outflows.</li>
+      <li>50 real stations (NOAA ISD, 2016-24): 31 Indian airports, 12 Australian automatic weather stations, 7 US automated stations reporting every 20 minutes; cyclones, heat and cold waves, outflows.</li>
       <li>Protocol committed first; holdout sealed in time and space, run once, lock file.</li>
       <li>The holdout showed failures: we registered a rule, sealed 12 more stations, ran once: one remedy adopted, one rejected.</li>
       <li>Baselines and an ablation on the same data; NOAA's own flags; one command per result.</li>
@@ -69,7 +69,7 @@ footer { margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; d
     <tr class="grp"><th></th><th colspan="3">AtmosGuard</th><th colspan="2" class="b">Textbook range + step + persistence</th></tr>
     <tr><th>Split</th><th>false alarms, clean data</th><th>real extreme-weather windows with a FAULT</th><th>injected faults detected (mean of 6 types)</th>
         <th>false alarms</th><th>windows with a FAULT</th></tr>
-    <tr><td><b>DEV</b> <span>6 stations, 2020-21, tuned here</span></td><td>1.9%</td><td>0 of 30</td><td>95%</td><td class='b'>5.4%</td><td class='b'>29 of 30</td></tr><tr><td><b>Holdout in time</b> <span>same 6, 2022-24</span></td><td>2.5%</td><td>0 of 38</td><td>95%</td><td class='b'>5.2%</td><td class='b'>37 of 38</td></tr><tr><td><b>Holdout in space</b> <span>8 unseen stations</span></td><td>2.9%</td><td>3 of 98</td><td>88%</td><td class='b'>6.8%</td><td class='b'>95 of 98</td></tr><tr><td><b>Fresh stations</b> <span>12 more, sealed first</span></td><td>2.5%</td><td>3 of 139</td><td>85%</td><td class='b'>8.4%</td><td class='b'>134 of 139</td></tr><tr><td><b>Fresh 2</b> <span>12 more: 5 airports, 7 AWS</span></td><td>9.3%</td><td>4 of 134</td><td>91%</td><td class='b'>3.2%</td><td class='b'>100 of 134</td></tr>
+    <tr><td><b>DEV</b> <span>6 stations, 2020-21, tuned here</span></td><td>1.9%</td><td>0 of 30</td><td>95%</td><td class='b'>5.4%</td><td class='b'>29 of 30</td></tr><tr><td><b>Holdout in time</b> <span>same 6, 2022-24</span></td><td>2.5%</td><td>0 of 38</td><td>95%</td><td class='b'>5.2%</td><td class='b'>37 of 38</td></tr><tr><td><b>Holdout in space</b> <span>8 unseen stations</span></td><td>2.9%</td><td>3 of 98</td><td>88%</td><td class='b'>6.8%</td><td class='b'>95 of 98</td></tr><tr><td><b>Fresh stations</b> <span>12 more, sealed first</span></td><td>2.5%</td><td>3 of 139</td><td>85%</td><td class='b'>8.4%</td><td class='b'>134 of 139</td></tr><tr><td><b>Fresh 2</b> <span>12 more: 5 airports, 7 AWS</span></td><td>9.3%</td><td>4 of 134</td><td>91%</td><td class='b'>3.2%</td><td class='b'>100 of 134</td></tr><tr><td><b>Fresh 3</b> <span>12 more: 7 US 20-min, 5 AWS</span></td><td>9.7%</td><td>5 of 160</td><td>94%</td><td class='b'>5.1%</td><td class='b'>157 of 160</td></tr>
   </table>
   <p class="small">Real records; faults are injected (no labelled real faults exist); "detected" means an alarm the fault itself raised (FAULT or SUSPECT). Full tables, baselines, ablation and intervals: results/REPORT.md.</p>
 </section>
@@ -89,7 +89,7 @@ footer { margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; d
 <section class="box"><h2 style="color:var(--red)">Where it fails (we say it first)</h2>
   <ul class="two">
     <li>Detection is on injected faults; the data are airport records, not IMD AWS records.</li>
-    <li>3 of 98 and 3 of 139 and 4 of 134 real extreme-weather windows on the unseen stations (holdout, fresh, fresh 2, pipeline as frozen for each) got a FAULT: a 47 % humidity jump in two hours, a 16 C jump across a reporting gap, a 49 % humidity drop in a dry air mass. The step remedy adopted on the last set takes it from 4 windows to 1.</li>
+    <li>3 of 98 and 3 of 139 and 4 of 134 and 5 of 160 real extreme-weather windows on the unseen stations (holdout, fresh, fresh 2, pipeline as frozen for each) got a FAULT: a 47 % humidity jump in two hours, a 16 C jump across a reporting gap, a 49 % humidity drop in a dry air mass. The step remedy adopted on the last set takes it from 4 windows to 1.</li>
     <li>Noise bursts are the weakest class; small drift and constant offsets are invisible from one station.</li>
     <li>Simpler detectors beat us on some fault types (spikes; wrong clocks on unseen stations) but miss others and call real weather a fault.</li>
     <li>Most spike, level-shift, noise and clock detections are SUSPECT (review), not FAULT.</li>

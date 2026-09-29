@@ -1,0 +1,24 @@
+Peer layer study, limit = q0.995 of the training windows x 1.1: 31 stations, radius 600 km, at least 3 peers, 7-day mean, fault length 60 d, offsets must be caught within 21 d
+
+Fault detection (paired; peers = with neighbours, own = the same statistic on the station's own anomaly, no neighbours)
+channel         kind      size               peers             own only
+humidity_pct    drift       12   63.5% (158/249) 39.3 d    57.1% (164/287) 37.3 d
+humidity_pct    offset       3    9.6% (24/250)  7.4 d    13.7% (39/284)  7.0 d
+humidity_pct    offset       6   19.3% (48/249)  7.2 d    23.5% (67/285)  7.4 d
+humidity_pct    offset      12   67.5% (170/252)  6.2 d    62.5% (178/285)  6.3 d
+pressure_hpa    drift        2   85.3% (214/251) 33.0 d    25.1% (71/283) 44.2 d
+pressure_hpa    offset     0.5   20.1% (50/249)  7.2 d     5.3% (15/285)  9.0 d
+pressure_hpa    offset       1   50.2% (125/249)  6.0 d    10.5% (30/287)  6.7 d
+pressure_hpa    offset       2   90.8% (228/251)  4.4 d    20.6% (59/287)  8.0 d
+temperature_c   drift        2   47.6% (119/250) 40.5 d    19.5% (55/282) 42.1 d
+temperature_c   offset     0.5   10.4% (26/250)  9.2 d     3.2% (9/285)  4.8 d
+temperature_c   offset       1   16.8% (42/250)  7.6 d    10.2% (29/284)  5.6 d
+temperature_c   offset       2   53.6% (134/250)  6.7 d    20.8% (59/283)  8.1 d
+
+False alarms: share of test days (2020-2023) with an alarm on clean data, mean over stations
+  humidity_pct    own   2.30%  (24 stations)
+  humidity_pct    peer  2.11%  (21 stations)
+  pressure_hpa    own   1.75%  (24 stations)
+  pressure_hpa    peer  3.90%  (21 stations)
+  temperature_c   own   2.27%  (24 stations)
+  temperature_c   peer  2.69%  (21 stations)

@@ -21,7 +21,7 @@ import pandas as pd
 
 from atmos import autofit
 from atmos.config import load_settings, model_path
-from atmos.limits import fit_limits
+from atmos.limits import StationLimits, complete_limits, fit_limits
 from atmos.mlmodel import IsolationModel, MahalanobisModel
 from atmos.normality import NormalityTable
 from atmos.schema import CHANNELS, Reading
@@ -59,16 +59,33 @@ def refit(readings: list[Reading], station: str, settings: dict) -> dict:
                         if unlearned else None)}
 
 
+def complete(readings: list[Reading], station: str, settings: dict) -> dict:
+    """Amendment 4: keep the station's existing limits and fill only those it could not learn (typically the noise limit) from this stretch."""
+    path = model_path(settings, station, "limits", ".json")
+    if not Path(path).exists():
+        raise ValueError(f"{station} has no saved limits to complete: run refit.py without --complete first")
+    span_days = (readings[-1].timestamp - readings[0].timestamp).days if len(readings) > 1 else 0
+    if len(readings) < autofit.MIN_ROWS or span_days < autofit.MIN_DAYS:
+        raise ValueError(f"only {len(readings)} complete readings over {span_days} days: need at least {autofit.MIN_ROWS} over {autofit.MIN_DAYS}")
+    base = StationLimits.load(path)
+    out = complete_limits(base, readings, settings, autofit.cadence_of(readings))
+    out.save(path)
+    return {"station": station, "readings": len(readings), "days": span_days, "cadence_minutes": out.cadence_minutes,
+            "noise_limit_learned": {ch: out.noise_std(ch) is not None for ch in CHANNELS}}
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Refit one station's learned models on a stretch of its own record.")
     ap.add_argument("csv", type=Path)
     ap.add_argument("--station", required=True)
     ap.add_argument("--from", dest="start", default=None, help="first timestamp to learn from (UTC, e.g. 2020-01-01)")
     ap.add_argument("--to", dest="end", default=None, help="learn up to, not including, this timestamp")
+    ap.add_argument("--complete", action="store_true", help="keep the saved limits and fill only the ones that were never learned from this stretch (needs saved limits). Tested in Amendment 4: it removes the false-alarm flood at stations with an irregular training record (45 % to 2 %) and costs noise-burst detection (about 6 points pooled), so it is an operator's choice, not a default")
     args = ap.parse_args(argv)
     settings = load_settings()
     try:
-        out = refit(read_stretch(args.csv, args.station, args.start, args.end), args.station, settings)
+        stretch = read_stretch(args.csv, args.station, args.start, args.end)
+        out = complete(stretch, args.station, settings) if args.complete else refit(stretch, args.station, settings)
     except ValueError as e:
         print(f"Cannot refit: {e}")
         return 2

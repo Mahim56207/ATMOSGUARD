@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import isd
 
-CLUSTERS = ("nsw", "vic")
+CLUSTERS = ("nsw", "vic", "india")
 
 
 def main(argv=None) -> int:
@@ -20,6 +20,18 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     cat = isd.load_catalog(Path(__file__).resolve().parent / f"stations_peers_{args.cluster}.yaml")
     OUT_DIR = isd.REPO / "data" / "peers" / args.cluster
+    if args.cluster == "india":                        # assembled from the repository's own station files, nothing downloaded
+        import pandas as pd
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+        repo = isd.REPO / "data"
+        for sid in cat["stations"]:
+            parts = [repo / "real" / "dev" / f"{sid}.csv", repo / "holdout" / "real" / f"{sid}_future.csv", repo / "holdout" / "real" / f"{sid}.csv",
+                     repo / "fresh" / "real" / f"{sid}.csv", repo / "fresh2" / "real" / f"{sid}.csv"]
+            df = pd.concat([pd.read_csv(p) for p in parts if p.exists()], ignore_index=True)
+            df = df.drop_duplicates("timestamp").sort_values("timestamp")
+            df.to_csv(OUT_DIR / f"{sid}.csv", index=False)
+            print(f"{sid}: {len(df)} rows")
+        return 0
     years = list(range(cat["years"]["first"], cat["years"]["last"] + 1))
     isd.fetch_all([s["file"] for s in cat["stations"].values()], years)
     OUT_DIR.mkdir(parents=True, exist_ok=True)

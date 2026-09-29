@@ -4,7 +4,7 @@
 
 ## Abstract
 
-AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an evidence standard: 26 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on the same data, and the failures kept on record. After the holdout showed three real-weather failure windows, we registered a decision rule and tested the proposed remedies on twelve further stations nobody had looked at: one remedy was adopted and one rejected. Headline results:
+AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an evidence standard: 50 real stations (31 Indian airports, 12 Australian automatic stations and 7 US automated 20-minute stations; NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on the same data, and the failures kept on record. After the holdout showed three real-weather failure windows, we registered a decision rule and tested the proposed remedies on twelve further stations nobody had looked at: one remedy was adopted and one rejected. Headline results:
 
 - **DEV (tuned here).** Clean data: 1.9% (1.8-2.0) of 98340 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 3503 samples (0 of 30 windows); WEATHER on 10.8%, SUSPECT on 9.0%.
 - **holdout in time (same six stations, 2022-2024).** Clean data: 2.5% (2.4-2.6) of 147078 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 4374 samples (0 of 38 windows); WEATHER on 11.8%, SUSPECT on 8.2%.
@@ -13,8 +13,11 @@ AtmosGuard judges every temperature, pressure and humidity reading of a single a
 - **fresh-2 stations (a third set of twelve: five Indian airports, seven Australian automatic weather stations).** Clean data: 9.3% (9.2-9.3) of 453323 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 14732 samples (4 of 134 windows); WEATHER on 4.1%, SUSPECT on 14.1%.
 - **fresh-2, the five Indian airport stations.** Clean data: 3.2% (3.1-3.3) of 189591 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 3994 samples (0 of 42 windows); WEATHER on 7.3%, SUSPECT on 4.7%.
 - **fresh-2, the seven Australian automatic weather stations.** Clean data: 13.6% (13.5-13.7) of 263732 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 10738 samples (4 of 92 windows); WEATHER on 3.0%, SUSPECT on 17.6%.
+- **fresh-3 stations (a fourth set of twelve: seven US 20-minute stations, five Australian AWS).** Clean data: 9.7% (9.6-9.8) of 1026508 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.1) of 45332 samples (5 of 160 windows); WEATHER on 3.0%, SUSPECT on 12.8%.
+- **fresh-3, the seven US 20-minute stations.** Clean data: 2.7% (2.7-2.7) of 858141 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.1) of 38294 samples (3 of 103 windows); WEATHER on 3.4%, SUSPECT on 5.3%.
+- **fresh-3, the five Australian AWS.** Clean data: 45.4% (45.1-45.6) of 168367 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 7038 samples (2 of 57 windows); WEATHER on 1.3%, SUSPECT on 53.7%.
 
-Detection is measured on **injected** faults, because no labelled real faults exist; the data are airport records, not IMD AWS records; and on the unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict (3 of 98 on the eight holdout stations, 3 of 139 on the twelve fresh ones, 4 of 134 on the twelve fresh-2 ones; Section 5). Sections 5 and 6 say exactly what we cannot show.
+Detection is measured on **injected** faults, because no labelled real faults exist; the data are airport records, not IMD AWS records; and on the unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict (3 of 98 on the eight holdout stations, 3 of 139 on the twelve fresh ones, 4 of 134 on the twelve fresh-2 ones, 5 of 160 on the twelve fresh-3 ones; Section 5). Sections 5 and 6 say exactly what we cannot show.
 
 ## 1. Introduction
 
@@ -292,6 +295,70 @@ Thredbo in October 2023 (humidity -48.9 % in 120 minutes), remains: the daily cy
   one-command tool.
 - Detection of injected faults on these stations (`full`): frozen 100 %, spike 89 %, level shift 91 %, noise burst 83 %, dropout 93 %, clock 90 %. The Indian and Australian subsets are in `results/REPORT.md`.
 - Real extreme weather: FAULT on 0.0 % of 14,732 samples (4 of 134 windows, the four above); WEATHER 4.1 %, SUSPECT 14.1 % (SUSPECT is higher on the AWS, 17.6 %, in step with their higher false-alarm rate).
+
+### 2.11 Amendment 4: a fourth set, including sub-hourly records (from `config/protocol.md`)
+
+Two limits were left after Amendment 3: no record tested was sub-hourly, and four Australian stations of the third set were flooded with false alarms (33, 26, 21, 8 % of clean samples) because their
+2016-2019 records were irregular, so no noise limit could be learned. A refit on the hourly years fixed it, but that check used the stations that revealed the problem. This amendment tests, once, on twelve
+stations nobody has looked at, a remedy for the second and reports the first. `evaluate_real.py --fresh3` refuses to run unless this amendment is in the committed `config/protocol.md` (guard
+`evaluate.guard_fresh3`, lock `data/fresh3/.fresh3_used`); a second run is refused; `replay.py` and `/datasets` refuse `data/fresh3/`.
+
+**The stations** (`data_tools/stations_fresh3.yaml`, files committed with this amendment): seven US automated weather stations (AWOS/ASOS) that report **every 20 minutes** at 0.1 C (Fitch H Beach MI, Pratt KS, Madison
+County AL, La Porte, Glasgow MT, George R Carr FL, Hutchinson KS; routine METAR at :15, :35 and :55, pressure = altimeter setting) and five Australian Bureau of Meteorology automatic stations with the irregular-then-hourly
+pattern (Weipa, Tennant Creek, Alice Springs, Learmonth, Broome). Rule fixed before any verdict was computed: at least 60 % of the expected reports carry temperature, dew point and pressure in both the training
+years (2016-2019) and the test years (2020-2024). The US stations came from a random sample of 90 stations of the US, Canada, Japan, the UK, Ireland, France, Spain and Italy (all with data in 2016 and 2024) scanned for a median cadence of 30 minutes or
+finer; of those with tenth-degree temperatures and routine METAR reports every 20 minutes, the seven with the most complete 2022 records were taken; whole-degree stations and the ones that only file irregular SPECI reports were left out. Coverage, cadence and
+resolution were the only things looked at. A second copy of each report one minute after the first (present in some years) is dropped: of any reports less than five minutes apart, the first is kept (`data_tools.isd`,
+`any_minute`, tested). This is the first sub-hourly record in the project. It is 20 minutes, not the 1-15 minutes of a typical AWS.
+
+**The remedy (`r6_warmup`).** For a station whose training years left any channel's noise limit unlearned, the unlearned limits (only those; learned ones are kept) are filled from the first stretch of the judged period
+in which the station reports regularly: 60 days in which at least 90 % of the days carry at least 90 % of the reports expected at the station's current cadence (median gap over the last year of the period). That stretch is chosen
+from timestamps only, never from values or verdicts; extreme-weather windows are cut out of it; it is treated as clean (a fault inside it is learned as normal, as in `atmos/autofit.py`). **Every configuration at such a station is
+judged only after the stretch ends** (so `full` and the remedy are compared on the same samples); at all other stations nothing changes and `r6_warmup` equals `full`. (`limits.complete_limits`, `evaluate_real.warm_stretch`, tested.)
+
+**Configurations** (phase `FRESH3`): `full`, the pipeline as shipped (remedies 1 and 3 on), `r6_warmup`, and the five baselines. No ablations.
+
+**Decision rule, registered now.** The remedy is adopted only if, on the twelve stations pooled unless stated: (a) over the stations where the warm-up applied, clean false alarms fall by at least 3 percentage points; (b) no
+injected-fault type's paired detection is lower than with `full` by more than 2 points; (c) real extreme-weather windows with a `FAULT` and their `FAULT` share are not higher; (d) the `SUSPECT` share in real extreme weather is not higher by
+more than 2 points. "Adopted" means `refit.py --complete` (fill only the unlearned limits from a stretch you name) is the documented fix that the `limits` notice points to and the shipped notice says the warm-up is validated;
+the pipeline does not change limits on its own. Otherwise the remedy is reported as tested and rejected. If the warm-up applies to no station, the remedy is reported as untested.
+
+**Reported whatever happens.** Every table for `full` on the seven 20-minute US stations and the five Australian ones, pooled and by group (the five numbers), which is the sub-hourly result; the stations where the warm-up applied and
+the stretch chosen for each; every station where anything is worse.
+
+**What this is not.** Still injected faults, still not IMD, 20-minute and not 1-15-minute cadence. The US stations are airport automated stations, not a meteorological service's AWS network.
+
+### 2.12 Amendment 4: outcome (from `config/protocol.md`)
+
+`results/fresh3_run1.*` was produced by the single run behind the guard (lock `data/fresh3/.fresh3_used`, protocol commit `cbacfe6`, 12 stations, about 52 minutes on 4 workers).
+
+**The decision rule, applied by `make_summary.py` (`amendment4_rows`):**
+
+| | (a) clean false alarms at the five stations where the warm-up applied (full / this) | (b) worst change in paired detection | (c) windows with a FAULT (full / this, of 160) | (d) SUSPECT share in real weather | adopt |
+|---|---|---|---|---|---|
+| remedy 6, unlearned limits filled from the first regular stretch | 45.4 % / 1.8 % (pass, needs 3 points) | **-6.0 pp (noise burst)** (fail, allows 2) | 5 / 5 (pass) | -7.90 pp (pass) | **no** (rule b) |
+
+**Decision.** By the rule registered first the remedy is **rejected**: it removes almost all of the false alarms it was designed for, and costs 6 points of noise-burst detection pooled over the twelve stations (at the five stations where
+it applied, 72/72 to 67/72, 99/99 to 94/99, 79/81 to 48/81, 72/72 to 65/72, 78/81 to 57/81). The reading of that trade is ours and it is not part of the rule: with the fixed 0.5 C floor the pipeline alarmed on 29-61 % of *clean* samples at those stations,
+so its "detection" of noise bursts there was mostly the floor firing on everything; with a learned limit the alarm means something, and it is less sensitive. The rule was written to stop a remedy that lost detection and it did its job; we do not
+overturn it. Consequences: `refit.py --complete` stays in the repository as an operator's tool (it fills only unlearned limits from a stretch you name) with this trade-off stated, the `limits` notice still tells the operator when limits do not fit,
+and the pipeline does not change limits by itself. The shipped default is unchanged.
+
+**What FRESH3 shows about the sub-hourly, fine-resolution case (reported whatever the decision):** on the seven US automated stations reporting **every 20 minutes** at 0.1 C (pipeline as shipped, no station-specific tuning):
+clean false alarms 2.7 % of 858,141 samples (FAULT 0.0 %); real extreme weather FAULT on 0.1 % of 38,294 samples (3 of 103 windows), WEATHER 3.4 %, SUSPECT 5.3 %; injected faults raised the alarm: frozen 100 %, spike 97 %, level shift 99 %,
+noise burst 100 %, dropout 99 %, clock 94 %; NOAA-flagged values escalated 39.6 %. All seven stations had every limit learned. This is the first sub-hourly evidence in the project; it is 20 minutes, not 1-15.
+
+**What the five Australian stations with irregular 2016-2019 records show:** with the pipeline as shipped, clean false alarms are 45.4 % (29.3 % Weipa, 42.1 % Tennant Creek, 60.7 % Alice Springs, 49.3 % Learmonth, 42.7 % Broome): no
+noise limit could be learned at any of them (all five had the alternating 1 h / 2 h pattern, and Weipa, Learmonth and Broome stayed irregular through 2020). With the warm-up they are 1.2-2.8 %. This confirms, on stations nobody had looked at,
+that the FRESH2 false-alarm finding is a property of the irregular training record and not of the four stations that revealed it. It is not fixed by default: the remedy failed its rule.
+
+**The five real-weather windows that got a FAULT** (`python window_forensics.py --phase FRESH3 --station <STN>`, read only after the results were fixed):
+- Fitch H Beach (Michigan), a low-pressure window in January 2024, and La Porte, low-pressure (Jan 2024) and cold (Jan 2024) windows: **temperature stuck at exactly 0 C (or -1 C) for 520-560 minutes** while humidity sat at 93 %, in the January 2024 US cold outbreak
+  (freezing precipitation holds the air at the freezing point). It is the same kind of cause as the saturated humidity at Visakhapatnam and Ranchi, a physical plateau that the frozen rule reads as a stuck sensor; a freezing-point analogue of remedy 1 is the obvious candidate and
+  would need another set of unseen stations to be judged honestly. It is not applied.
+- Alice Springs, sharp-change and low-pressure windows around 3-4 August 2020: at night the temperature goes from 5.9 C to 18.4 C in one hour (+12.5 C, then +15 C over two hours by the next reading) with pressure smooth and humidity falling from 31 % to 23 %.
+  Either a real warm downslope wind or a sensor step; the data cannot say which. The pipeline called it a single-channel jump against the 10 C step cap. It is the same cause, a fixed step cap meeting a fast real (or ambiguous) change, that Amendment 3's
+  remedy addresses; here the daily cycle explains none of it, because it happened in the middle of the night.
 
 ## 3. Method
 
@@ -1728,7 +1795,523 @@ Each system's weakest fault type from table 1, beside its false-alarm rate and i
 | baseline: Isolation Forest only | dropout: 0% | 0.7% | 0/92 |
 | baseline: Mahalanobis distance only | dropout: 0% | 0.7% | 0/92 |
 
-### 4.8 Scale and speed
+### 4.8 FRESH3: a fourth set of twelve stations, 2020-2024
+
+*Chosen and sealed before the Amendment 4 remedy was tested (config/protocol.md). Seven US automated stations reporting every 20 minutes at 0.1 C and five Australian automatic stations with irregular training years. `AtmosGuard (full)` is the pipeline as shipped.* Stations: FHB, PTT, MDS, LPO, GGW, GRC, HUT, WEI, TNC, ASP, LRM, BRM.
+
+#### Headline
+
+Five separate numbers. They are never merged.
+
+| question | answer |
+|---|---|
+| False alarms on clean real data (nothing injected) | 9.7% (9.6-9.8) of 1026508 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT |
+| What happens to real extreme weather (cyclones, heat, cold, sharp fronts; nothing injected) | FAULT on 0.1% (0.1-0.1) of 45332 samples (5 of 160 windows); WEATHER on 3.0%, SUSPECT on 12.8% |
+| Injected faults whose alarm the fault raised (each type on its own; injected, not real) | frozen 100%; spike 84%; level shift 95%; noise burst 100%; dropout 88%; clock 3 h out 96% |
+| Agreement with NOAA's own quality flags (another automated system, not ground truth) | escalated (FAULT, SUSPECT or WEATHER) on 59.9% of 845 NOAA-flagged values (FAULT or SUSPECT alone: 50.4%); escalated on 11.3% of the 1071872 values NOAA left alone |
+| Slow drift (health monitor, single station, no reference) | false drift claims on 0.6% of 17824 station-days; an injected ramp reaching 8x the service limit was found in 27% of trials |
+
+#### 1. Detection of injected faults, by type (the fault raised the alarm)
+
+Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault (paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. Ablation rows switch one layer off; baseline rows are simpler systems on the same data.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 84% | 95% | 100% | 88% | 96% |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 100% | 97% | 93% | 94% | 99% | 95% |
+| baseline: range check only | 0% | 14% | 13% | 16% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 90% | 92% | 87% | 0% | 94% |
+| baseline: climatology z-score only | 11% | 10% | 14% | 5% | 0% | 38% |
+| baseline: Isolation Forest only | 6% | 15% | 22% | 42% | 0% | 78% |
+| baseline: Mahalanobis distance only | 66% | 100% | 98% | 92% | 0% | 85% |
+| (faults injected) | 1143 | 1143 | 1143 | 1143 | 1143 | 967 |
+| AtmosGuard: median minutes to the alarm | 280 | 0 | 0 | 100 | 0 | 420 |
+
+#### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 1143 | 100.0% (99.7-100.0) | 98.7% (97.8-99.2) |
+| spike | 1143 | 84.0% (81.8-86.0) | 12.1% (10.3-14.1) |
+| level shift | 1143 | 95.0% (93.6-96.1) | 12.6% (10.8-14.6) |
+| noise burst | 1143 | 99.6% (99.0-99.8) | 15.6% (13.6-17.8) |
+| dropout | 1143 | 88.2% (86.2-89.9) | 88.2% (86.2-89.9) |
+| clock 3 h out | 967 | 96.2% (94.8-97.2) | 1.2% (0.7-2.2) |
+
+#### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
+
+A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
+
+| AtmosGuard, injected faults | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| raised an alarm (FAULT or SUSPECT) | 100% | 84% | 95% | 100% | 88% | 96% |
+| of which named FAULT | 99% | 12% | 13% | 16% | 88% | 1% |
+| missed, but made some samples look like WEATHER | 0% | 1% | 1% | 0% | 0% | 2% |
+
+#### The Amendment 4 remedy (unlearned limits filled from the first regular stretch), judged by the rule registered before the run
+
+Adopt only if (a) clean false alarms at the stations where the warm-up applied fall by at least 3 points, (b) no fault type loses more than 2 points, (c) real-weather windows with a FAULT and their share do not rise, (d) the SUSPECT share in real weather rises by at most 2 points. At those stations every configuration is judged only after the warm-up stretch.
+
+| configuration | stations where the warm-up applied | (a) clean false alarms there (full / this) | (b) worst change in paired detection | (c) windows with a FAULT (full / this) | (d) SUSPECT share in real weather (change) | rule (a) | rule (b) | rule (c) | rule (d) | adopt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | WEI, TNC, ASP, LRM, BRM | 45.4% / 1.8% | -6.0 pp (noise burst) | 5 / 5 of 160 | -7.90 pp | pass | FAIL | pass | pass | no |
+
+#### 2. False alarms on clean real data
+
+No fault injected. Extreme-weather windows and NOAA-flagged values removed.
+
+| configuration | any alarm | FAULT only | WEATHER verdicts | samples |
+|---|---|---|---|---|
+| AtmosGuard (full) | 9.7% | 0.0% | 1.2% | 1026508 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 2.6% | 0.0% | 1.4% | 1026508 |
+| baseline: range check only | 0.0% | 0.0% | - | 1026508 |
+| baseline: textbook range + step + persistence | 5.1% | 5.1% | - | 1026508 |
+| baseline: climatology z-score only | 0.7% | 0.0% | - | 1026508 |
+| baseline: Isolation Forest only | 0.8% | 0.0% | - | 1026508 |
+| baseline: Mahalanobis distance only | 0.7% | 0.0% | - | 1026508 |
+
+#### 3. Real extreme weather (nothing injected)
+
+A FAULT here is a failure: real weather called a broken sensor. WEATHER is the escalated, correct verdict.
+
+| configuration | FAULT | SUSPECT | WEATHER | VALID | windows with a FAULT |
+|---|---|---|---|---|---|
+| AtmosGuard (full) | 0.1% | 12.8% | 3.0% | 84.1% | 5/160 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 0.1% | 4.9% | 3.6% | 91.4% | 5/160 |
+| baseline: range check only | 0.0% | 0.0% | - | 100.0% | 0/160 |
+| baseline: textbook range + step + persistence | 6.4% | 0.0% | - | 93.6% | 157/160 |
+| baseline: climatology z-score only | 0.0% | 1.7% | - | 98.3% | 0/160 |
+| baseline: Isolation Forest only | 0.0% | 1.7% | - | 98.3% | 0/160 |
+| baseline: Mahalanobis distance only | 0.0% | 1.6% | - | 98.4% | 0/160 |
+
+Full pipeline, by kind of extreme weather:
+
+| kind of extreme weather | samples | FAULT | SUSPECT | WEATHER | windows with a FAULT |
+|---|---|---|---|---|---|
+| cold | 8727 | 0.1% | 18.7% | 1.8% | 1/30 |
+| heat | 10828 | 0.0% | 8.4% | 4.8% | 0/32 |
+| low | 13786 | 0.3% | 13.3% | 3.1% | 3/41 |
+| sharp | 11991 | 0.0% | 11.9% | 2.3% | 1/57 |
+
+#### 4. Agreement with NOAA's own quality flags
+
+NOAA's flags come from another automated system. Agreement means consistency with existing practice, not proof of real-world accuracy.
+
+| measure | value |
+|---|---|
+| NOAA-flagged values (suspect or erroneous) | 845 |
+|   of which erroneous | 0 |
+| AtmosGuard alarmed (FAULT or SUSPECT) on flagged values | 50.4% |
+| AtmosGuard escalated at all (also WEATHER) on flagged values | 59.9% |
+| AtmosGuard alarmed on erroneous values | n/a |
+| values NOAA did not flag | 1071872 |
+| AtmosGuard alarmed on those (extra flags) | 10.0% |
+| AtmosGuard escalated at all on those | 11.3% |
+
+#### 5. Slow drift, judged by the health monitor
+
+A ramp over 45 days is added to one channel of clean real data. Severity = offset at the end of the ramp in multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.
+
+| drift at end of ramp | temperature | pressure | humidity |
+|---|---|---|---|
+| none (false claims) | 2.4% of 84 chunks | 2.4% of 84 chunks | 14.3% of 84 chunks |
+| 1x service limit | 1% of 84 (day 30, 12.0x at detection) | 1% of 84 (day 18, 2.7x at detection) | 4% of 84 (day 149, 7.5x at detection) |
+| 2x service limit | 1% of 84 (day 30, 12.5x at detection) | 1% of 84 (day 18, 3.1x at detection) | 5% of 84 (day 112, 6.8x at detection) |
+| 4x service limit | 5% of 84 (day 45, 6.0x at detection) | 10% of 84 (day 68, 4.7x at detection) | 11% of 84 (day 52, 6.3x at detection) |
+| 8x service limit | 13% of 84 (day 38, 9.6x at detection) | 25% of 84 (day 47, 6.2x at detection) | 44% of 84 (day 53, 9.2x at detection) |
+
+#### By station (full pipeline)
+
+Each station judged on its own record.
+
+| station | cadence (min) | clean any alarm | clean FAULT | extreme weather FAULT | windows with a FAULT | extreme weather WEATHER | injected faults detected |
+|---|---|---|---|---|---|---|---|
+| FHB | 20 | 3.2% | 0.2% | 0.4% | 1/14 | 2.7% | 98% |
+| PTT | 20 | 1.4% | 0.0% | 0.0% | 0/17 | 2.5% | 98% |
+| MDS | 20 | 1.6% | 0.0% | 0.0% | 0/12 | 1.8% | 98% |
+| LPO | 20 | 3.7% | 0.1% | 0.4% | 2/14 | 0.7% | 97% |
+| GGW | 20 | 1.4% | 0.0% | 0.0% | 0/15 | 2.5% | 99% |
+| GRC | 20 | 4.6% | 0.0% | 0.0% | 0/16 | 8.4% | 99% |
+| HUT | 20 | 3.0% | 0.0% | 0.0% | 0/15 | 3.8% | 99% |
+| WEI | 60 | 29.3% | 0.0% | 0.0% | 0/10 | 1.3% | 92% |
+| TNC | 60 | 42.1% | 0.0% | 0.0% | 0/16 | 1.6% | 88% |
+| ASP | 60 | 60.7% | 0.0% | 0.1% | 2/14 | 0.5% | 77% |
+| LRM | 60 | 49.3% | 0.0% | 0.0% | 0/8 | 0.8% | 86% |
+| BRM | 60 | 42.7% | 0.0% | 0.0% | 0/9 | 2.9% | 85% |
+
+#### 1b. The same, by the criterion registered in the protocol (any alarm in the window)
+
+Background false alarms (about 2 % of samples) also fall inside long fault windows, so this flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. Kept because it was registered before the holdout.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 99% | 100% | 100% | 100% | 96% |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 100% | 99% | 94% | 94% | 100% | 95% |
+| baseline: range check only | 0% | 14% | 13% | 16% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 92% | 96% | 92% | 18% | 94% |
+| baseline: climatology z-score only | 15% | 11% | 16% | 7% | 1% | 39% |
+| baseline: Isolation Forest only | 18% | 16% | 35% | 50% | 1% | 78% |
+| baseline: Mahalanobis distance only | 76% | 100% | 98% | 94% | 1% | 85% |
+| (faults injected) | 1143 | 1143 | 1143 | 1143 | 1143 | 967 |
+| AtmosGuard: median minutes to the alarm | 240 | 0 | 0 | 60 | 0 | 60 |
+
+#### No single simpler system is good at every fault type
+
+Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.
+
+| system | weakest injected-fault type (fault raised the alarm) | false alarms on clean data | real extreme weather, windows with a FAULT |
+|---|---|---|---|
+| AtmosGuard (full) | spike: 84% | 9.7% | 5/160 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | level shift: 93% | 2.6% | 5/160 |
+| baseline: range check only | frozen: 0% | 0.0% | 0/160 |
+| baseline: textbook range + step + persistence | dropout: 0% | 5.1% | 157/160 |
+| baseline: climatology z-score only | dropout: 0% | 0.7% | 0/160 |
+| baseline: Isolation Forest only | dropout: 0% | 0.8% | 0/160 |
+| baseline: Mahalanobis distance only | dropout: 0% | 0.7% | 0/160 |
+
+### 4.9 FRESH3, the seven US 20-minute stations only
+
+*The first sub-hourly, fine-resolution records in the project: routine METAR at :15, :35 and :55.* Stations: FHB, PTT, MDS, LPO, GGW, GRC, HUT.
+
+#### Headline
+
+Five separate numbers. They are never merged.
+
+| question | answer |
+|---|---|
+| False alarms on clean real data (nothing injected) | 2.7% (2.7-2.7) of 858141 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT |
+| What happens to real extreme weather (cyclones, heat, cold, sharp fronts; nothing injected) | FAULT on 0.1% (0.1-0.1) of 38294 samples (3 of 103 windows); WEATHER on 3.4%, SUSPECT on 5.3% |
+| Injected faults whose alarm the fault raised (each type on its own; injected, not real) | frozen 100%; spike 97%; level shift 99%; noise burst 100%; dropout 99%; clock 3 h out 94% |
+| Agreement with NOAA's own quality flags (another automated system, not ground truth) | escalated (FAULT, SUSPECT or WEATHER) on 39.6% of 498 NOAA-flagged values (FAULT or SUSPECT alone: 24.7%); escalated on 4.3% of the 896769 values NOAA left alone |
+| Slow drift (health monitor, single station, no reference) | false drift claims on 0.7% of 11208 station-days; an injected ramp reaching 8x the service limit was found in 18% of trials |
+
+#### 1. Detection of injected faults, by type (the fault raised the alarm)
+
+Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault (paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. Ablation rows switch one layer off; baseline rows are simpler systems on the same data.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 97% | 99% | 100% | 99% | 94% |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 100% | 97% | 99% | 100% | 99% | 94% |
+| baseline: range check only | 0% | 14% | 13% | 21% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 98% | 99% | 100% | 0% | 100% |
+| baseline: climatology z-score only | 8% | 7% | 8% | 4% | 0% | 29% |
+| baseline: Isolation Forest only | 7% | 15% | 24% | 55% | 0% | 85% |
+| baseline: Mahalanobis distance only | 73% | 100% | 100% | 100% | 0% | 90% |
+| (faults injected) | 738 | 738 | 738 | 738 | 738 | 612 |
+| AtmosGuard: median minutes to the alarm | 280 | 0 | 0 | 60 | 0 | 800 |
+
+#### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 738 | 100.0% (99.5-100.0) | 98.1% (96.8-98.9) |
+| spike | 738 | 97.3% (95.9-98.2) | 13.6% (11.3-16.2) |
+| level shift | 738 | 99.1% (98.1-99.5) | 13.3% (11.0-15.9) |
+| noise burst | 738 | 100.0% (99.5-100.0) | 21.0% (18.2-24.1) |
+| dropout | 738 | 99.3% (98.4-99.7) | 99.3% (98.4-99.7) |
+| clock 3 h out | 612 | 94.0% (91.8-95.6) | 2.0% (1.1-3.4) |
+
+#### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
+
+A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
+
+| AtmosGuard, injected faults | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| raised an alarm (FAULT or SUSPECT) | 100% | 97% | 99% | 100% | 99% | 94% |
+| of which named FAULT | 98% | 14% | 13% | 21% | 99% | 2% |
+| missed, but made some samples look like WEATHER | 0% | 1% | 1% | 0% | 0% | 4% |
+
+#### The Amendment 4 remedy (unlearned limits filled from the first regular stretch), judged by the rule registered before the run
+
+Adopt only if (a) clean false alarms at the stations where the warm-up applied fall by at least 3 points, (b) no fault type loses more than 2 points, (c) real-weather windows with a FAULT and their share do not rise, (d) the SUSPECT share in real weather rises by at most 2 points. At those stations every configuration is judged only after the warm-up stretch.
+
+| configuration | stations where the warm-up applied | (a) clean false alarms there (full / this) | (b) worst change in paired detection | (c) windows with a FAULT (full / this) | (d) SUSPECT share in real weather (change) | rule (a) | rule (b) | rule (c) | rule (d) | adopt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | WEI, TNC, ASP, LRM, BRM | 45.4% / 1.8% | none | 3 / 3 of 103 | +0.00 pp | pass | pass | pass | pass | yes |
+
+#### 2. False alarms on clean real data
+
+No fault injected. Extreme-weather windows and NOAA-flagged values removed.
+
+| configuration | any alarm | FAULT only | WEATHER verdicts | samples |
+|---|---|---|---|---|
+| AtmosGuard (full) | 2.7% | 0.0% | 1.3% | 858141 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 2.7% | 0.0% | 1.3% | 858141 |
+| baseline: range check only | 0.0% | 0.0% | - | 858141 |
+| baseline: textbook range + step + persistence | 5.6% | 5.6% | - | 858141 |
+| baseline: climatology z-score only | 0.8% | 0.0% | - | 858141 |
+| baseline: Isolation Forest only | 0.7% | 0.0% | - | 858141 |
+| baseline: Mahalanobis distance only | 0.6% | 0.0% | - | 858141 |
+
+#### 3. Real extreme weather (nothing injected)
+
+A FAULT here is a failure: real weather called a broken sensor. WEATHER is the escalated, correct verdict.
+
+| configuration | FAULT | SUSPECT | WEATHER | VALID | windows with a FAULT |
+|---|---|---|---|---|---|
+| AtmosGuard (full) | 0.1% | 5.3% | 3.4% | 91.3% | 3/103 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 0.1% | 5.3% | 3.4% | 91.3% | 3/103 |
+| baseline: range check only | 0.0% | 0.0% | - | 100.0% | 0/103 |
+| baseline: textbook range + step + persistence | 6.7% | 0.0% | - | 93.3% | 103/103 |
+| baseline: climatology z-score only | 0.0% | 1.7% | - | 98.3% | 0/103 |
+| baseline: Isolation Forest only | 0.0% | 1.4% | - | 98.6% | 0/103 |
+| baseline: Mahalanobis distance only | 0.0% | 1.2% | - | 98.8% | 0/103 |
+
+Full pipeline, by kind of extreme weather:
+
+| kind of extreme weather | samples | FAULT | SUSPECT | WEATHER | windows with a FAULT |
+|---|---|---|---|---|---|
+| cold | 6722 | 0.1% | 7.4% | 1.8% | 1/16 |
+| heat | 9570 | 0.0% | 3.4% | 5.4% | 0/23 |
+| low | 12056 | 0.3% | 7.6% | 3.2% | 2/29 |
+| sharp | 9946 | 0.0% | 2.8% | 2.7% | 0/35 |
+
+#### 4. Agreement with NOAA's own quality flags
+
+NOAA's flags come from another automated system. Agreement means consistency with existing practice, not proof of real-world accuracy.
+
+| measure | value |
+|---|---|
+| NOAA-flagged values (suspect or erroneous) | 498 |
+|   of which erroneous | 0 |
+| AtmosGuard alarmed (FAULT or SUSPECT) on flagged values | 24.7% |
+| AtmosGuard escalated at all (also WEATHER) on flagged values | 39.6% |
+| AtmosGuard alarmed on erroneous values | n/a |
+| values NOAA did not flag | 896769 |
+| AtmosGuard alarmed on those (extra flags) | 2.9% |
+| AtmosGuard escalated at all on those | 4.3% |
+
+#### 5. Slow drift, judged by the health monitor
+
+A ramp over 45 days is added to one channel of clean real data. Severity = offset at the end of the ramp in multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.
+
+| drift at end of ramp | temperature | pressure | humidity |
+|---|---|---|---|
+| none (false claims) | 1.9% of 53 chunks | 0.0% of 53 chunks | 15.1% of 53 chunks |
+| 1x service limit | 0% of 53 (-, - at detection) | 0% of 53 (-, - at detection) | 4% of 53 (day 138, 7.6x at detection) |
+| 2x service limit | 0% of 53 (-, - at detection) | 0% of 53 (-, - at detection) | 6% of 53 (day 74, 8.7x at detection) |
+| 4x service limit | 0% of 53 (-, - at detection) | 0% of 53 (-, - at detection) | 11% of 53 (day 49, 7.0x at detection) |
+| 8x service limit | 0% of 53 (-, - at detection) | 4% of 53 (day 43, 8.0x at detection) | 49% of 53 (day 53, 8.1x at detection) |
+
+#### By station (full pipeline)
+
+Each station judged on its own record.
+
+| station | cadence (min) | clean any alarm | clean FAULT | extreme weather FAULT | windows with a FAULT | extreme weather WEATHER | injected faults detected |
+|---|---|---|---|---|---|---|---|
+| FHB | 20 | 3.2% | 0.2% | 0.4% | 1/14 | 2.7% | 98% |
+| PTT | 20 | 1.4% | 0.0% | 0.0% | 0/17 | 2.5% | 98% |
+| MDS | 20 | 1.6% | 0.0% | 0.0% | 0/12 | 1.8% | 98% |
+| LPO | 20 | 3.7% | 0.1% | 0.4% | 2/14 | 0.7% | 97% |
+| GGW | 20 | 1.4% | 0.0% | 0.0% | 0/15 | 2.5% | 99% |
+| GRC | 20 | 4.6% | 0.0% | 0.0% | 0/16 | 8.4% | 99% |
+| HUT | 20 | 3.0% | 0.0% | 0.0% | 0/15 | 3.8% | 99% |
+
+#### 1b. The same, by the criterion registered in the protocol (any alarm in the window)
+
+Background false alarms (about 2 % of samples) also fall inside long fault windows, so this flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. Kept because it was registered before the holdout.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 100% | 99% | 100% | 100% | 94% |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 100% | 100% | 99% | 100% | 100% | 94% |
+| baseline: range check only | 0% | 14% | 13% | 21% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 100% | 100% | 100% | 24% | 100% |
+| baseline: climatology z-score only | 11% | 8% | 11% | 6% | 1% | 30% |
+| baseline: Isolation Forest only | 18% | 16% | 35% | 60% | 1% | 85% |
+| baseline: Mahalanobis distance only | 81% | 100% | 100% | 100% | 1% | 90% |
+| (faults injected) | 738 | 738 | 738 | 738 | 738 | 612 |
+| AtmosGuard: median minutes to the alarm | 280 | 0 | 0 | 60 | 0 | 740 |
+
+#### No single simpler system is good at every fault type
+
+Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.
+
+| system | weakest injected-fault type (fault raised the alarm) | false alarms on clean data | real extreme weather, windows with a FAULT |
+|---|---|---|---|
+| AtmosGuard (full) | clock 3 h out: 94% | 2.7% | 3/103 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | clock 3 h out: 94% | 2.7% | 3/103 |
+| baseline: range check only | frozen: 0% | 0.0% | 0/103 |
+| baseline: textbook range + step + persistence | dropout: 0% | 5.6% | 103/103 |
+| baseline: climatology z-score only | dropout: 0% | 0.8% | 0/103 |
+| baseline: Isolation Forest only | dropout: 0% | 0.7% | 0/103 |
+| baseline: Mahalanobis distance only | dropout: 0% | 0.6% | 0/103 |
+
+### 4.10 FRESH3, the five Australian automatic stations only
+
+*Irregular 2016-2019 records (16 reports a day with alternating 1 h and 2 h gaps), hourly after.* Stations: WEI, TNC, ASP, LRM, BRM.
+
+#### Headline
+
+Five separate numbers. They are never merged.
+
+| question | answer |
+|---|---|
+| False alarms on clean real data (nothing injected) | 45.4% (45.1-45.6) of 168367 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT |
+| What happens to real extreme weather (cyclones, heat, cold, sharp fronts; nothing injected) | FAULT on 0.0% (0.0-0.1) of 7038 samples (2 of 57 windows); WEATHER on 1.3%, SUSPECT on 53.7% |
+| Injected faults whose alarm the fault raised (each type on its own; injected, not real) | frozen 100%; spike 60%; level shift 88%; noise burst 99%; dropout 68%; clock 3 h out 100% |
+| Agreement with NOAA's own quality flags (another automated system, not ground truth) | escalated (FAULT, SUSPECT or WEATHER) on 89.0% of 347 NOAA-flagged values (FAULT or SUSPECT alone: 87.3%); escalated on 47.1% of the 175103 values NOAA left alone |
+| Slow drift (health monitor, single station, no reference) | false drift claims on 0.5% of 6616 station-days; an injected ramp reaching 8x the service limit was found in 44% of trials |
+
+#### 1. Detection of injected faults, by type (the fault raised the alarm)
+
+Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault (paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. Ablation rows switch one layer off; baseline rows are simpler systems on the same data.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 60% | 88% | 99% | 68% | 100% |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 100% | 97% | 83% | 82% | 100% | 98% |
+| baseline: range check only | 0% | 13% | 12% | 6% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 76% | 80% | 63% | 0% | 84% |
+| baseline: climatology z-score only | 18% | 16% | 24% | 6% | 0% | 54% |
+| baseline: Isolation Forest only | 5% | 16% | 20% | 18% | 0% | 66% |
+| baseline: Mahalanobis distance only | 52% | 100% | 93% | 79% | 0% | 76% |
+| (faults injected) | 405 | 405 | 405 | 405 | 405 | 355 |
+| AtmosGuard: median minutes to the alarm | 300 | 0 | 60 | 240 | 0 | 240 |
+
+#### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 405 | 100.0% (99.1-100.0) | 99.8% (98.6-100.0) |
+| spike | 405 | 59.8% (54.9-64.4) | 9.4% (6.9-12.6) |
+| level shift | 405 | 87.7% (84.1-90.5) | 11.4% (8.6-14.8) |
+| noise burst | 405 | 98.8% (97.1-99.5) | 5.7% (3.8-8.4) |
+| dropout | 405 | 67.9% (63.2-72.3) | 67.9% (63.2-72.3) |
+| clock 3 h out | 355 | 100.0% (98.9-100.0) | 0.0% (0.0-1.1) |
+
+#### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
+
+A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
+
+| AtmosGuard, injected faults | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| raised an alarm (FAULT or SUSPECT) | 100% | 60% | 88% | 99% | 68% | 100% |
+| of which named FAULT | 100% | 9% | 11% | 6% | 68% | 0% |
+| missed, but made some samples look like WEATHER | 0% | 1% | 0% | 0% | 0% | 0% |
+
+#### The Amendment 4 remedy (unlearned limits filled from the first regular stretch), judged by the rule registered before the run
+
+Adopt only if (a) clean false alarms at the stations where the warm-up applied fall by at least 3 points, (b) no fault type loses more than 2 points, (c) real-weather windows with a FAULT and their share do not rise, (d) the SUSPECT share in real weather rises by at most 2 points. At those stations every configuration is judged only after the warm-up stretch.
+
+| configuration | stations where the warm-up applied | (a) clean false alarms there (full / this) | (b) worst change in paired detection | (c) windows with a FAULT (full / this) | (d) SUSPECT share in real weather (change) | rule (a) | rule (b) | rule (c) | rule (d) | adopt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | WEI, TNC, ASP, LRM, BRM | 45.4% / 1.8% | -17.0 pp (noise burst) | 2 / 2 of 57 | -50.85 pp | pass | FAIL | pass | pass | no |
+
+#### 2. False alarms on clean real data
+
+No fault injected. Extreme-weather windows and NOAA-flagged values removed.
+
+| configuration | any alarm | FAULT only | WEATHER verdicts | samples |
+|---|---|---|---|---|
+| AtmosGuard (full) | 45.4% | 0.0% | 0.5% | 168367 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 1.8% | 0.0% | 2.0% | 168367 |
+| baseline: range check only | 0.0% | 0.0% | - | 168367 |
+| baseline: textbook range + step + persistence | 2.6% | 2.6% | - | 168367 |
+| baseline: climatology z-score only | 0.5% | 0.0% | - | 168367 |
+| baseline: Isolation Forest only | 1.2% | 0.0% | - | 168367 |
+| baseline: Mahalanobis distance only | 1.3% | 0.0% | - | 168367 |
+
+#### 3. Real extreme weather (nothing injected)
+
+A FAULT here is a failure: real weather called a broken sensor. WEATHER is the escalated, correct verdict.
+
+| configuration | FAULT | SUSPECT | WEATHER | VALID | windows with a FAULT |
+|---|---|---|---|---|---|
+| AtmosGuard (full) | 0.0% | 53.7% | 1.3% | 45.0% | 2/57 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 0.0% | 2.8% | 5.2% | 92.0% | 2/57 |
+| baseline: range check only | 0.0% | 0.0% | - | 100.0% | 0/57 |
+| baseline: textbook range + step + persistence | 4.6% | 0.0% | - | 95.4% | 54/57 |
+| baseline: climatology z-score only | 0.0% | 1.4% | - | 98.6% | 0/57 |
+| baseline: Isolation Forest only | 0.0% | 3.5% | - | 96.5% | 0/57 |
+| baseline: Mahalanobis distance only | 0.0% | 3.9% | - | 96.1% | 0/57 |
+
+Full pipeline, by kind of extreme weather:
+
+| kind of extreme weather | samples | FAULT | SUSPECT | WEATHER | windows with a FAULT |
+|---|---|---|---|---|---|
+| cold | 2005 | 0.0% | 56.9% | 1.7% | 0/14 |
+| heat | 1258 | 0.0% | 46.3% | 0.7% | 0/9 |
+| low | 1730 | 0.1% | 53.0% | 1.9% | 1/12 |
+| sharp | 2045 | 0.0% | 55.6% | 0.8% | 1/22 |
+
+#### 4. Agreement with NOAA's own quality flags
+
+NOAA's flags come from another automated system. Agreement means consistency with existing practice, not proof of real-world accuracy.
+
+| measure | value |
+|---|---|
+| NOAA-flagged values (suspect or erroneous) | 347 |
+|   of which erroneous | 0 |
+| AtmosGuard alarmed (FAULT or SUSPECT) on flagged values | 87.3% |
+| AtmosGuard escalated at all (also WEATHER) on flagged values | 89.0% |
+| AtmosGuard alarmed on erroneous values | n/a |
+| values NOAA did not flag | 175103 |
+| AtmosGuard alarmed on those (extra flags) | 46.6% |
+| AtmosGuard escalated at all on those | 47.1% |
+
+#### 5. Slow drift, judged by the health monitor
+
+A ramp over 45 days is added to one channel of clean real data. Severity = offset at the end of the ramp in multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.
+
+| drift at end of ramp | temperature | pressure | humidity |
+|---|---|---|---|
+| none (false claims) | 3.2% of 31 chunks | 6.5% of 31 chunks | 12.9% of 31 chunks |
+| 1x service limit | 3% of 31 (day 30, 12.0x at detection) | 3% of 31 (day 18, 2.7x at detection) | 3% of 31 (day 149, 3.7x at detection) |
+| 2x service limit | 3% of 31 (day 30, 12.5x at detection) | 3% of 31 (day 18, 3.1x at detection) | 3% of 31 (day 149, 4.8x at detection) |
+| 4x service limit | 13% of 31 (day 45, 6.0x at detection) | 26% of 31 (day 68, 4.7x at detection) | 10% of 31 (day 70, 6.3x at detection) |
+| 8x service limit | 35% of 31 (day 38, 9.6x at detection) | 61% of 31 (day 47, 6.2x at detection) | 35% of 31 (day 54, 10.0x at detection) |
+
+#### By station (full pipeline)
+
+Each station judged on its own record.
+
+| station | cadence (min) | clean any alarm | clean FAULT | extreme weather FAULT | windows with a FAULT | extreme weather WEATHER | injected faults detected |
+|---|---|---|---|---|---|---|---|
+| WEI | 60 | 29.3% | 0.0% | 0.0% | 0/10 | 1.3% | 92% |
+| TNC | 60 | 42.1% | 0.0% | 0.0% | 0/16 | 1.6% | 88% |
+| ASP | 60 | 60.7% | 0.0% | 0.1% | 2/14 | 0.5% | 77% |
+| LRM | 60 | 49.3% | 0.0% | 0.0% | 0/8 | 0.8% | 86% |
+| BRM | 60 | 42.7% | 0.0% | 0.0% | 0/9 | 2.9% | 85% |
+
+#### 1b. The same, by the criterion registered in the protocol (any alarm in the window)
+
+Background false alarms (about 2 % of samples) also fall inside long fault windows, so this flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. Kept because it was registered before the holdout.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 99% | 100% | 100% | 100% | 100% |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | 100% | 98% | 85% | 83% | 100% | 98% |
+| baseline: range check only | 0% | 13% | 12% | 6% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 77% | 90% | 77% | 7% | 84% |
+| baseline: climatology z-score only | 21% | 17% | 26% | 9% | 1% | 55% |
+| baseline: Isolation Forest only | 17% | 17% | 33% | 31% | 0% | 66% |
+| baseline: Mahalanobis distance only | 66% | 100% | 94% | 84% | 0% | 77% |
+| (faults injected) | 405 | 405 | 405 | 405 | 405 | 355 |
+| AtmosGuard: median minutes to the alarm | 0 | 0 | 0 | 0 | 0 | 0 |
+
+#### No single simpler system is good at every fault type
+
+Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.
+
+| system | weakest injected-fault type (fault raised the alarm) | false alarms on clean data | real extreme weather, windows with a FAULT |
+|---|---|---|---|
+| AtmosGuard (full) | spike: 60% | 45.4% | 2/57 |
+| AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch) | noise burst: 82% | 1.8% | 2/57 |
+| baseline: range check only | frozen: 0% | 0.0% | 0/57 |
+| baseline: textbook range + step + persistence | dropout: 0% | 2.6% | 54/57 |
+| baseline: climatology z-score only | dropout: 0% | 0.5% | 0/57 |
+| baseline: Isolation Forest only | dropout: 0% | 1.2% | 0/57 |
+| baseline: Mahalanobis distance only | dropout: 0% | 1.3% | 0/57 |
+
+### 4.11 Scale and speed
 
 Simulated stations on one machine (a design check, not a deployment proof). cpu_count=4, python=3.11.15.
 
@@ -1748,7 +2331,7 @@ The same test with the Isolation Forest layer switched off (`layers.mlmodel: fal
 
 Real HTTP server (FastAPI + SQLite), 50 stations, 8 concurrent clients: 164.8 requests/s, median 44.89 ms, p95 59.17 ms, p99 66.33 ms, errors 0.
 
-### 4.9 How big must a fault be? (DEV, injected)
+### 4.12 How big must a fault be? (DEV, injected)
 
 How big must a fault be? Spikes, level shifts and noise bursts of 0.25 to 4 times the configured size, injected into clean real data of the six DEV stations (the tuning set, so an envelope study and not a held-out result). A detection is an alarm the fault itself raised. The 1x row is a separate random draw (two faults of each type per series, one round), so it is close to but not identical with the main table.
 
@@ -1770,7 +2353,7 @@ How big must a fault be? Spikes, level shifts and noise bursts of 0.25 to 4 time
 | Mahalanobis distance only | 2x | 100% | 100% | 100% |
 | Mahalanobis distance only | 4x | 100% | 100% | 100% |
 
-### 4.10 A new station on day one (cold start)
+### 4.13 A new station on day one (cold start)
 
 Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table from the nearest other station. Injected faults: frozen, spike, level shift.
 
@@ -1784,7 +2367,7 @@ Leave-one-station-out on the six DEV stations, judged on their DEV years. A star
 
 The study ran 42 jobs in 8.7 minutes on 4 workers (`python evaluate_coldstart.py`; `--estimate` projects the running time first).
 
-### 4.11 Figures
+### 4.14 Figures
 
 ![Figure 3. The same real data and the same three numbers for AtmosGuard and simpler systems, in every split (lower is better in the first two columns, higher in the third).](figures/fig_baselines.png)
 
@@ -1860,31 +2443,39 @@ kept is the most sensitive whose false-alarm share stays at or below 1 % of days
 ![Offsets found with and without neighbours](figures/fig_peers.png)
 
 <!-- PEERS:START -->
-| fault (60 days long) | NSW: with neighbours / alone | VIC: with neighbours / alone |
-|---|---|---|
-| temperature offset of 0.5 C | 9% (13/144, 7 d) / 3% (4/141, 12 d) | 17% (24/141, 12 d) / 0% (0/141) |
-| temperature offset of 1 C | 38% (54/143, 7 d) / 3% (5/144, 10 d) | 48% (68/143, 8 d) / 0% (0/144) |
-| temperature offset of 2 C | 86% (122/142, 6 d) / 9% (13/144, 7 d) | 88% (125/142, 5 d) / 1% (2/144, 8 d) |
-| temperature drift, 0 to 2 C | 82% (118/144, 40 d) / 3% (5/144, 42 d) | 84% (120/143, 36 d) / 3% (5/143, 48 d) |
-| pressure offset of 0.5 hPa | 31% (44/144, 10 d) / 1% (1/140, 19 d) | 23% (32/141, 12 d) / 0% (0/143) |
-| pressure offset of 1 hPa | 67% (96/143, 6 d) / 1% (2/141, 11 d) | 65% (93/143, 7 d) / 0% (0/143) |
-| pressure offset of 2 hPa | 96% (138/144, 4 d) / 4% (6/143, 9 d) | 91% (131/144, 5 d) / 0% (0/143) |
-| pressure drift, 0 to 2 hPa | 94% (135/143, 32 d) / 3% (4/143, 19 d) | 90% (128/142, 35 d) / 1% (2/143, 38 d) |
-| humidity offset of 3 % | 12% (17/144, 9 d) / 13% (19/143, 6 d) | 15% (21/142, 9 d) / 17% (25/144, 8 d) |
-| humidity offset of 6 % | 34% (48/142, 9 d) / 26% (37/143, 11 d) | 41% (59/143, 8 d) / 28% (40/142, 8 d) |
-| humidity offset of 12 % | 75% (107/143, 6 d) / 46% (66/144, 7 d) | 90% (130/144, 5 d) / 53% (74/140, 8 d) |
-| humidity drift, 0 to 12 % | 69% (99/144, 36 d) / 47% (68/144, 33 d) | 90% (128/143, 35 d) / 61% (88/144, 31 d) |
+| fault (60 days long) | NSW: with neighbours / alone | VIC: with neighbours / alone | INDIA: with neighbours / alone |
+|---|---|---|---|
+| temperature offset of 0.5 C | 9% (13/144, 7 d) / 3% (4/141, 12 d) | 17% (24/141, 12 d) / 0% (0/141) | 10% (26/250, 9 d) / 3% (9/285, 5 d) |
+| temperature offset of 1 C | 38% (54/143, 7 d) / 3% (5/144, 10 d) | 48% (68/143, 8 d) / 0% (0/144) | 17% (42/250, 8 d) / 10% (29/284, 6 d) |
+| temperature offset of 2 C | 86% (122/142, 6 d) / 9% (13/144, 7 d) | 88% (125/142, 5 d) / 1% (2/144, 8 d) | 54% (134/250, 7 d) / 21% (59/283, 8 d) |
+| temperature drift, 0 to 2 C | 82% (118/144, 40 d) / 3% (5/144, 42 d) | 84% (120/143, 36 d) / 3% (5/143, 48 d) | 48% (119/250, 40 d) / 20% (55/282, 42 d) |
+| pressure offset of 0.5 hPa | 31% (44/144, 10 d) / 1% (1/140, 19 d) | 23% (32/141, 12 d) / 0% (0/143) | 20% (50/249, 7 d) / 5% (15/285, 9 d) |
+| pressure offset of 1 hPa | 67% (96/143, 6 d) / 1% (2/141, 11 d) | 65% (93/143, 7 d) / 0% (0/143) | 50% (125/249, 6 d) / 10% (30/287, 7 d) |
+| pressure offset of 2 hPa | 96% (138/144, 4 d) / 4% (6/143, 9 d) | 91% (131/144, 5 d) / 0% (0/143) | 91% (228/251, 4 d) / 21% (59/287, 8 d) |
+| pressure drift, 0 to 2 hPa | 94% (135/143, 32 d) / 3% (4/143, 19 d) | 90% (128/142, 35 d) / 1% (2/143, 38 d) | 85% (214/251, 33 d) / 25% (71/283, 44 d) |
+| humidity offset of 3 % | 12% (17/144, 9 d) / 13% (19/143, 6 d) | 15% (21/142, 9 d) / 17% (25/144, 8 d) | 10% (24/250, 7 d) / 14% (39/284, 7 d) |
+| humidity offset of 6 % | 34% (48/142, 9 d) / 26% (37/143, 11 d) | 41% (59/143, 8 d) / 28% (40/142, 8 d) | 19% (48/249, 7 d) / 24% (67/285, 7 d) |
+| humidity offset of 12 % | 75% (107/143, 6 d) / 46% (66/144, 7 d) | 90% (130/144, 5 d) / 53% (74/140, 8 d) | 67% (170/252, 6 d) / 62% (178/285, 6 d) |
+| humidity drift, 0 to 12 % | 69% (99/144, 36 d) / 47% (68/144, 33 d) | 90% (128/143, 35 d) / 61% (88/144, 31 d) | 63% (158/249, 39 d) / 57% (164/287, 37 d) |
 
-| share of clean days with an alarm | NSW: with neighbours / alone | VIC: with neighbours / alone |
-|---|---|---|
-| temperature | 0.52% / 2.60% | 0.62% / 0.43% |
-| pressure | 0.95% / 0.77% | 0.20% / 0.30% |
-| humidity | 0.96% / 2.36% | 2.45% / 3.09% |
+| share of clean days with an alarm | NSW: with neighbours / alone | VIC: with neighbours / alone | INDIA: with neighbours / alone |
+|---|---|---|---|
+| temperature | 0.52% / 2.60% | 0.62% / 0.43% | 2.69% / 2.27% |
+| pressure | 0.95% / 0.77% | 0.20% / 0.30% | 3.90% / 1.75% |
+| humidity | 0.96% / 2.36% | 2.45% / 3.09% | 2.11% / 2.30% |
 
 <!-- PEERS:END -->
 
 A "quiet" setting (99.9th percentile x 1.2) is in `results/peers_*_quiet.*`: false alarms below 0.25 % of days on NSW and below 0.75 % on VIC, at the cost of a large part of the
 detection at small and medium sizes (a 1 hPa offset: 40 % instead of 67 % on NSW, 32 % instead of 65 % on VIC).
+
+#### Does it work at Indian station spacing? (INDIA column)
+Indian airports are far apart: only 4 of 31 stations have three neighbours within 250 km, but 28 of 31 have three within 600 km. The INDIA column runs the same settings on the 31 Indian airport
+stations already in this repository (DEV, holdout, fresh and fresh-2 files; whole-degree hourly METAR, some 3-hourly SYNOP), with the neighbour radius widened to **600 km** (`python evaluate_peers.py --cluster india
+--radius-km 600`); nothing is tuned on them and nothing new is downloaded. Result, in short: **pressure works** (a 2 hPa offset found in 91 % of trials against 21 % alone, a 2 hPa drift 85 % against 25 %; 1 hPa 50 % against
+10 %), temperature works at 2 C (54 % against 21 %) and much less below, **humidity gains nothing**, and false alarms are higher than on the Australian clusters (about 2-4 % of clean days, 3.9 % for pressure) because the
+records are rounded to whole hPa and the neighbours are farther away. So the honest statement is: with a 600 km radius, an Indian network of airport-spacing stations can see pressure offsets and drift of about 1-2 hPa
+that no single station can; it is not a substitute for calibration visits, and it was measured on injected faults.
 
 #### What it does not do
 - **Small offsets.** Half a degree, half a hPa and 3 % humidity are mostly missed even with neighbours, and humidity is weak throughout (its departures are local: fog, irrigation, a
@@ -1900,7 +2491,8 @@ detection at small and medium sizes (a 1 hPa offset: 40 % instead of 67 % on NSW
 python -m data_tools.make_peers --cluster nsw && python -m data_tools.make_peers --cluster vic
 python evaluate_peers.py --cluster nsw --quantile 0.995 --margin 1.1 --out results/peers_nsw.json
 python evaluate_peers.py --cluster vic --quantile 0.995 --margin 1.1 --out results/peers_vic.json
-python make_summary.py results/dev_run4.json ... --peers results/peers_nsw.json results/peers_vic.json --peers-doc docs/PEER_LAYER.md   # refreshes the tables above
+python -m data_tools.make_peers --cluster india && python evaluate_peers.py --cluster india --radius-km 600 --quantile 0.995 --margin 1.1 --out results/peers_india.json
+python make_summary.py results/dev_run4.json ... --peers results/peers_nsw.json results/peers_vic.json results/peers_india.json --peers-doc docs/PEER_LAYER.md   # refreshes the tables above
 ```
 For a cluster of your own: a catalog like `data_tools/stations_peers_nsw.yaml` (identity and coordinates) and one CSV per station in `data/peers/<cluster>/`.
 
@@ -1958,13 +2550,19 @@ extreme-weather windows with a `FAULT` 4 to 1 of 134 (the four were fast humidit
 -0.02 points. The one window left is Thredbo, October 2023 (humidity -48.9 % in two hours). Remedy 4 (a sustained one-channel offset) is **rejected**: level-shift detection +1 point against the +5 registered,
 clean false alarms +0.48 points. Details and every number: Amendment 3 and its outcome in `config/protocol.md`, `results/REPORT.md`.
 
+### And a fourth set (Amendment 4)
+Twelve more stations (seven US automated stations reporting every 20 minutes at 0.1 C, five Australian stations with irregular training years) tested a limits warm-up for stations whose training record left the noise limit unlearned. It cut their
+false alarms from 45.4 % to 1.8 % and cost 6 points of noise-burst detection, so by the rule registered first it is **rejected** (kept as an operator's option, `refit.py --complete`). The fourth set also produced five more real-weather windows with a `FAULT`
+(5 of 160): temperature pinned at 0 C for about nine hours in freezing rain (Fitch H Beach and La Porte, January 2024), and a +12.5 C night-time jump at Alice Springs. The freezing-point plateau is the same kind of cause as the saturated humidity of the first
+post-mortem, and would need its own registered remedy and another unseen set. Details: Amendment 4 and its outcome in `config/protocol.md`.
+
 ## 6. Limitations: what we do not claim and cannot see
 
 ### About the data
 - **The data are not IMD AWS records.** IMD AWS data are not public, and the hosts that might serve one are blocked where this was built. We use NOAA's Integrated Surface
   Database (METAR and SYNOP) for 26 Indian airport stations, 2016-2024 (14 for development and the first holdouts, 12 fresh), and, in the third sealed set, five more Indian airports and seven
   Australian Bureau of Meteorology automatic weather stations (hourly SYNOP at 0.1 C and 0.1 hPa). Those are real automatic weather stations at fine resolution, but Australian, hourly, and not IMD.
-- **No sub-hourly record has been tested.** Every record is hourly or 3-hourly. The pipeline scales its windows with the cadence and is unit-tested at 1, 15 and 60 minutes, but 1-15 minute real data at 0.1 resolution has not been run.
+- **No 1-15 minute record has been tested.** The fastest real record is 20 minutes: seven US automated stations reporting every 20 minutes at 0.1 C (fresh-3: 2.7 % clean false alarms, 94-100 % of injected faults by type). Every other record is hourly or 3-hourly. The pipeline scales its windows with the cadence and is unit-tested at 1, 15 and 60 minutes, but a 1-15 minute real record has not been run.
 - **Relative humidity is derived, not measured.** ISD carries temperature and dew point; RH is computed from them
   (Magnus). So T and RH are not independent measurements in our evaluation, and the humidity channel inherits the rounding
   of two whole-degree numbers.
@@ -1984,7 +2582,7 @@ clean false alarms +0.48 points. Details and every number: Amendment 3 and its o
 - **Offset with no reference is invisible.** A humidity sensor that reads 3 % high from day one, with nothing else changing,
   cannot be seen by any single-station method, including the core of this one. The optional peer layer (`docs/PEER_LAYER.md`) sees offsets and drifts against three or more neighbours within 250 km
   (a 2 hPa offset in 91-96 % of trials within 21 days on two Australian AWS clusters, against 0-4 % for the station alone), but it needs a dense network, misses half-unit offsets, is weak on humidity,
-  cannot see a fault that moves all the neighbours too, and was measured on injected faults.
+  cannot see a fault that moves all the neighbours too, and was measured on injected faults. On 31 Indian airports it needs a 600 km radius (only 4 of 31 have three neighbours within 250 km), finds a 2 hPa offset in 91 % of trials against 21 % alone, gains nothing on humidity, and has 2-4 % false alarm days.
 - **Long-term drift behaviour is not validated.** Real calibration drift plays out over months and years; we tested ramps
   of 45 days.
 - **The holdout was run once.** The result is whatever it was, including if it is worse than DEV. `data/holdout/.holdout_used`
@@ -1997,7 +2595,7 @@ clean false alarms +0.48 points. Details and every number: Amendment 3 and its o
   tested and rejected.
 - **Fresh-2 false alarms are 9.3 %, not 2.5 %.** Four Australian AWS whose 2016-2019 records had 16 reports a day with alternating 1 h and 2 h gaps (hourly all day from 2020) have no learned noise
   limit, so a fixed floor tuned on coarser data alarms on them (33 %, 26 %, 21 % and 8 % of clean samples). Every other station in every set had its limits learned. Refit on the current cadence is the
-  fix (`python refit.py`; a post-hoc diagnostic on the same stations, `refit_diagnostic.py`, gives 2.6 % false alarms, not sealed evidence); the pipeline says so in an informational notice on each reading.
+  fix (`python refit.py`; a post-hoc diagnostic on the same stations gives 2.6 % false alarms). A fourth sealed set repeated the failure (45 % false alarms on five more irregular-record stations); the warm-up remedy cut it to 1.8 % but cost 6 points of noise-burst detection and was rejected by the rule registered first, so it is an operator's option, not a default; the pipeline says so in an informational notice on each reading.
 - **Detection is lower on unseen stations than on DEV,** and most detections of spikes, level shifts, noise bursts and wrong clocks are `SUSPECT`, not `FAULT`.
   Simpler detectors beat the full pipeline on some fault types (see `results/REPORT.md`).
 - **The cold-start study covers six stations,** each borrowing from its nearest neighbour among the other five. A new station in a climate none of them share may
