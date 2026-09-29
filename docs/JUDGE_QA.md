@@ -93,8 +93,8 @@ rates in the tables. (Calibrating it, with a reliability diagram and isotonic re
 **Can it detect slow drift?** Large drift, yes; small drift, no. A single station with no reference sees drifts of several times the
 service limit within weeks, and the monitor reports the smallest slope it can see at that station. False drift claims on clean real data
 are about 1 % of station-days. **A constant offset from day one?** No single-station method can, and we say so. With three or more neighbours within 250 km an optional peer layer can
-(`docs/PEER_LAYER.md`): on two disjoint clusters of Australian AWS it found a 2 hPa offset in 91-96 % of trials within 21 days where the station alone found 0-4 %, and a 2 C offset in 86-88 % against 1-9 %. It misses
-half-unit offsets, is weak on humidity and was measured on injected faults.
+(`docs/PEER_LAYER.md`): on two disjoint clusters of Australian AWS it found a 2 hPa offset in 91-96 % of trials within 21 days where the station alone found 0-4 %, and a 2 C offset in 86-88 % against 1-9 %. On 31 Indian airport stations at a 600 km radius (that is the spacing India has; only 4 of 31 have three neighbours within 250 km) a 2 hPa offset is found in 91 % of trials against 21 % alone, humidity gains nothing, and false alarms are 2-4 % of days. It misses
+half-unit offsets and was measured on injected faults.
 
 ## Design choices
 **Why single-station only?** The places India needs this most (Ladakh, the Thar, the Andamans) have no neighbour within hundreds of km.

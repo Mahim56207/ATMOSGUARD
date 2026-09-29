@@ -31,31 +31,39 @@ kept is the most sensitive whose false-alarm share stays at or below 1 % of days
 ![Offsets found with and without neighbours](figures/fig_peers.png)
 
 <!-- PEERS:START -->
-| fault (60 days long) | NSW: with neighbours / alone | VIC: with neighbours / alone |
-|---|---|---|
-| temperature offset of 0.5 C | 9% (13/144, 7 d) / 3% (4/141, 12 d) | 17% (24/141, 12 d) / 0% (0/141) |
-| temperature offset of 1 C | 38% (54/143, 7 d) / 3% (5/144, 10 d) | 48% (68/143, 8 d) / 0% (0/144) |
-| temperature offset of 2 C | 86% (122/142, 6 d) / 9% (13/144, 7 d) | 88% (125/142, 5 d) / 1% (2/144, 8 d) |
-| temperature drift, 0 to 2 C | 82% (118/144, 40 d) / 3% (5/144, 42 d) | 84% (120/143, 36 d) / 3% (5/143, 48 d) |
-| pressure offset of 0.5 hPa | 31% (44/144, 10 d) / 1% (1/140, 19 d) | 23% (32/141, 12 d) / 0% (0/143) |
-| pressure offset of 1 hPa | 67% (96/143, 6 d) / 1% (2/141, 11 d) | 65% (93/143, 7 d) / 0% (0/143) |
-| pressure offset of 2 hPa | 96% (138/144, 4 d) / 4% (6/143, 9 d) | 91% (131/144, 5 d) / 0% (0/143) |
-| pressure drift, 0 to 2 hPa | 94% (135/143, 32 d) / 3% (4/143, 19 d) | 90% (128/142, 35 d) / 1% (2/143, 38 d) |
-| humidity offset of 3 % | 12% (17/144, 9 d) / 13% (19/143, 6 d) | 15% (21/142, 9 d) / 17% (25/144, 8 d) |
-| humidity offset of 6 % | 34% (48/142, 9 d) / 26% (37/143, 11 d) | 41% (59/143, 8 d) / 28% (40/142, 8 d) |
-| humidity offset of 12 % | 75% (107/143, 6 d) / 46% (66/144, 7 d) | 90% (130/144, 5 d) / 53% (74/140, 8 d) |
-| humidity drift, 0 to 12 % | 69% (99/144, 36 d) / 47% (68/144, 33 d) | 90% (128/143, 35 d) / 61% (88/144, 31 d) |
+| fault (60 days long) | NSW: with neighbours / alone | VIC: with neighbours / alone | INDIA: with neighbours / alone |
+|---|---|---|---|
+| temperature offset of 0.5 C | 9% (13/144, 7 d) / 3% (4/141, 12 d) | 17% (24/141, 12 d) / 0% (0/141) | 10% (26/250, 9 d) / 3% (9/285, 5 d) |
+| temperature offset of 1 C | 38% (54/143, 7 d) / 3% (5/144, 10 d) | 48% (68/143, 8 d) / 0% (0/144) | 17% (42/250, 8 d) / 10% (29/284, 6 d) |
+| temperature offset of 2 C | 86% (122/142, 6 d) / 9% (13/144, 7 d) | 88% (125/142, 5 d) / 1% (2/144, 8 d) | 54% (134/250, 7 d) / 21% (59/283, 8 d) |
+| temperature drift, 0 to 2 C | 82% (118/144, 40 d) / 3% (5/144, 42 d) | 84% (120/143, 36 d) / 3% (5/143, 48 d) | 48% (119/250, 40 d) / 20% (55/282, 42 d) |
+| pressure offset of 0.5 hPa | 31% (44/144, 10 d) / 1% (1/140, 19 d) | 23% (32/141, 12 d) / 0% (0/143) | 20% (50/249, 7 d) / 5% (15/285, 9 d) |
+| pressure offset of 1 hPa | 67% (96/143, 6 d) / 1% (2/141, 11 d) | 65% (93/143, 7 d) / 0% (0/143) | 50% (125/249, 6 d) / 10% (30/287, 7 d) |
+| pressure offset of 2 hPa | 96% (138/144, 4 d) / 4% (6/143, 9 d) | 91% (131/144, 5 d) / 0% (0/143) | 91% (228/251, 4 d) / 21% (59/287, 8 d) |
+| pressure drift, 0 to 2 hPa | 94% (135/143, 32 d) / 3% (4/143, 19 d) | 90% (128/142, 35 d) / 1% (2/143, 38 d) | 85% (214/251, 33 d) / 25% (71/283, 44 d) |
+| humidity offset of 3 % | 12% (17/144, 9 d) / 13% (19/143, 6 d) | 15% (21/142, 9 d) / 17% (25/144, 8 d) | 10% (24/250, 7 d) / 14% (39/284, 7 d) |
+| humidity offset of 6 % | 34% (48/142, 9 d) / 26% (37/143, 11 d) | 41% (59/143, 8 d) / 28% (40/142, 8 d) | 19% (48/249, 7 d) / 24% (67/285, 7 d) |
+| humidity offset of 12 % | 75% (107/143, 6 d) / 46% (66/144, 7 d) | 90% (130/144, 5 d) / 53% (74/140, 8 d) | 67% (170/252, 6 d) / 62% (178/285, 6 d) |
+| humidity drift, 0 to 12 % | 69% (99/144, 36 d) / 47% (68/144, 33 d) | 90% (128/143, 35 d) / 61% (88/144, 31 d) | 63% (158/249, 39 d) / 57% (164/287, 37 d) |
 
-| share of clean days with an alarm | NSW: with neighbours / alone | VIC: with neighbours / alone |
-|---|---|---|
-| temperature | 0.52% / 2.60% | 0.62% / 0.43% |
-| pressure | 0.95% / 0.77% | 0.20% / 0.30% |
-| humidity | 0.96% / 2.36% | 2.45% / 3.09% |
+| share of clean days with an alarm | NSW: with neighbours / alone | VIC: with neighbours / alone | INDIA: with neighbours / alone |
+|---|---|---|---|
+| temperature | 0.52% / 2.60% | 0.62% / 0.43% | 2.69% / 2.27% |
+| pressure | 0.95% / 0.77% | 0.20% / 0.30% | 3.90% / 1.75% |
+| humidity | 0.96% / 2.36% | 2.45% / 3.09% | 2.11% / 2.30% |
 
 <!-- PEERS:END -->
 
 A "quiet" setting (99.9th percentile x 1.2) is in `results/peers_*_quiet.*`: false alarms below 0.25 % of days on NSW and below 0.75 % on VIC, at the cost of a large part of the
 detection at small and medium sizes (a 1 hPa offset: 40 % instead of 67 % on NSW, 32 % instead of 65 % on VIC).
+
+## Does it work at Indian station spacing? (INDIA column)
+Indian airports are far apart: only 4 of 31 stations have three neighbours within 250 km, but 28 of 31 have three within 600 km. The INDIA column runs the same settings on the 31 Indian airport
+stations already in this repository (DEV, holdout, fresh and fresh-2 files; whole-degree hourly METAR, some 3-hourly SYNOP), with the neighbour radius widened to **600 km** (`python evaluate_peers.py --cluster india
+--radius-km 600`); nothing is tuned on them and nothing new is downloaded. Result, in short: **pressure works** (a 2 hPa offset found in 91 % of trials against 21 % alone, a 2 hPa drift 85 % against 25 %; 1 hPa 50 % against
+10 %), temperature works at 2 C (54 % against 21 %) and much less below, **humidity gains nothing**, and false alarms are higher than on the Australian clusters (about 2-4 % of clean days, 3.9 % for pressure) because the
+records are rounded to whole hPa and the neighbours are farther away. So the honest statement is: with a 600 km radius, an Indian network of airport-spacing stations can see pressure offsets and drift of about 1-2 hPa
+that no single station can; it is not a substitute for calibration visits, and it was measured on injected faults.
 
 ## What it does not do
 - **Small offsets.** Half a degree, half a hPa and 3 % humidity are mostly missed even with neighbours, and humidity is weak throughout (its departures are local: fog, irrigation, a
@@ -71,6 +79,7 @@ detection at small and medium sizes (a 1 hPa offset: 40 % instead of 67 % on NSW
 python -m data_tools.make_peers --cluster nsw && python -m data_tools.make_peers --cluster vic
 python evaluate_peers.py --cluster nsw --quantile 0.995 --margin 1.1 --out results/peers_nsw.json
 python evaluate_peers.py --cluster vic --quantile 0.995 --margin 1.1 --out results/peers_vic.json
-python make_summary.py results/dev_run4.json ... --peers results/peers_nsw.json results/peers_vic.json --peers-doc docs/PEER_LAYER.md   # refreshes the tables above
+python -m data_tools.make_peers --cluster india && python evaluate_peers.py --cluster india --radius-km 600 --quantile 0.995 --margin 1.1 --out results/peers_india.json
+python make_summary.py results/dev_run4.json ... --peers results/peers_nsw.json results/peers_vic.json results/peers_india.json --peers-doc docs/PEER_LAYER.md   # refreshes the tables above
 ```
 For a cluster of your own: a catalog like `data_tools/stations_peers_nsw.yaml` (identity and coordinates) and one CSV per station in `data/peers/<cluster>/`.

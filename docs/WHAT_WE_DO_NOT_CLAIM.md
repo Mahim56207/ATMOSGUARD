@@ -27,7 +27,7 @@ also true of the repository as it stands.
 - **Offset with no reference is invisible.** A humidity sensor that reads 3 % high from day one, with nothing else changing,
   cannot be seen by any single-station method, including the core of this one. The optional peer layer (`docs/PEER_LAYER.md`) sees offsets and drifts against three or more neighbours within 250 km
   (a 2 hPa offset in 91-96 % of trials within 21 days on two Australian AWS clusters, against 0-4 % for the station alone), but it needs a dense network, misses half-unit offsets, is weak on humidity,
-  cannot see a fault that moves all the neighbours too, and was measured on injected faults.
+  cannot see a fault that moves all the neighbours too, and was measured on injected faults. On 31 Indian airports it needs a 600 km radius (only 4 of 31 have three neighbours within 250 km), finds a 2 hPa offset in 91 % of trials against 21 % alone, gains nothing on humidity, and has 2-4 % false alarm days.
 - **Long-term drift behaviour is not validated.** Real calibration drift plays out over months and years; we tested ramps
   of 45 days.
 - **The holdout was run once.** The result is whatever it was, including if it is worse than DEV. `data/holdout/.holdout_used`
