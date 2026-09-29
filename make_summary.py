@@ -32,6 +32,7 @@ PHASE_TITLES = {
 FULL_NAMES = {"full": "AtmosGuard (full)", "no_physics": "without physics layer", "no_health": "without health layer",
               "no_normality": "without normality layer", "no_mlmodel": "without Isolation Forest",
               "no_timing": "without timing layer", "no_limits": "without station-learned limits",
+              "no_mahalanobis": "without Mahalanobis layer",
               "baseline_range": "baseline: range check only",
               "baseline_rules": "baseline: textbook range + step + persistence",
               "baseline_climatology": "baseline: climatology z-score only",
@@ -235,18 +236,21 @@ def build_summary(results: dict[str, dict], scale: Optional[dict]) -> dict:
     return out
 
 
+def markdown_table(rows: list[dict]) -> list[str]:
+    """Lines of a Markdown table (plus a blank line) for a list of same-keyed dicts; nothing for an empty list."""
+    if not rows:
+        return []
+    cols = list(rows[0])
+    out = ["| " + " | ".join(cols) + " |", "|" + "|".join("---" for _ in cols) + "|"]
+    out += ["| " + " | ".join(str(r.get(c, "")).replace("|", "/") for c in cols) + " |" for r in rows]
+    return out + [""]
+
+
 def to_markdown(summary: dict) -> str:
     L = ["# AtmosGuard evaluation results", "", summary["note"], ""]
 
     def table(rows: list[dict]) -> None:
-        if not rows:
-            return
-        cols = list(rows[0])
-        L.append("| " + " | ".join(cols) + " |")
-        L.append("|" + "|".join("---" for _ in cols) + "|")
-        for r in rows:
-            L.append("| " + " | ".join(str(r.get(c, "")) for c in cols) + " |")
-        L.append("")
+        L.extend(markdown_table(rows))
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
