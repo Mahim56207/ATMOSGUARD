@@ -51,6 +51,8 @@ REAL_HOLDOUT_DIR = REPO / "data" / "holdout" / "real"
 EVENTS_JSON = REPO / "data" / "real" / "events.json"
 REAL_FRESH_DIR = REPO / "data" / "fresh" / "real"
 FRESH_EVENTS_JSON = REPO / "data" / "fresh" / "events.json"
+REAL_FRESH2_DIR = REPO / "data" / "fresh2" / "real"
+FRESH2_EVENTS_JSON = REPO / "data" / "fresh2" / "events.json"
 RESULTS_DIR = REPO / "results"
 TRAIN_END = pd.Timestamp("2020-01-01")          # training = everything before this
 DEV_END = pd.Timestamp("2022-01-01")
@@ -262,20 +264,48 @@ def baseline_mahalanobis(train: list[Reading], quantile: float = 0.995) -> Predi
     return predict
 
 
+def pin_registered(settings: dict) -> dict:
+    """Every remedy off: the pipeline as registered and reported in dev_run4, holdout_run1/2 and fresh_run1."""
+    settings["health"]["frozen"]["ceiling_aware"] = False       # remedy 1 (Amendment 2, adopted afterwards)
+    settings["limits"]["learned_step_cap"] = False              # remedy 2 (Amendment 2, rejected)
+    settings["health"]["step"]["expected_aware"] = False        # remedy 3 (Amendment 3)
+    settings["health"]["offset"]["enabled"] = False             # remedy 4 (Amendment 3)
+    return settings
+
+
+def amendment3_variants(base: dict) -> list[tuple[str, dict]]:
+    """FRESH2: the shipped pipeline (remedy 1 on) with each Amendment 3 remedy switched on alone, and all three together."""
+    out = []
+    for name, keys in (("r3_expected_step", ("step",)), ("r4_offset", ("offset",)), ("r34_both", ("step", "offset"))):
+        v = copy.deepcopy(base)
+        if "step" in keys:
+            v["health"]["step"]["expected_aware"] = True
+        if "offset" in keys:
+            v["health"]["offset"]["enabled"] = True
+        out.append((name, v))
+    return out
+
+
 def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, limits: StationLimits,
                   train: list[Reading], sid: str, cadence: float,
-                  mahal: Optional[MahalanobisModel] = None) -> list[tuple[str, str, Predictor]]:
-    settings = copy.deepcopy(settings)                # `full`, the ablations and the baselines are the pipeline that was
-    settings["health"]["frozen"]["ceiling_aware"] = False       # registered and reported (both remedies off), whatever the shipped
-    settings["limits"]["learned_step_cap"] = False              # default is now (remedy 1 was adopted after the fresh run)
-    cfgs: list[tuple[str, str, Predictor]] = [
-        ("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
-    for name, frozen, step in (("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True)):
+                  mahal: Optional[MahalanobisModel] = None, phase: str = "DEV") -> list[tuple[str, str, Predictor]]:
+    settings = pin_registered(copy.deepcopy(settings))          # `full`, the ablations and the baselines are the pipeline that was
+    if phase == "FRESH2":                                       # registered and reported (all remedies off), whatever the shipped default is now
+        shipped = copy.deepcopy(settings)
+        shipped["health"]["frozen"]["ceiling_aware"] = True     # FRESH2's `full` is the pipeline as shipped before Amendment 3 (remedy 1 adopted)
+        cfgs = [("full", "full", pipeline_predictor(shipped, table, model, limits, sid, cadence, mahal)),
+                ("registered", "registered", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
+        for name, variant in amendment3_variants(shipped):
+            cfgs.append((name, "remedy", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
+    else:
+        cfgs = [("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
+    for name, frozen, step in ((("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True))
+                               if phase != "FRESH2" else ()):
         variant = copy.deepcopy(settings)                       # the two remedies of docs/HOLDOUT_POSTMORTEM.md (off in "full")
         variant["health"]["frozen"]["ceiling_aware"] = frozen
         variant["limits"]["learned_step_cap"] = step
         cfgs.append((name, "remedy", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
-    for layer in ("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits"):
+    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase != "FRESH2" else ()):
         variant = copy.deepcopy(settings)
         variant["layers"][layer] = False
         cfgs.append((f"no_{layer}", "ablation", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
@@ -533,7 +563,7 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     rounds = 1 if quick else s["evaluate"]["injection_rounds"]
     faulted = make_faulted(clean, s, rounds, min_len=int(30 * 1440 / cadence))
 
-    configs = build_configs(s, table, model, limits, train, sid, cadence, mahal)
+    configs = build_configs(s, table, model, limits, train, sid, cadence, mahal, plan.name)
     results = {}
     if parts & {"detect", "events"}:
         for name, kind, predict in configs:
@@ -575,7 +605,8 @@ def _worker(args):
 # orchestration and report
 # ====================================================================================================
 def load_events(phase: str = "DEV") -> dict:
-    return json.loads((FRESH_EVENTS_JSON if phase == "FRESH" else EVENTS_JSON).read_text(encoding="utf-8"))
+    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON}.get(phase, EVENTS_JSON)
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
@@ -597,6 +628,10 @@ def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
         for sid in sealed:                                           # stations nobody had looked at (Amendment 2)
             p = REAL_FRESH_DIR / f"{sid}.csv"
             plans.append(PhasePlan("FRESH", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
+    elif phase == "FRESH2":
+        for sid in sealed:                                           # a third set, twelve stations, Indian airports and Australian AWS (Amendment 3)
+            p = REAL_FRESH2_DIR / f"{sid}.csv"
+            plans.append(PhasePlan("FRESH2", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
     return plans
 
 
@@ -753,6 +788,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     g.add_argument("--dev", action="store_true")
     g.add_argument("--holdout", action="store_true")
     g.add_argument("--fresh", action="store_true", help="the twelve FRESH stations (Amendment 2 in config/protocol.md)")
+    g.add_argument("--fresh2", action="store_true", help="the twelve FRESH2 stations (Amendment 3 in config/protocol.md)")
     ap.add_argument("--quick", action="store_true", help="one year and one fault round: for tuning loops only")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stations", nargs="*", help="only these stations")
@@ -763,7 +799,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="reproduce a holdout run that was already made (the original lock file stays in git history)")
     args = ap.parse_args(argv)
     settings = load_settings()
-    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "DEV"
+    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "DEV"
+    if args.fresh2:
+        lock = REPO / "data" / "fresh2" / ev.FRESH2_LOCK_NAME
+        if args.force_rerun_holdout and lock.exists():
+            print(f"Re-running the FRESH2 evaluation to reproduce it. The first run is recorded in {lock}.")
+        else:
+            try:
+                ev.guard_fresh2(settings, REPO, REPO / "data")
+            except ev.HoldoutError as e:
+                print(f"Cannot run the FRESH2 evaluation: {e}")
+                return 2
     if args.fresh:
         lock = REPO / "data" / "fresh" / ev.FRESH_LOCK_NAME
         if args.force_rerun_holdout and lock.exists():
@@ -790,7 +836,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         text.append(format_phase(aggregate(res["stations"], ph), {"DEV": "DEV (tuning allowed)",
                                                                   "HOLDOUT_TIME": "HOLDOUT in time (DEV stations, 2022-2024)",
                                                                   "HOLDOUT_SPACE": "HOLDOUT in space (sealed stations, 2020-2024)",
-                                                                  "FRESH": "FRESH (twelve stations nobody had looked at, 2020-2024)"}[ph]))
+                                                                  "FRESH": "FRESH (twelve stations nobody had looked at, 2020-2024)",
+                                                                  "FRESH2": "FRESH2 (a third set of twelve: Indian airports and Australian AWS, 2020-2024)"}[ph]))
     print("\n\n".join(text))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -104,7 +104,8 @@ def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_mi
 
 
 def check_step(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float,
-               limits: Optional[StationLimits] = None) -> CheckResult:
+               limits: Optional[StationLimits] = None,
+               expected: Optional[Sequence[Optional[float]]] = None) -> CheckResult:
     name = f"step:{ch}"
     if len(history) < 2:
         return CheckResult(check=name, flagged=False, reason=f"{ch}: only one reading, no step to check.")
@@ -121,6 +122,19 @@ def check_step(history: Sequence[Reading], ch: str, settings: dict, cadence_minu
                                       and settings["limits"].get("learned_step_cap")) else None
     allowed = _allowed_step(ch, dt, settings, learned)
     delta = b - a
+    note = ""
+    if settings["health"]["step"].get("expected_aware") and expected is not None and len(expected) == len(history):
+        ea, eb = expected[-2], expected[-1]
+        if ea is not None and eb is not None and abs(delta - (eb - ea)) < abs(delta):
+            # remedy 3: a desert warms 15 C between two reports on a clear day. Only the part of the change that the
+            # station's own daily cycle does not explain is judged; this can relax a flag, never add one.
+            note = f" (of which the usual daily cycle explains {eb - ea:+.1f})"
+            delta_judged = delta - (eb - ea)
+            if abs(delta_judged) > allowed:
+                return CheckResult(check=name, flagged=True,
+                                   reason=f"{ch} jumped by {delta:+g} in {dt:g} min{note}, allowed {allowed:g}.")
+            return CheckResult(check=name, flagged=False,
+                               reason=f"{ch} changed by {delta:+g} in {dt:g} min{note}, allowed {allowed:g}.")
     if abs(delta) > allowed:
         return CheckResult(check=name, flagged=True,
                            reason=f"{ch} jumped by {delta:+g} in {dt:g} min (allowed {allowed:g}).")
@@ -268,6 +282,56 @@ def check_drift(history: Sequence[Reading], ch: str, expected: Optional[Sequence
                        reason=f"{ch} has no sustained drift (CUSUM {peak:.1f}, alarm at {cfg['h_sigma']:g}).")
 
 
+def check_offset(history: Sequence[Reading], ch: str, expected: Optional[Sequence[Optional[float]]],
+                 sigma: Optional[Sequence[Optional[float]]], all_expected: dict, all_sigma: dict,
+                 settings: dict, cadence_minutes: float) -> CheckResult:
+    """Remedy 4 (off by default): a sustained one-channel offset. Over the last `window_minutes` the MEDIAN departure of `ch` from
+    the station's normal is at least `z_median` standard deviations, and the other two channels' median departures are both below
+    `others_below`. One sample of weather cannot do this, and a weather system that moves the level of one channel usually moves
+    another (a heat wave: hot, dry, low pressure), which is why the others must stay near normal. SOFT: it can only lead to SUSPECT."""
+    name = f"offset:{ch}"
+    cfg = settings["health"].get("offset") or {}
+    if not cfg.get("enabled") or expected is None or sigma is None or len(expected) != len(history):
+        return CheckResult(check=name, flagged=False, severity="soft", reason=f"{ch}: sustained-offset check is off.")
+    window = max(cfg["window_minutes"], (cfg["min_samples"] - 1) * cadence_minutes)
+    cutoff = history[-1].timestamp - timedelta(minutes=window)
+    gap = _gap_limit_minutes(settings, cadence_minutes)
+
+    def departures(c: str, exp, sig) -> Optional[list[float]]:
+        zs, prev = [], None
+        for i, r in enumerate(history):
+            if r.timestamp < cutoff:
+                continue
+            v = getattr(r, c)
+            if v is None or exp[i] is None or not sig[i]:
+                return None
+            if prev is not None and _minutes(prev, r.timestamp) > gap:
+                return None
+            prev = r.timestamp
+            zs.append((v - exp[i]) / sig[i])
+        return zs if len(zs) >= cfg["min_samples"] else None
+
+    own = departures(ch, expected, sigma)
+    if own is None:
+        return CheckResult(check=name, flagged=False, severity="soft", reason=f"{ch}: not enough complete samples for an offset check.")
+    med = sorted(own)[len(own) // 2] if len(own) % 2 else 0.5 * (sorted(own)[len(own) // 2 - 1] + sorted(own)[len(own) // 2])
+    if abs(med) < cfg["z_median"]:
+        return CheckResult(check=name, flagged=False, severity="soft", reason=f"{ch}: median departure {med:+.1f} sd over {window:g} min is ordinary.")
+    for other in CHANNELS:
+        if other == ch:
+            continue
+        z = departures(other, all_expected[other], all_sigma[other])
+        if z is None:
+            return CheckResult(check=name, flagged=False, severity="soft", reason=f"{ch}: the other channels cannot be compared.")
+        m = sorted(z)[len(z) // 2] if len(z) % 2 else 0.5 * (sorted(z)[len(z) // 2 - 1] + sorted(z)[len(z) // 2])
+        if abs(m) >= cfg["others_below"]:
+            return CheckResult(check=name, flagged=False, severity="soft",
+                               reason=f"{ch} is {med:+.1f} sd from normal but so is {other} ({m:+.1f}): moving together looks like weather.")
+    return CheckResult(check=name, flagged=True, severity="soft",
+                       reason=f"{ch} has sat {med:+.1f} standard deviations from this station's normal for {window:g} min while the other "
+                              "two channels stayed near normal: a sustained offset on one sensor.")
+
+
 def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: float,
                  now: Optional[datetime] = None,
                  expected: Optional[dict[str, Sequence[Optional[float]]]] = None,
@@ -281,9 +345,12 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
     for ch in CHANNELS:
         results += [
             check_frozen(history, ch, settings, cadence_minutes, limits),
-            check_step(history, ch, settings, cadence_minutes, limits),
+            check_step(history, ch, settings, cadence_minutes, limits, (expected or {}).get(ch)),
             check_spike(history, ch, settings, cadence_minutes),
             check_noise(history, ch, settings, cadence_minutes, limits),
             check_drift(history, ch, (expected or {}).get(ch), settings, (sigma or {}).get(ch), cadence_minutes),
         ]
+    if (settings["health"].get("offset") or {}).get("enabled") and expected and sigma:
+        for ch in CHANNELS:
+            results.append(check_offset(history, ch, expected.get(ch), sigma.get(ch), expected, sigma, settings, cadence_minutes))
     return results
