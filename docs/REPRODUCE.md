@@ -12,7 +12,7 @@ pip install -r requirements.txt
 
 ## 1. Does it work? (about 1 minute)
 ```bash
-python -m pytest -q                                   # 340+ tests, including the C++ edge-parity tests (needs g++)
+python -m pytest -q                                   # 400+ tests, including the C++ edge-parity tests (needs g++)
 ```
 
 ## 2. Run it (the committed models and real data are in the repo)
