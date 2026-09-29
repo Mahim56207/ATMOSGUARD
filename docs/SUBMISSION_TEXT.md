@@ -71,9 +71,10 @@ with what is standard, adapted and ours: `docs/NOVELTY_AND_PRIOR_ART.md` and the
 > agreement with NOAA's quality flags, and the failures the real data exposed.
 
 ## What we say we cannot do (say it first)
-Detection is measured on **injected** faults (no labelled real faults exist). The data are airport records, not IMD AWS records. On the
-eight unseen stations 3 of 98 real extreme-weather windows contain a `FAULT` verdict (the causes are in `docs/HOLDOUT_POSTMORTEM.md`). A
-single station with no reference cannot see small drift or a constant offset present from the start. The firmware has not run on hardware.
+Detection is measured on **injected** faults (no labelled real faults exist). The data are airport records, not IMD AWS records. On the eight unseen stations of the
+holdout 3 of 98 real extreme-weather windows contain a `FAULT` verdict, and on twelve more unseen stations 3 of 139 (causes in `docs/HOLDOUT_POSTMORTEM.md`); of the
+two remedies we tested by a rule registered first, one is adopted and one rejected. A single station with no reference cannot see small drift or a constant offset present
+from the start. The firmware has not run on hardware.
 
 ## 30-second pitch
 "A broken barometer and a cyclone look the same on a chart. AtmosGuard tells them apart from one station's own temperature, pressure and

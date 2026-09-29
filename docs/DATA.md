@@ -22,6 +22,12 @@ Hourly METAR: Bhubaneswar (BBI), Chennai (MAA), Kolkata (CCU), Delhi (DEL), Jaip
 3-hourly SYNOP, all **sealed**: Port Blair (IXZ), Bhuj (BHJ), Cochin (COK). Climate zones, coordinates and cadence are in
 `config/stations.yaml`. Leh and Hyderabad were dropped (too few reports); Srinagar had no pressure group.
 
+## The fresh stations (12), added for Amendment 2
+Lucknow (LKO), Patna (PAT), Indore (IDR), Ranchi (IXR), Coimbatore (CJB), Mangalore (IXE), Tiruchirappalli (TRZ), Amritsar (ATQ) - hourly METAR; Pune (PNQ), Goa (GOI),
+Raipur (RPR), Jodhpur (JDH) - 3-hourly SYNOP. Same source, same builder, same extreme-weather rules. Chosen from a coverage scout of 2022 only (report counts, no
+verdicts) and never used for anything before the amendment; sealed in `data/fresh/` behind their own guard. Coverage varies (Indore 42-69 % of the expected hours in
+the training years). `python -m data_tools.make_fresh fetch` then `build`; `data_tools/stations_fresh.yaml` lists them.
+
 ## Split
 | Set | What | Used for |
 |---|---|---|

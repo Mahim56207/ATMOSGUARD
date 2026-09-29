@@ -60,6 +60,18 @@ rerun reproduced the first run's registered numbers exactly.
 **Your DEV numbers are better than holdout, aren't they?** DEV is where we tuned and looked at failures, so it is the optimistic set. We
 report all three splits side by side; see `results/REPORT.md`.
 
+**The holdout showed failures. What did you do about them?** We did not tune on it. We wrote the post-mortem (`docs/HOLDOUT_POSTMORTEM.md`), proposed two
+remedies, registered a decision rule (Amendment 2), sealed twelve more stations nobody had looked at, and ran them once. By the rule, the ceiling-aware frozen
+rule is adopted (windows with a FAULT 3 to 2 of 139, nothing else changes) and the learned step cap is rejected (it cost 4.2 points of wrong-clock detection).
+The tables, the rule and the three windows that still get a FAULT are all in the repository.
+
+**Why not fix the step-cap cases too?** The fix we tried would have, and it made another number worse by more than the rule allows, so we did not ship it. A step
+cap that scales with the reporting gap is the next candidate, and it would need a third set of unseen stations to be judged honestly.
+
+**A simpler detector beats you on some fault types. Why use yours?** It does, and we show it: a Mahalanobis-only detector is better on spikes and blind to frozen
+sensors, dropouts and clocks; the textbook rules are better on wrong clocks and blind to dropouts, and they call a FAULT on 134 of 139 real extreme-weather windows and
+alarm on 8 % of clean data. The point is coverage of all six fault types without calling a cyclone a broken sensor. The table is "No single simpler system" in `results/REPORT.md`.
+
 **What is your false-alarm rate, and is it acceptable?** Report both: "any alarm" (`FAULT` or `SUSPECT`; `SUSPECT` means "review", the
 reading is kept) and `FAULT` alone. In operations the useful reading is per thousand readings: multiply the percentage by ten.
 

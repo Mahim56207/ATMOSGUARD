@@ -27,6 +27,7 @@ Numbers are from `results/REPORT.md` (real data, injected faults). The last sect
 | Heat wave: extreme temperature for days | normality flags → `SUSPECT`/`WEATHER`, not FAULT | normality and drift flags are soft |
 | Cold wave, dense fog | same | same |
 | Thunderstorm outflow / nor'wester: several channels change within hours | `WEATHER` or `SUSPECT` | step limits allow fast weather; a co-jump needs the change to be simultaneous in one sample |
+| Sustained torrential rain: derived humidity pinned at 100 % (and temperature flat) for a day or more | `SUSPECT`, not FAULT | ceiling-aware frozen rule (adopted after the fresh-station test); before it, this was the cause of 2 of the holdout's 3 and 1 of the fresh stations' 3 real-weather FAULT windows |
 | Monsoon onset: humidity trends up for weeks | *not* reported as sensor drift | isolated-trend rule: several channels are trending together |
 
 ## What the system cannot see (say this out loud)
@@ -42,4 +43,8 @@ Numbers are from `results/REPORT.md` (real data, injected faults). The last sect
 7. **A weather event that looks exactly like a fault** (a real one-channel jump). Rule 2 would call it a fault. We tune toward
    protecting weather (mixed evidence is `SUSPECT`, not `FAULT`), and we report the FAULT rate on real extreme weather
    separately so the cost is visible.
-8. **Anything that needs a reference:** neighbour stations, a forecast model, a calibration record. By design we use none.
+8. **A humidity sensor stuck exactly at 100 %.** Since the ceiling-aware frozen rule was adopted (Amendment 2), this is a `SUSPECT`, not a `FAULT`: sustained
+   heavy rain holds derived humidity at its ceiling for a day or more, and on twelve unseen stations that was the more common cause of a real-weather FAULT.
+9. **A real one-sample jump larger than the fixed step cap** (a 47 % humidity rise in two hours after rain; a 16 C warming across a 6-hour reporting gap at an
+   arid station). Still called a `FAULT` (3 of 139 real extreme-weather windows on the fresh stations). The fix we tried costs wrong-clock detection.
+10. **Anything that needs a reference:** neighbour stations, a forecast model, a calibration record. By design we use none.
