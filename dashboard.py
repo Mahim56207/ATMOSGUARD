@@ -158,6 +158,8 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
     c1.metric("Latest verdict", v.verdict.value if v else "pending")
     if v:
         c1.caption(f"Confidence {v.confidence:.2f}. {v.reason}")
+        for note in v.notices:
+            c1.caption(f"Notice: {note}")
         if v.imputation:
             c1.caption("Estimated for the missing or faulty value (raw value kept): " + "; ".join(
                 f"{db_label(ch)} {e.value:.2f} (band {e.lower:.2f} to {e.upper:.2f})" for ch, e in v.imputation.channels.items()))
@@ -188,8 +190,218 @@ def render_live(api_url: str, settings: dict, station: str) -> None:
 
     with st.expander("Checks behind the latest verdict"):
         st.dataframe(check_rows(newest), width="stretch", hide_index=True)
+    with st.expander("Why the statistical layers found it unusual (exact Mahalanobis contributions, SHAP for the Isolation Forest)"):
+        try:
+            ex = fetch(api_url, "/explain", {"station_id": station, "record_id": newest.id})
+        except httpx.HTTPError:
+            ex = None
+        if not ex:
+            st.caption("No explanation available from the API.")
+        else:
+            for key, title in (("mahalanobis", "Mahalanobis distance"), ("isolation_forest", "Isolation Forest")):
+                part = ex.get(key, {})
+                st.markdown(f"**{title}**")
+                rows = part.get("contributions") or part.get("shap")
+                if not part.get("available") or not rows:
+                    st.caption(part.get("note", "Not available."))
+                    continue
+                head = (f"distance^2 {part['distance2']} (limit {part['threshold']})" if key == "mahalanobis"
+                        else f"score {part['score']} (limit {part['threshold']})")
+                st.caption(f"{head}. {part.get('note', '')}")
+                st.dataframe(rows, width="stretch", hide_index=True)
     with st.expander("Data table (same readings as the charts)"):
         st.dataframe(series_rows(records), width="stretch", hide_index=True)
+
+
+def _headers() -> dict:
+    key = os.environ.get("ATMOS_API_KEY")
+    return {"X-API-Key": key} if key else {}
+
+
+def post(api_url: str, path: str, body: Optional[dict] = None):
+    r = httpx.post(api_url.rstrip("/") + path, json=body, timeout=15, headers=_headers())
+    r.raise_for_status()
+    return r.json()
+
+
+def delete(api_url: str, path: str, params: Optional[dict] = None):
+    r = httpx.delete(api_url.rstrip("/") + path, params=params, timeout=15, headers=_headers())
+    r.raise_for_status()
+    return r.json()
+
+
+FAULT_TYPES = ("frozen", "spike", "step", "drift", "noise", "dropout")
+
+
+def upload_body(name: str, data: bytes, station: str, speed: float, limit: int, learn: bool = True) -> dict:
+    """The JSON the API's /replay/upload expects, from an uploaded file."""
+    body = {"filename": name, "text": data.decode("utf-8-sig"), "speed": float(speed), "learn_fraction": 0.5 if learn else 0.0}
+    if station:
+        body["station_id"] = station
+    if limit:
+        body["limit"] = int(limit)
+    return body
+
+
+VERDICT_RANK = {"FAULT": 0, "SUSPECT": 1, "WEATHER": 2, "VALID": 3, None: 4}
+
+
+def fleet_rows(fleet: dict) -> list[dict]:
+    """The network table, most urgent first: FAULT before SUSPECT before WEATHER before VALID, then the lowest health score.
+    Each station is judged on its own record; this only lists them side by side."""
+    stations = fleet.get("stations", [])
+    ordered = sorted(stations, key=lambda s: (VERDICT_RANK.get(s.get("verdict"), 4), s.get("health_score") if s.get("health_score") is not None else 101.0))
+    rows = []
+    for s in ordered:
+        tk = s.get("ticket")
+        cs = s.get("channel_scores") or {}
+        rows.append({"station": s["station_id"], "verdict": s.get("verdict") or "no reading yet",
+                     "health (0-100)": s.get("health_score"),
+                     "T": cs.get("temperature_c"), "P": cs.get("pressure_hpa"), "RH": cs.get("humidity_pct"),
+                     "ticket": (tk["priority"] + ": " + ", ".join(c.split("_")[0] for c in tk["channels"])) if tk else "none",
+                     "service by": s.get("service_date") or "none", "alerts (last 200)": s.get("recent_alerts", 0),
+                     "newest reading": (s.get("last_time") or "")[:16].replace("T", " "), "why": s.get("reason") or ""})
+    return rows
+
+
+def render_network(api_url: str) -> None:
+    st.subheader("The network, station by station")
+    st.caption("One line per station, most urgent first. Every station is judged on its own record; nothing here compares one "
+               "station with another. Health is 0-100 (T, P and RH are the channel scores).")
+    try:
+        fleet = fetch(api_url, "/fleet")
+    except httpx.HTTPError as e:
+        st.info(f"The API has no network view yet ({e}).")
+        return
+    rows = fleet_rows(fleet)
+    if not rows:
+        st.info("No stations have sent readings yet.")
+        return
+    attention = [r for r in rows if r["verdict"] in ("FAULT", "SUSPECT") or r["ticket"] != "none"]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Stations", len(rows))
+    c2.metric("Need attention", len(attention))
+    scores = [r["health (0-100)"] for r in rows if r["health (0-100)"] is not None]
+    c3.metric("Lowest health score", f"{min(scores):.0f}" if scores else "n/a")
+    st.dataframe(rows, width="stretch", hide_index=True, column_config={
+        "health (0-100)": st.column_config.NumberColumn("health (0-100)", format="%.0f"),
+        "T": st.column_config.NumberColumn("T", format="%.0f"), "P": st.column_config.NumberColumn("P", format="%.0f"),
+        "RH": st.column_config.NumberColumn("RH", format="%.0f")})
+
+
+def render_controls(api_url: str, station: str, status: dict) -> None:
+    """Break the sensor on demand, and start or stop a replay. Everything here calls the API."""
+    st.subheader("Break the sensor")
+    st.caption("Arms a fault on this station's NEXT readings. Whatever streams in (a replay, the fake node, a real "
+               "ESP32) is altered the way a failing sensor would alter it. Watch the verdict, the reason and the "
+               "health score react on the Live monitor tab.")
+    c1, c2, c3, c4 = st.columns(4)
+    fault = c1.selectbox("Fault", FAULT_TYPES, key="fault_type")
+    channel = c2.selectbox("Channel", CHANNELS, format_func=lambda c: CHANNEL_LABELS[c], key="fault_channel")
+    samples = c3.number_input("Lasts (readings)", min_value=1, max_value=100000, value={"spike": 1, "drift": 60}.get(fault, 30),
+                              key="fault_samples")
+    if c4.button("Arm fault", type="primary", key="arm"):
+        try:
+            armed = post(api_url, "/inject", {"station_id": station, "fault_type": fault, "channel": channel,
+                                              "samples": int(samples)})["armed"]
+            st.success(f"Armed: {armed['fault_type']} on {armed['channel']} for {armed['samples']} readings.")
+        except httpx.HTTPError as e:
+            st.error(f"Could not arm the fault: {e}")
+    active = [i for i in status.get("injections", []) if i.get("active")]
+    if active:
+        st.warning("Armed now: " + "; ".join(f"{i['fault_type']} on {i['channel']} ({i['applied']}/{i['samples']})" for i in active))
+        if st.button("Clear all armed faults", key="clear"):
+            delete(api_url, "/inject")
+            st.rerun()
+
+    st.subheader("Replay recorded data")
+    st.caption("Plays a CSV from the data folder through the same pipeline. Real cyclone windows are in data/real/dev.")
+    try:
+        files = httpx.get(api_url.rstrip("/") + "/datasets", timeout=15).json().get("datasets", [])
+    except (httpx.HTTPError, ValueError):
+        files = []
+    r1, r2, r3 = st.columns([3, 1, 1])
+    path = r1.selectbox("File", files or ["(no CSV files under data/)"], key="replay_file")
+    speed = r2.number_input("Speed (0 = fastest)", min_value=0.0, value=0.0, key="replay_speed")
+    limit = r3.number_input("Readings (0 = all)", min_value=0, value=500, key="replay_limit")
+    station_id = st.text_input("Station id (only if the CSV has no station_id column)", value="", key="replay_station")
+    b1, b2 = st.columns(2)
+    if b1.button("Start replay", key="replay_start") and files:
+        body = {"csv_path": path, "speed": float(speed)}
+        if station_id:
+            body["station_id"] = station_id
+        if limit:
+            body["limit"] = int(limit)
+        try:
+            post(api_url, "/replay", body)
+            st.success("Replay started. Switch to the Live monitor tab.")
+        except httpx.HTTPStatusError as e:
+            st.error(e.response.json().get("detail", str(e)))
+    if b2.button("Stop replay", key="replay_stop"):
+        delete(api_url, "/replay")
+
+    st.subheader("Bring your own CSV")
+    st.caption("A CSV with timestamp (UTC), temperature_c, pressure_hpa, humidity_pct (station_id optional). It is judged through the same "
+               "pipeline, live. The server keeps a copy under data/uploads/.")
+    uploaded = st.file_uploader("CSV file", type="csv", key="upload_file")
+    v1, v2, v3 = st.columns([2, 1, 1])
+    up_station = v1.text_input("Station id (only if the CSV has no station_id column)", value="", key="upload_station")
+    up_speed = v2.number_input("Speed (0 = fastest)", min_value=0.0, value=0.0, key="upload_speed")
+    up_limit = v3.number_input("Readings (0 = all)", min_value=0, value=0, key="upload_limit")
+    up_learn = st.checkbox("A station the server has no models for learns from the first half of the file, then the second half is judged", value=True, key="upload_learn")
+    if st.button("Judge this file", key="upload_go", disabled=uploaded is None) and uploaded is not None:
+        try:
+            out = post(api_url, "/replay/upload", upload_body(uploaded.name, uploaded.getvalue(), up_station, up_speed, up_limit, up_learn))
+            st.success(f"Judging {out['total']} readings from {uploaded.name}. Switch to the Live monitor tab and pick the station.")
+            for note in out.get("notes", []):
+                st.info(note)
+        except httpx.HTTPStatusError as e:
+            st.error(e.response.json().get("detail", str(e)))
+        except UnicodeDecodeError:
+            st.error("The file is not text (UTF-8). Save it as CSV and try again.")
+
+
+def render_evaluation(api_url: str) -> None:
+    """The committed evaluation summary. Three separate numbers, never merged, always labelled."""
+    try:
+        r = httpx.get(api_url.rstrip("/") + "/metrics", timeout=15)
+        r.raise_for_status()
+        summary = r.json()
+    except Exception:                                   # no summary committed yet, or the API is older
+        st.info("No evaluation summary available from the API yet. Run `python evaluate_real.py --dev` and "
+                "`python make_summary.py`, then reload.")
+        return
+    st.caption(summary.get("note", ""))
+    for name, phase in summary.get("phases", {}).items():
+        st.subheader(phase.get("title", name))
+        st.caption(phase.get("subtitle", ""))
+        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift", "by_station", "speed"):
+            table = phase.get(key)
+            if not table:
+                continue
+            st.markdown(f"**{table['title']}**")
+            if table.get("caption"):
+                st.caption(table["caption"])
+            if key == "headline":
+                st.table(table["rows"])                 # long sentences: a static table wraps them, a dataframe cuts them off
+            else:
+                st.dataframe(table["rows"], width="stretch", hide_index=True)
+
+
+def render_method() -> None:
+    st.markdown("""
+**Four verdicts.** `VALID`, `WEATHER`, `SUSPECT`, `FAULT`. A cyclone is escalated as `WEATHER`, never deleted as noise.
+
+**Layers (each can be switched off in `config/settings.yaml`):** L0 physics (ranges, dew point, wet-bulb; also runs on the
+ESP32) → L1 health (frozen, step, spike, noise, gap, CUSUM; limits learned per station) → L2 normality (station x month x
+hour) → L3 Isolation Forest → timing (clock shift, co-jump) → fusion → health score, drift monitor, ticket, imputation.
+
+**Fusion rule in words.** Impossible, frozen or missing: FAULT. One channel jumps while the other two stay calm: FAULT.
+Several channels move together, smoothly, in a known weather pattern: WEATHER. Unusual but ambiguous: SUSPECT.
+
+**Confidence** is agreement between checks, not a calibrated probability. **Imputed values** sit beside the raw value and
+carry an uncertainty band; the raw value is never overwritten.
+""")
 
 
 def main() -> None:
@@ -216,13 +428,23 @@ def main() -> None:
     st.sidebar.caption(f"Refreshes every {cfg['refresh_seconds']} s. Models loaded: "
                        f"{status['models_loaded']['normality'] or 'none'}")
 
-    @st.fragment(run_every=cfg["refresh_seconds"])
-    def live():
-        try:
-            render_live(api_url, settings, station)
-        except httpx.HTTPError as e:
-            st.error(f"Lost the API at {api_url}: {e}")
-    live()
+    tab_live, tab_net, tab_ctrl, tab_eval, tab_method = st.tabs(["Live monitor", "Network", "Control panel", "Evaluation", "How it decides"])
+    with tab_live:
+        @st.fragment(run_every=cfg["refresh_seconds"])
+        def live():
+            try:
+                render_live(api_url, settings, station)
+            except httpx.HTTPError as e:
+                st.error(f"Lost the API at {api_url}: {e}")
+        live()
+    with tab_net:
+        render_network(api_url)
+    with tab_ctrl:
+        render_controls(api_url, station, status)
+    with tab_eval:
+        render_evaluation(api_url)
+    with tab_method:
+        render_method()
 
 
 if __name__ == "__main__":

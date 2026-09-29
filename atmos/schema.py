@@ -78,6 +78,7 @@ class VerdictResult(BaseModel):
     imputed_humidity_pct: Optional[float] = None
     imputation: Optional[Imputation] = None  # the same estimates with their bands and reasons
     checks: list[CheckResult] = []
+    notices: list[str] = []                 # informational events (e.g. a communication gap) that do not change the verdict
 
 
 class StoredRecord(BaseModel):

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"          # the version the Dockerfile and the pinned requirements target
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: "Tests (includes the C++ edge-parity tests; g++ is on the runner)"
+        run: python -m pytest -q
+      - name: "The ESP32 limits header is in sync with settings.yaml"
+        run: python firmware/node/gen_config.py --check
+      - name: "Plumbing check of the evaluation (synthetic data; proves the code runs, says nothing about weather)"
+        run: python evaluate.py --synthetic > /dev/null
+      - name: "Research self-test (the tau_RH bench analysis recovers a known answer)"
+        run: python research/tau_rh.py selftest
+      - name: The committed models load and the demo API starts
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          import api
+          c = TestClient(api.create_app())
+          s = c.get("/status").json()
+          assert s["status"] == "ok" and "BBI" in s["models_loaded"]["normality"], s
+          print("loaded models for:", s["models_loaded"]["normality"])
+          PY

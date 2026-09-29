@@ -1,0 +1,20 @@
+# The FRESH stations: twelve Indian airport stations that were not used for anything before Amendment 2 in config/protocol.md was
+# written (not for training, tuning, the DEV set, the holdout, the demo or the post-mortem). They exist to test, on data nobody has
+# looked at, whether the two remedies proposed in docs/HOLDOUT_POSTMORTEM.md work. Source: NOAA ISD (noaa-global-hourly-pds).
+# Identity, coordinates and elevation are taken from the NAME / LATITUDE / LONGITUDE / ELEVATION columns of the raw NOAA files.
+# The list was fixed from a coverage scout of the year 2022 only (how many reports carry temperature, dew point and pressure); no
+# verdict of AtmosGuard was computed on any of these stations before the list was frozen.
+years: {first: 2016, last: 2024}
+stations:
+  LKO: {file: "42369099999", name: "Lucknow (Chaudhary Charan Singh Intl, VILK)", lat: 26.761, lon: 80.889, elevation_m: 125.0, climate_zone: "humid subtropical north plains", source: metar, cadence_minutes: 60}
+  PAT: {file: "42492099999", name: "Patna (Jay Prakash Narayan Intl, VEPT)",       lat: 25.591, lon: 85.088, elevation_m: 51.8,  climate_zone: "humid subtropical east plains", source: metar, cadence_minutes: 60}
+  IDR: {file: "42754099999", name: "Indore (Devi Ahilya Bai Holkar, VAID)",         lat: 22.722, lon: 75.801, elevation_m: 563.9, climate_zone: "tropical interior plateau", source: metar, cadence_minutes: 60}
+  IXR: {file: "42701099999", name: "Ranchi (Birsa Munda, VERC)",                    lat: 23.314, lon: 85.322, elevation_m: 654.7, climate_zone: "humid subtropical plateau", source: metar, cadence_minutes: 60}
+  CJB: {file: "43321099999", name: "Coimbatore (VOCB)",                             lat: 11.031, lon: 77.044, elevation_m: 403.6, climate_zone: "tropical interior south", source: metar, cadence_minutes: 60}
+  IXE: {file: "43284099999", name: "Mangalore (VOML)",                              lat: 12.961, lon: 74.890, elevation_m: 102.7, climate_zone: "tropical humid west coast", source: metar, cadence_minutes: 60}
+  TRZ: {file: "43344099999", name: "Tiruchirappalli (VOTR)",                        lat: 10.765, lon: 78.710, elevation_m: 87.8,  climate_zone: "tropical interior southeast", source: metar, cadence_minutes: 60}
+  ATQ: {file: "42071099999", name: "Amritsar (VIAR)",                               lat: 31.710, lon: 74.797, elevation_m: 230.4, climate_zone: "semi-arid northwest plains", source: metar, cadence_minutes: 60}
+  PNQ: {file: "43063099999", name: "Pune",                                          lat: 18.533, lon: 73.850, elevation_m: 558.0, climate_zone: "tropical highland west", source: synop, cadence_minutes: 180}
+  GOI: {file: "43192099999", name: "Goa (Panjim)",                                  lat: 15.483, lon: 73.817, elevation_m: 58.4,  climate_zone: "tropical coastal west", source: synop, cadence_minutes: 180}
+  RPR: {file: "42874099999", name: "Raipur",                                        lat: 21.233, lon: 81.650, elevation_m: 298.0, climate_zone: "tropical interior east", source: synop, cadence_minutes: 180}
+  JDH: {file: "42339099999", name: "Jodhpur (VIJO)",                                lat: 26.251, lon: 73.049, elevation_m: 218.5, climate_zone: "arid west", source: synop, cadence_minutes: 180}

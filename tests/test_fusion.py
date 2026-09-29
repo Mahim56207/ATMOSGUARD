@@ -103,8 +103,17 @@ def test_rule4_unusual_but_ambiguous_is_suspect(settings):
 
 
 def test_rule4_other_hard_flags_are_suspect(settings):
-    for name in ("noise:temperature_c", "gap", "timestamp", "drift:pressure_hpa"):
+    for name in ("noise:temperature_c", "timestamp", "drift:pressure_hpa"):
         assert run([chk(name)], settings).verdict == Verdict.SUSPECT
+
+
+def test_a_communication_gap_is_a_notice_and_does_not_change_the_verdict(settings):
+    """The values that arrive after a gap are fine. The gap is reported beside the verdict, not as a fault."""
+    v = run([chk("gap")], settings)
+    assert v.verdict == Verdict.VALID
+    assert len(v.notices) == 1 and "gap happened" in v.notices[0]
+    v = run([chk("gap"), chk("range:temperature_c")], settings)          # a real fault still wins
+    assert v.verdict == Verdict.FAULT and len(v.notices) == 1
 
 
 def test_rule5_nothing_flagged_is_valid(settings):
@@ -271,3 +280,43 @@ def test_listing_stations_while_another_thread_adds_them_does_not_fail():
     [t.start() for t in ts]
     [t.join() for t in ts]
     assert errors == [] and len(pipe.stations_seen()) == 150
+
+
+# ---- rule 2 needs the other channels to be QUIET, not merely un-flagged ---------------------------------
+def _hourly_pipeline(settings):
+    pipe = Pipeline(settings, {"S1": {"cadence_minutes": 60}})
+    for r in make_history(30, cadence=60):                      # gentle ramps: T 20, P 1000, RH 50
+        pipe.process(r)
+    return pipe
+
+
+def test_a_thunderstorm_outflow_is_not_a_fault(settings):
+    """Humidity jumps 47 %, temperature falls 8 C (under the 10 C step limit, so no check fires on it), pressure rises.
+    Rule 2 used to call this 'only humidity jumped'. Real records (Delhi and Kolkata) did exactly this."""
+    v = _hourly_pipeline(settings).process(make_reading(30 * 60, t=12.0, p=1002.0, rh=97.0))
+    assert v.verdict != Verdict.FAULT, v.reason
+
+
+def test_a_lone_humidity_jump_on_calm_channels_is_still_a_fault(settings):
+    v = _hourly_pipeline(settings).process(make_reading(30 * 60, t=20.3, p=1000.3, rh=97.0))
+    assert v.verdict == Verdict.FAULT and "only humidity_pct jumped" in v.reason
+
+
+# ---- WEATHER by level: several channels far from normal together ---------------------------------------------
+def test_two_channels_far_from_normal_together_is_weather_not_suspect(settings):
+    checks = [chk("normality:temperature_c", severity="soft"), chk("normality:humidity_pct", severity="soft")]
+    calm = make_history(5)                                    # nothing moving, so no movement signature matches
+    v = fuse(checks, calm, settings, 1, {"temperature_c": 3.1, "pressure_hpa": 0.2, "humidity_pct": -2.4})
+    assert v.verdict == Verdict.WEATHER and "at the same time" in v.reason and "temperature_c +3.1" in v.reason
+
+
+def test_one_channel_far_from_normal_alone_stays_suspect(settings):
+    checks = [chk("normality:temperature_c", severity="soft")]
+    v = fuse(checks, make_history(5), settings, 1, {"temperature_c": 5.0, "pressure_hpa": 0.2, "humidity_pct": -0.4})
+    assert v.verdict == Verdict.SUSPECT
+
+
+def test_coherent_level_never_overrides_a_hard_fault(settings):
+    checks = [chk("range:humidity_pct"), chk("normality:temperature_c", severity="soft")]
+    v = fuse(checks, make_history(5), settings, 1, {"temperature_c": 4.0, "pressure_hpa": -3.0, "humidity_pct": 5.0})
+    assert v.verdict == Verdict.FAULT

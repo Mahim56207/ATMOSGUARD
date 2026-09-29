@@ -6,3 +6,6 @@ __pycache__
 data
 models
 firmware/node/secrets.h
+docs
+results/*run*.json
+results/history

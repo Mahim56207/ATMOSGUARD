@@ -1,27 +1,39 @@
 """FastAPI service.
 
-Endpoints: /ingest /latest /alerts /health /replay /inject /metrics /status
+Endpoints: /ingest /latest /alerts /health /fleet /explain /replay /replay/upload /inject /datasets /metrics /status
 
 /ingest runs the full pipeline (physics, health, normality, ML, fusion) and stores the raw reading,
 the verdict and the checks side by side. /health gives the sensor health score, projected service
 date and ticket per station. POST /replay starts a CSV replay in the background (GET shows progress).
-/inject and /metrics stay 501 until evaluate.py exists.
+POST /inject arms a fault on a station's next readings (frozen, spike, step, drift, noise, dropout): whatever
+streams in afterwards, from a replay, the fake node or a real ESP32, is altered the way a failing sensor would alter
+it, and the altered value is stored and judged. /metrics serves the committed evaluation summary (results/summary.json).
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import logging
 import os
+import re
+import sys
 import threading
-from datetime import datetime, timezone
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 import replay as replay_module
-from atmos.config import CONFIG_DIR, load_settings, load_stations
+from atmos import autofit
+from atmos.config import CONFIG_DIR, load_settings, load_stations, model_path
+from atmos.explain import explain_reading
 from atmos.fusion import Pipeline
+from atmos.livefault import LIVE_FAULT_TYPES, LiveInjector
 from atmos.schema import CheckResult, Reading, StoredRecord, Verdict, VerdictResult
 from atmos.store import SQLiteStore, Store
 
@@ -49,6 +61,43 @@ class ReplayRequest(BaseModel):
     limit: Optional[int] = Field(default=None, ge=1)
 
 
+class UploadRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=200)          # only the base name is used, and only letters, digits, . _ -
+    text: str = Field(min_length=1)                              # the CSV itself (timestamp, temperature_c, pressure_hpa, humidity_pct [, station_id])
+    station_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
+    speed: float = Field(default=0.0, ge=0)
+    limit: Optional[int] = Field(default=None, ge=1)
+    learn_fraction: float = Field(default=0.5, ge=0, lt=1)    # a station with no models learns from this first share of the file; 0 = never learn
+
+
+def safe_upload_name(filename: str) -> str:
+    """The base name with everything but letters, digits, dot, underscore and dash replaced; always ends in .csv."""
+    base = re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename.replace("\\", "/")).name).lstrip(".") or "upload"
+    return base if base.lower().endswith(".csv") else base + ".csv"
+
+
+def model_fingerprints(settings: dict, station_ids) -> dict[str, dict]:
+    """Which model files each station is running: a short hash of each, so a verdict can be tied to the models behind it."""
+    out = {}
+    for sid in station_ids:
+        files = {}
+        for kind, suffix in (("normality", ".json"), ("iforest", ".joblib"), ("mahalanobis", ".joblib"), ("limits", ".json")):
+            p = model_path(settings, sid, kind, suffix)
+            if p.exists():
+                files[kind] = hashlib.sha256(p.read_bytes()).hexdigest()[:12]
+        if files:
+            out[sid] = files
+    return out
+
+
+class InjectRequest(BaseModel):
+    station_id: str = Field(min_length=1, max_length=64)
+    fault_type: str                                        # one of LIVE_FAULT_TYPES
+    channel: str                                           # temperature_c | pressure_hpa | humidity_pct
+    samples: Optional[int] = Field(default=None, ge=1, le=100000)      # how many readings it lasts (default per type)
+    magnitude: Optional[float] = Field(default=None, ge=0)             # default from settings injector.magnitude
+
+
 def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
                pipeline: Optional[Pipeline] = None, clock: Callable[[], datetime] = utc_now) -> FastAPI:
     settings = settings if settings is not None else load_settings()
@@ -62,11 +111,13 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
         # after a restart, rebuild each station's history from the stored raw readings (nothing is written)
         for station_id in store.stations():
             pipeline.warm_up(store.recent_readings(station_id, settings["pipeline"]["warmup_max_readings"]))
+    injector = LiveInjector(settings)
     lock = threading.Lock()          # one reading at a time through store + pipeline
     replay_state: dict = {"state": "idle", "sent": 0, "total": 0, "verdicts": {}, "error": None}
     replay_stop = threading.Event()
 
     def ingest_reading(reading: Reading) -> StoredRecord:
+        reading = injector.apply(reading)               # a fault armed with /inject alters the reading here
         with lock:
             record_id = store.add_reading(reading)      # raw reading is stored first, unchanged
             try:
@@ -77,9 +128,38 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
                 verdict = VerdictResult(verdict=Verdict.SUSPECT, confidence=0.0, reason=reason,
                                         checks=[CheckResult(check="pipeline_error", flagged=True, severity="soft", reason=reason)])
             store.set_verdict(record_id, verdict)
+            counters["ingested"] += 1
+            days = api_cfg.get("retention_days", 0)
+            if days and counters["ingested"] % int(api_cfg.get("purge_every", 1000)) == 0:
+                store.purge_older_than(clock() - timedelta(days=days))
             return store.get(record_id)
 
     app = FastAPI(title="AtmosGuard")
+    started = time.time()
+    counters = {"ingested": 0}
+    api_cfg = settings.get("api", {})
+    hits: dict[str, deque] = defaultdict(deque)
+
+    @app.middleware("http")
+    async def guard(request: Request, call_next):
+        """Optional API key on every write (POST, DELETE) and an optional per-address rate limit on /ingest."""
+        from fastapi.responses import JSONResponse
+        key = os.environ.get(api_cfg.get("api_key_env", "ATMOS_API_KEY"))
+        if key and request.method in ("POST", "DELETE"):
+            given = request.headers.get("x-api-key", "")
+            if not hmac.compare_digest(given.encode(), key.encode()):
+                return JSONResponse({"detail": "A valid X-API-Key header is required for this request."}, status_code=401)
+        limit = int(api_cfg.get("rate_limit_per_minute", 0) or 0)
+        if limit and request.method == "POST" and request.url.path == "/ingest":
+            who = request.client.host if request.client else "?"
+            now = time.time()
+            q = hits[who]
+            while q and now - q[0] > 60:
+                q.popleft()
+            if len(q) >= limit:
+                return JSONResponse({"detail": f"Rate limit: {limit} readings per minute per client."}, status_code=429)
+            q.append(now)
+        return await call_next(request)
 
     @app.post("/ingest", response_model=StoredRecord)
     def ingest(reading: Reading) -> StoredRecord:
@@ -102,17 +182,50 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
             raise HTTPException(404, f"No readings yet for station {station_id}.")
         return {"stations": {sid: (r.model_dump(mode="json") if r else None) for sid, r in reports.items()}}
 
+    @app.get("/fleet")
+    def fleet():
+        """The network view: one line per station with its newest verdict, health score (overall and per channel), open ticket,
+        projected service date and how many alerts it raised recently. Every station is judged on its own; this only lists them."""
+        rows = []
+        for sid in sorted(set(pipeline.stations_seen()) | set(store.stations())):
+            latest = store.latest(sid, 1)
+            rec = latest[0] if latest else None
+            verdict = rec.verdict if rec is not None else None
+            rep = pipeline.health_report(sid)
+            rows.append({
+                "station_id": sid,
+                "last_time": rec.reading.timestamp.isoformat() if rec else None,
+                "verdict": verdict.verdict.value if verdict else None,
+                "confidence": verdict.confidence if verdict else None,
+                "reason": verdict.reason if verdict else None,
+                "health_score": rep.score if rep else None,
+                "channel_scores": {ch: c.score for ch, c in rep.channels.items()} if rep else {},
+                "service_date": rep.service_date.isoformat() if rep and rep.service_date else None,
+                "ticket": ({"priority": rep.ticket.priority, "channels": rep.ticket.channels, "reason": rep.ticket.reason}
+                           if rep and rep.ticket else None),
+                "recent_alerts": len(store.alerts(sid, 200)),
+            })
+        return {"stations": rows}
+
     @app.get("/status")
     def status():
         return {
             "status": "ok",
+            "uptime_seconds": round(time.time() - started, 1),
+            "readings_processed": counters["ingested"],
+            "auth_required_for_writes": bool(os.environ.get(api_cfg.get("api_key_env", "ATMOS_API_KEY"))),
+            "retention_days": api_cfg.get("retention_days", 0),
+            "python": sys.version.split()[0],
+            "model_fingerprints": model_fingerprints(settings, sorted(pipeline.tables)),
             "stations_configured": sorted(stations),
             "stations_seen": sorted(set(pipeline.stations_seen()) | set(store.stations())),
-            "models_loaded": {"normality": sorted(pipeline.tables), "isolation_forest": sorted(pipeline.models)},
+            "models_loaded": {"normality": sorted(pipeline.tables), "isolation_forest": sorted(pipeline.models),
+                              "mahalanobis": sorted(pipeline.mahalanobis), "limits": sorted(pipeline.limits)},
             "layers": settings.get("layers", {}),
             "verdict_counts": store.counts(),
             "pipeline": "full",
             "replay": dict(replay_state),
+            "injections": injector.list(),
         }
 
     def run_replay(readings: list[Reading], speed: float) -> None:
@@ -138,10 +251,40 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
             raise HTTPException(404, f"No such file: {req.csv_path}")
         except ValueError as e:
             raise HTTPException(400, str(e))
+        return begin_replay(readings, req.speed)
+
+    def begin_replay(readings: list[Reading], speed: float) -> dict:
         replay_stop.clear()
         replay_state.update(state="running", sent=0, total=len(readings), verdicts={}, error=None)
-        threading.Thread(target=run_replay, args=(readings, req.speed), daemon=True).start()
+        threading.Thread(target=run_replay, args=(readings, speed), daemon=True).start()
         return dict(replay_state)
+
+    @app.post("/replay/upload")
+    def upload_and_replay(req: UploadRequest):
+        """Bring your own CSV: it is saved under data/uploads/, checked like any replay file, and judged through the pipeline in the background."""
+        if replay_state["state"] == "running":
+            raise HTTPException(409, "A replay is already running.")
+        limit_bytes = int(api_cfg.get("upload_max_bytes", 20_000_000))
+        if len(req.text.encode("utf-8")) > limit_bytes:
+            raise HTTPException(413, f"The file is larger than {limit_bytes} bytes.")
+        folder = replay_module.data_root(settings) / "uploads"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"{datetime.now(timezone.utc):%Y%m%dT%H%M%S}_{safe_upload_name(req.filename)}"
+        path.write_text(req.text, encoding="utf-8")
+        try:
+            readings = replay_module.read_readings(path, settings, req.station_id, must_be_in_data_dir=True)[: req.limit]
+        except ValueError as e:
+            path.unlink(missing_ok=True)
+            raise HTTPException(400, str(e))
+        if not readings:
+            path.unlink(missing_ok=True)
+            raise HTTPException(400, "The file has no readings.")
+        learned: list = []
+        notes: list[str] = []
+        if req.learn_fraction > 0:
+            readings, learned, notes = autofit.learn_stations(pipeline, readings, settings, req.learn_fraction)
+        return {**begin_replay(readings, req.speed), "saved_as": str(path.relative_to(replay_module.data_root(settings).parent)),
+                "learned": [vars(x) for x in learned], "notes": notes}
 
     @app.get("/replay")
     def replay_progress():
@@ -153,12 +296,52 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
         return {"stopping": replay_state["state"] == "running"}
 
     @app.post("/inject")
-    def inject():
-        raise HTTPException(501, "Not built yet (build step 3 module exists; API route comes with evaluate/replay).")
+    def inject(req: InjectRequest):
+        """Arm a fault on this station's next readings."""
+        try:
+            fault = injector.add(req.station_id, req.fault_type, req.channel, req.samples, req.magnitude)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        return {"armed": {**vars(fault), "active": fault.active}, "fault_types": list(LIVE_FAULT_TYPES)}
+
+    @app.get("/inject")
+    def injections():
+        return {"injections": injector.list(), "fault_types": list(LIVE_FAULT_TYPES)}
+
+    @app.delete("/inject")
+    def clear_injections(station_id: Optional[str] = None):
+        return {"removed": injector.clear(station_id)}
+
+    @app.get("/explain")
+    def explain(station_id: str, record_id: Optional[int] = None):
+        """Why the statistical layers found a reading unusual: exact Mahalanobis contributions and (if `shap` is
+        installed) SHAP values for the Isolation Forest. Defaults to the station's latest reading."""
+        recent = store.latest(station_id, 60)                        # newest first
+        if not recent:
+            raise HTTPException(404, f"No readings yet for station {station_id}.")
+        idx = 0 if record_id is None else next((i for i, r in enumerate(recent) if r.id == record_id), None)
+        if idx is None:
+            raise HTTPException(404, f"Reading {record_id} is not among the latest 60 of {station_id}.")
+        history = [r.reading for r in reversed(recent[idx: idx + 2])]      # previous reading, then the one to explain
+        out = explain_reading(history, pipeline.tables.get(station_id), pipeline.models.get(station_id),
+                              pipeline.mahalanobis.get(station_id))
+        return {"station_id": station_id, "record_id": recent[idx].id, "timestamp": recent[idx].reading.timestamp.isoformat(), **out}
+
+    @app.get("/datasets")
+    def datasets():
+        """CSV files under the data folder that /replay may play (never data/holdout or data/fresh)."""
+        root = replay_module.data_root(settings)
+        files = sorted(str(p.relative_to(root.parent)) for p in root.rglob("*.csv")
+                       if not {"holdout", "fresh", "fresh2"} & set(p.relative_to(root).parts))
+        return {"datasets": files}
 
     @app.get("/metrics")
     def metrics():
-        raise HTTPException(501, "Not built yet (build step 6: evaluate.py).")
+        """The committed evaluation summary (written by make_summary.py from evaluate_real.py results)."""
+        path = REPO_ROOT / "results" / "summary.json"
+        if not path.exists():
+            raise HTTPException(404, "No evaluation summary yet: run evaluate_real.py and make_summary.py.")
+        return json.loads(path.read_text(encoding="utf-8"))
 
     return app
 

@@ -37,6 +37,7 @@ def render(settings: dict) -> str:
         f"#define L0_HUMIDITY_MIN_PCT {_f(r['humidity_pct'][0])}",
         f"#define L0_HUMIDITY_MAX_PCT {_f(r['humidity_pct'][1])}",
         f"#define L0_DEW_POINT_TOLERANCE_C {_f(p['dew_point_tolerance_c'])}",
+        f"#define L0_FROZEN_MINUTES {int(n['frozen_minutes'])}",
         "",
         "// Sampling and sending (section `node`)",
         f"#define SAMPLE_INTERVAL_MS {int(n['sample_interval_seconds']) * 1000}UL",

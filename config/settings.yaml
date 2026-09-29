@@ -14,9 +14,11 @@ layers:            # every layer is toggleable so the ablation study needs no co
   physics: true        # L0
   health: true         # L1
   normality: true      # L2
-  mlmodel: true        # L3
+  mlmodel: true        # L3 Isolation Forest
+  mahalanobis: true    # L3b Mahalanobis distance of (departure from normal, rate of change)
   lstm_ae: false       # optional, behind a flag
   timing: true         # T1, T2
+  limits: true         # station-learned frozen-run and noise ceilings (atmos/limits.py)
   impute: true
 
 physics:           # L0
@@ -30,6 +32,7 @@ physics:           # L0
 
 health:            # L1  (all windows in minutes; starting points)
   frozen:          # value does not change at all over the window
+    hard_multiplier: 2.0         # with a station-learned window: a run this many times the learned limit is HARD, shorter is soft
     min_samples: 3               # window is stretched to hold at least this many samples
     window_minutes:
       temperature_c: 60
@@ -39,7 +42,16 @@ health:            # L1  (all windows in minutes; starting points)
       temperature_c: 0.0
       pressure_hpa: 0.0
       humidity_pct: 0.0
+    ceiling_aware: true          # remedy 1 (docs/HOLDOUT_POSTMORTEM.md): humidity pinned at its ceiling, or temperature frozen while
+                                 # humidity is at its ceiling, is a SOFT flag at most (sustained heavy rain produces exactly this).
+                                 # ADOPTED by the rule registered in Amendment 2, on the twelve fresh stations (results/fresh_run1.*).
+                                 # The evaluation's `full` configuration still forces it off so every reported number reproduces.
+    ceiling:
+      humidity_pct: 99.5         # at or above this the channel counts as saturated
   step:            # allowed change between two samples = min(rate_per_min * minutes_apart, cap)
+    expected_aware: true         # remedy 3 (Amendment 3): judge only the part of a change that the station's usual daily cycle does not explain.
+                                 # ADOPTED by the rule registered in Amendment 3, on the twelve FRESH2 stations (results/fresh2_run1.*). The evaluation's
+                                 # `registered` and earlier `full` configurations force it off so every earlier number reproduces.
     rate_per_min:
       temperature_c: 1.0
       pressure_hpa: 0.5
@@ -55,6 +67,13 @@ health:            # L1  (all windows in minutes; starting points)
       temperature_c: 0.5
       pressure_hpa: 0.5
       humidity_pct: 3.0
+  offset:          # remedy 4 (Amendment 3): a sustained one-channel offset (soft). REJECTED by the rule registered in Amendment 3 (level-shift
+                   # detection +1 point against the +5 required, clean false alarms +0.48 points); stays off.
+    enabled: false
+    window_minutes: 720          # stretched to hold at least min_samples readings
+    min_samples: 4
+    z_median: 2.5                # median departure of the channel over the window, in standard deviations of its own month-hour cell
+    others_below: 1.0            # both other channels' median departures must be below this
   gaps:
     gap_cadence_multiplier: 3    # gap if time since last sample > this x station cadence
   timestamps:
@@ -71,6 +90,20 @@ health:            # L1  (all windows in minutes; starting points)
       pressure_hpa: 0.5
       humidity_pct: 5.0
 
+limits:            # station-learned limits (atmos/limits.py). Upper quantiles of CLEAN training data. The configured
+                   # health.frozen / health.noise values stay as the floor: learning can only relax them.
+  frozen_quantile: 0.999         # longest identical-value run: this quantile of the clean runs
+  frozen_margin: 1.0             # multiplier on that run length
+  min_runs: 30                   # fewer runs than this and nothing is learned (the configured window is used)
+  noise_quantile: 0.999          # largest jitter estimate: this quantile of the clean window estimates
+  noise_margin: 1.1
+  min_noise_samples: 200
+  learned_step_cap: false        # remedy 2 (docs/HOLDOUT_POSTMORTEM.md): the step cap becomes max(configured cap, this station's learned cap).
+                                 # REJECTED by the rule registered in Amendment 2: it cost 4.2 points of clock-shift detection on the fresh stations.
+  step_quantile: 0.999           # learned cap: this quantile of |change| over one reporting interval (gaps up to the gap limit included)
+  step_margin: 1.1
+  min_step_samples: 500
+
 normality:         # L2: station x month x hour statistics  (starting points)
   min_samples_per_cell: 10       # cells with fewer samples are left out ("not enough data")
   z_flag: 4.0                    # soft flag when |z| is above this
@@ -79,9 +112,16 @@ normality:         # L2: station x month x hour statistics  (starting points)
     pressure_hpa: 0.1
     humidity_pct: 1.0
 
+coldstart:         # atmos/coldstart.py: a new station starts from other stations' frozen tables, then learns its own
+  full_weight_samples: 30        # own samples in a month-hour cell at which the station's own mean and spread take over
+  full_weight_days: 365          # own days of clean history at which the station's own learned limits take over
+
 mlmodel:           # L3  (starting points)
   n_estimators: 100
   threshold_quantile: 0.005      # flag scores below this quantile of the clean training scores
+  mahalanobis:
+    quantile: 0.995              # alarm above this quantile of the clean training distances (squared)
+    ridge: 1.0e-6                # added to the covariance diagonal so it can always be inverted
 
 injector:          # fault injection for evaluation (starting points). Fault types come from the L1 checks.
   events_per_type: 3             # used by make_plan
@@ -92,6 +132,8 @@ injector:          # fault injection for evaluation (starting points). Fault typ
     drift: 360
     noise: 60
     dropout: 30
+    clock_shift: 5760            # 4 days. Only used when the plan asks for it (types=ALL_FAULT_TYPES)
+  clock_shift_hours: 3           # how far the logger clock is out
   magnitude:
     step:    {temperature_c: 5.0, pressure_hpa: 5.0, humidity_pct: 20.0}   # level shift
     spike:   {temperature_c: 8.0, pressure_hpa: 8.0, humidity_pct: 30.0}   # one-sample offset
@@ -100,6 +142,7 @@ injector:          # fault injection for evaluation (starting points). Fault typ
 timing:            # T1 clock / diurnal-phase check, T2 cross-channel co-jump check  (starting points)
   clock:                         # T1: does the daily cycle match this station's normal cycle, or is it shifted?
     window_minutes: 1440         # needs a full day of history
+    recompute_hours: 3           # the check is redone at most this often (data time). A wrong clock lasts days.
     channels: [temperature_c, humidity_pct]   # the channels with a clear daily cycle
     max_shift_hours: 6           # shifts tried: -6 ... +6 hours (the L2 table has one cell per hour)
     min_shift_hours: 1
@@ -112,9 +155,13 @@ pipeline:
   warmup_max_readings: 2000      # on start, this many stored readings per station are replayed to rebuild the history
 
 fusion:            # verdict logic (starting points). Rules run in the order given in the guide.
+  informational_checks: [gap, limits]                         # reported as a notice on the reading; never changes the verdict
   fault_checks: [range, dew_point, frozen, dropout]   # rule 1: a HARD flag from these -> FAULT
   jump_checks: [step, spike]                          # rule 2: a jump on ONE channel, others quiet -> FAULT
+  quiet_fraction: 0.5                                 # "quiet" = moved by at most this share of the step allowance over the last two intervals
+  quiet_multiple: 1.5                                 #   ...and, once the station's usual step is learned, at most this many times it
   weather:                                            # rule 3: needs 2+ channels moving, smoothly, matching a signature
+    coherent: {min_channels: 2, z: 2.0}               #   ...or 2+ channels this many normality sigmas from normal at once
     direction_window_minutes: 60
     min_move:                    # change over the window needed to count a channel as "moving"
       temperature_c: 1.0
@@ -148,10 +195,15 @@ healthscore:       # (starting points)
     drift: 40
   check_channels:                # checks whose name has no ":channel" part
     dew_point: [temperature_c, humidity_pct]
-  drift:                         # Theil-Sen line through (reading - expected)
-    min_samples: 30
-    max_points: 2000             # evenly thinned above this, to keep Theil-Sen fast
-    alpha: 0.95                  # confidence level of the slope interval
+  drift:                         # Theil-Sen slope of the DAILY MEAN of (reading - smooth expected), see DriftTracker
+    window_days: 60              # slope is fitted over this many days
+    min_days: 21                 # fewer usable days than this: drift is not measured
+    min_day_fraction: 0.5        # a day counts if it holds this share of the samples the cadence would give
+    winsor_sigma: 3.0            # one sample counts at most this many normality-cell sigmas
+    z_crit: 4.0                  # significant when slope / (autocorrelation-inflated standard error) is this large
+    ar1_max: 0.9                 # cap on the lag-1 autocorrelation used to inflate that error
+    persist_days: 7              # the trend must be significant, same sign, on each of the last this many daily evaluations
+    partner_z: 2.5               # a trend on one channel is NOT sensor drift if another channel trends this clearly too
     service_limit:               # offset at which the sensor needs service
       temperature_c: 0.5
       pressure_hpa: 1.0
@@ -173,6 +225,13 @@ impute:            # gap fill + uncertainty band  (starting points)
     humidity_pct: 5.0
   max_fill_samples: 10           # fill_gaps() never invents more than this many samples per gap
 
+api:               # operational settings for the service (api.py)
+  api_key_env: ATMOS_API_KEY     # name of the environment variable that holds the key. If it is set, POST and DELETE need the header X-API-Key
+  rate_limit_per_minute: 0       # POST /ingest per client address, per minute (0 = off)
+  retention_days: 0              # 0 keeps everything. Otherwise whole records older than this are deleted (raw values are otherwise never deleted)
+  purge_every: 1000              # readings between retention checks
+  upload_max_bytes: 20000000     # largest CSV that POST /replay/upload accepts
+
 replay:
   data_dir: data                 # /replay only reads CSV files inside this folder (relative to the repo root)
   max_sleep_seconds: 5.0         # cap on the wait between two readings, so a data gap does not stall a replay
@@ -188,6 +247,11 @@ evaluate:          # evaluate.py (starting points)
   train_fraction: 0.7            # real data: first part of data/clean is DEV-train, the rest is DEV clean-eval
   injection_rounds: 3            # each round injects a different seeded fault plan into the clean-eval data
   detection_grace_minutes: 60    # a fault counts as detected if an alarm comes up to this long after it ends
+  real:                          # evaluate_real.py only (station data reported hourly or every 3 hours)
+    overrides:                   # merged over the settings above for real-data runs. A stuck sensor, a level shift
+      injector:                  # or a burst of noise lasts days on a real network, not the hours used on 15-min data
+        min_separation_minutes: 720
+        duration_minutes: {frozen: 2880, step: 1440, drift: 86400, noise: 1440, dropout: 180, clock_shift: 5760}
   synthetic:                     # --synthetic only: fake weather to test the plumbing. NOT real results.
     start: "2026-01-01T00:00:00"
     cadence_minutes: 15
@@ -208,5 +272,6 @@ node:              # firmware/node (ESP32 + BME280). firmware/node/gen_config.py
   sample_interval_seconds: 1
   aggregate_seconds: 60
   min_valid_samples: 30          # fewer valid samples than this in a minute -> that channel is sent as missing
+  frozen_minutes: 30             # this many identical 1-minute means in a row -> the node flags the channel as frozen (0 = off)
   buffer_slots: 30               # unsent minutes kept on the device while the network is down
   post_timeout_seconds: 10

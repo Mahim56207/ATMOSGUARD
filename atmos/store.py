@@ -10,6 +10,7 @@ import sqlite3
 import threading
 from abc import ABC, abstractmethod
 from datetime import date, datetime
+from pathlib import Path
 from typing import Optional
 
 from .schema import CheckResult, Imputation, Reading, StoredRecord, Verdict, VerdictResult
@@ -40,6 +41,10 @@ class Store(ABC):
 
     @abstractmethod
     def counts(self) -> dict[str, int]: ...
+
+    @abstractmethod
+    def purge_older_than(self, cutoff: datetime) -> int:
+        """Delete whole records with a timestamp before `cutoff`; returns how many. Only used when a retention period is set."""
 
 
 _SCHEMA = """
@@ -79,6 +84,8 @@ class SQLiteStore(Store):
     def __init__(self, path: str = ":memory:"):
         # check_same_thread=False: FastAPI may call from worker threads, so every call below takes this lock.
         self._lock = threading.RLock()
+        if path != ":memory:" and not path.startswith("file:"):
+            Path(path).expanduser().parent.mkdir(parents=True, exist_ok=True)     # a fresh container has no state folder yet
         self._db = sqlite3.connect(path, check_same_thread=False)
         self._db.row_factory = sqlite3.Row
         self._db.executescript(_SCHEMA)
@@ -142,6 +149,12 @@ class SQLiteStore(Store):
         rows = self._db.execute("SELECT * FROM records WHERE station_id = ? ORDER BY id DESC LIMIT ?",
                                 (station_id, limit)).fetchall()
         return [_row_to_record(r).reading for r in reversed(rows)]        # arrival order, oldest first
+
+    @_locked
+    def purge_older_than(self, cutoff: datetime) -> int:
+        cur = self._db.execute("DELETE FROM records WHERE timestamp < ?", (cutoff.isoformat(),))
+        self._db.commit()
+        return int(cur.rowcount)
 
     @_locked
     def counts(self) -> dict[str, int]:

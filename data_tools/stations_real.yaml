@@ -1,0 +1,20 @@
+# Real stations used for validation. Source: NOAA ISD (noaa-global-hourly-pds). Coordinates and elevation are from
+# NOAA's own station history file (isd-history.csv). `source` says which report type carries the data:
+# metar = routine METAR (whole degC, whole hPa QNH); synop = SYNOP (0.1 degC, 0.1 hPa sea-level pressure).
+# climate_zone is our own coarse label (Koppen-style) so leave-one-zone-out results can be reported.
+years: {first: 2016, last: 2024}
+stations:
+  BBI:  {file: "42971099999", name: "Bhubaneswar (Biju Patnaik Intl, VEBS)", lat: 20.244, lon: 85.818, elevation_m: 42.1,   climate_zone: "tropical coastal east", source: metar, cadence_minutes: 60}
+  VTZ:  {file: "43149099999", name: "Visakhapatnam (VOVZ)",                  lat: 17.717, lon: 83.217, elevation_m: 4.6,    climate_zone: "tropical coastal east", source: metar, cadence_minutes: 60}
+  MAA:  {file: "43279099999", name: "Chennai Intl (VOMM)",                   lat: 12.994, lon: 80.181, elevation_m: 15.8,   climate_zone: "tropical coastal east", source: metar, cadence_minutes: 60}
+  CCU:  {file: "42809099999", name: "Kolkata (Netaji Subhash Chandra Bose Intl, VECC)", lat: 22.655, lon: 88.447, elevation_m: 4.9, climate_zone: "humid subtropical east", source: metar, cadence_minutes: 60}
+  BOM:  {file: "43003099999", name: "Mumbai (Chhatrapati Shivaji Maharaj Intl, VABB)", lat: 19.089, lon: 72.868, elevation_m: 11.3, climate_zone: "tropical coastal west", source: metar, cadence_minutes: 60}
+  DEL:  {file: "42181099999", name: "Delhi (Indira Gandhi Intl, VIDP)",      lat: 28.567, lon: 77.103, elevation_m: 236.8,  climate_zone: "semi-arid north plains", source: metar, cadence_minutes: 60}
+  JAI:  {file: "42348099999", name: "Jaipur (VIJP)",                         lat: 26.824, lon: 75.812, elevation_m: 385.0,  climate_zone: "arid northwest", source: metar, cadence_minutes: 60}
+  AMD:  {file: "42647099999", name: "Ahmedabad (Sardar Vallabhbhai Patel Intl, VAAH)", lat: 23.077, lon: 72.635, elevation_m: 57.6, climate_zone: "arid northwest", source: metar, cadence_minutes: 60}
+  NAG:  {file: "42867099999", name: "Nagpur (Dr Babasaheb Ambedkar Intl, VANP)", lat: 21.092, lon: 79.047, elevation_m: 314.9, climate_zone: "tropical interior", source: metar, cadence_minutes: 60}
+  TRV:  {file: "43372099999", name: "Thiruvananthapuram Intl (VOTV)",        lat: 8.482,  lon: 76.920, elevation_m: 4.6,    climate_zone: "tropical humid southwest", source: metar, cadence_minutes: 60}
+  GAU:  {file: "42410099999", name: "Guwahati (Lokpriya Gopinath Bordoloi Intl, VEGT)", lat: 26.106, lon: 91.586, elevation_m: 49.4, climate_zone: "humid northeast", source: metar, cadence_minutes: 60}
+  IXZ:  {file: "43333099999", name: "Port Blair (VEPB)",                     lat: 11.667, lon: 92.717, elevation_m: 79.0,   climate_zone: "tropical island", source: synop, cadence_minutes: 180}
+  BHJ:  {file: "42634099999", name: "Bhuj (VABJ)",                           lat: 23.288, lon: 69.670, elevation_m: 81.7,   climate_zone: "arid northwest", source: synop, cadence_minutes: 180}
+  COK:  {file: "43353099999", name: "Cochin Intl (VOCC)",                    lat: 9.946,  lon: 76.272, elevation_m: 2.4,    climate_zone: "tropical humid southwest", source: synop, cadence_minutes: 180}

@@ -44,7 +44,7 @@ def test_status_health_and_placeholders():
     assert "S1" in c.get("/health").json()["stations"]
     assert c.post("/replay").status_code == 422                       # needs a body now: it is a real route
     assert c.get("/replay").json()["state"] == "idle"
-    assert c.post("/inject").status_code == 501 and c.get("/metrics").status_code == 501
+    assert c.post("/inject").status_code == 422                       # needs a body: it is a real route now
 
 
 def test_health_report_gets_a_score_after_enough_readings_and_opens_a_ticket_for_a_dead_sensor():
@@ -146,3 +146,10 @@ def test_replay_request_is_validated():
     for body in ({"csv_path": "data/x.csv", "limit": -5}, {"csv_path": "data/x.csv", "limit": 0},
                  {"csv_path": "data/x.csv", "speed": -1}, {"csv_path": "data/x.csv", "station_id": ""}):
         assert c.post("/replay", json=body).status_code == 422
+
+
+def test_datasets_lists_replayable_csvs_and_never_the_holdout():
+    files = _client().get("/datasets").json()["datasets"]
+    assert all(f.endswith(".csv") for f in files)
+    assert not any("holdout" in f for f in files)
+    assert any(f.startswith("data/real/dev/") for f in files)         # the committed DEV station files

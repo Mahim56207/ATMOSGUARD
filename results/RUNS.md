@@ -1,0 +1,44 @@
+# What was run to produce the results in this directory
+
+Every result file here was written by a command in this table, on the code state named beside it. Nothing was edited by hand.
+
+| File | Command | Code state | What it is |
+|---|---|---|---|
+| `history/dev_run1.*`, `history/dev_run2.*` | `python evaluate_real.py --dev` | earlier commits, see `history/README.md` | Earlier DEV runs, kept for the record. Not current results. |
+| `dev_run3.json`, `.txt` | `python evaluate_real.py --dev --workers 4 --out results/dev_run3.json` | `9cd24f1` (the freeze) | DEV, **registered criterion** only (any alarm in the fault window). The DEV numbers quoted in `config/protocol.md`. |
+| `holdout_run1.json`, `.txt` | `python evaluate_real.py --holdout --workers 4 --out results/holdout_run1.json` | `9cd24f1` (lock file `data/holdout/.holdout_used`) | **The single registered holdout run**, in time and in space. Registered criterion only. Kept unedited. |
+| `dev_run4.json`, `.txt` | `python evaluate_real.py --dev --workers 4 --out results/dev_run4.json` | `d29eb02` (pipeline files unchanged since) | The same DEV evaluation re-scored with Amendment 1 (paired detection, table 1) and the registered criterion (table 1b). |
+| `holdout_run2.json`, `.txt` | `python evaluate_real.py --holdout --force-rerun-holdout --workers 4 --out results/holdout_run2.json` | `d29eb02` (pipeline files unchanged since) | The holdout again, with both criteria. Made only to score detection under Amendment 1; **no tuning followed**. |
+| `fresh_run1.json`, `.txt` | `python evaluate_real.py --fresh --workers 4 --out results/fresh_run1.json` | `aec7b6f` (lock `data/fresh/.fresh_used`) | **The single FRESH run**: twelve stations nobody had looked at, the frozen pipeline (`full`), the two remedies, the ablations and the baselines. Amendment 2. 54 minutes on 4 workers. |
+| `sensitivity.json` | `python evaluate_sensitivity.py --workers 4 --out results/sensitivity.json` | current code, remedy 1 on in settings (the `full` predictor is the registered pipeline) | Detection against the size of injected spikes, level shifts and noise bursts (0.25x to 4x), DEV stations, AtmosGuard and two simpler systems. An envelope study on the tuning set. 3 minutes on 4 workers. |
+| `dev_check_remedies.json`, `.txt` | `python evaluate_real.py --dev --workers 4 --parts detect,events --out results/dev_check_remedies.json` | after the adoption of remedy 1 | A sanity check on DEV only (no drift or speed parts): the shipped default (the `remedy_frozen` row) gives counts identical to `full` for clean data, extreme weather and every injected-fault type, so it changes nothing there. Not used for any table. |
+| `scale.json` | `python loadtest.py --stations 1 10 50 100` | `d29eb02` + `loadtest.py` fixed in the commit that adds the station-id regression test, + the vectorised single-row Isolation Forest scorer (`atmos/mlmodel.py`, bit-identical to sklearn, `tests/test_fast_forest.py`) | Scale and speed on simulated stations, one machine, every layer on, plus rows with the Isolation Forest layer off. An earlier `scale.json` (committed before this fix) fed readings under a different station id, so its pipeline ran with no per-station models; it was replaced. The first corrected version measured about 7.5 ms per reading, nearly all of it scikit-learn's per-call overhead in the Isolation Forest; the current file is after the vectorised scorer (verdicts identical). |
+| `coldstart.json` | `python evaluate_coldstart.py --workers 4 --out results/coldstart.json` (after `--estimate`, which projected 8 min) | `d29eb02` + the instrumented runner (pipeline files unchanged) | Leave-one-station-out cold-start study on the six DEV stations: 42 jobs, 9 minutes on 4 workers. An earlier attempt with the first version of the runner (one job per station, no progress output) was stopped after 90 minutes and its output discarded; the current runner scores the Isolation Forest in batches (verdicts identical, tested) and reports its own ETA. |
+| `fresh2_run1.json`, `.txt` | `python evaluate_real.py --fresh2 --workers 4 --out results/fresh2_run1.json` | `1a501f1` (lock `data/fresh2/.fresh2_used`) | **The single FRESH2 run** (Amendment 3): twelve stations nobody had looked at (five Indian airports, seven Australian AWS at 0.1 resolution), `full` = the pipeline as shipped before Amendment 3, `registered`, remedies 3 and 4 alone and together, the five baselines. 41 minutes on 4 workers. |
+| `dev_run5.json`, `.txt` | `python evaluate_real.py --dev --workers 4 --out results/dev_run5.json` | after the adoption of remedy 3 (`expected_aware: true`) | The full DEV evaluation again with the shipped default. `python compare_runs.py results/dev_run4.json results/dev_run5.json` compared **30,587** numbers and found **0 differences**: `full`, the ablations and the baselines are pinned to the registered pipeline, and the code added for Amendment 3 changes nothing there. |
+| `peers_nsw.json`, `peers_vic.json` (+ `_quiet`) | `python evaluate_peers.py --cluster nsw --quantile 0.995 --margin 1.1 --out results/peers_nsw.json` (and `--cluster vic`; the quiet files use `--quantile 0.999 --margin 1.2`) | current code | The optional peer-layer study: two disjoint clusters of twelve Australian AWS, injected 60-day offsets and drifts, with and without neighbours. Settings fixed on NSW (four tried), run unchanged on VIC. Under a minute each. |
+| `fresh2_refit_diagnostic.json`, `.txt` | `python refit_diagnostic.py --out results/fresh2_refit_diagnostic.json` | after Amendment 3 | Post-hoc diagnostic on the seven Australian FRESH2 AWS: fitted on 2020-2021 only (hourly, all day), judged 2022-2024. **Not sealed evidence**: the stations are the ones that revealed the cadence problem; nothing was tuned. |
+| `summary.json`, `REPORT.md` | `python make_summary.py results/dev_run4.json results/holdout_run2.json results/fresh_run1.json --scale results/scale.json --coldstart results/coldstart.json --sensitivity results/sensitivity.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md` (now also `results/fresh2_run1.json`, and `--peers results/peers_nsw.json results/peers_vic.json --peers-doc docs/PEER_LAYER.md`) | generated | The tables everything else reads. |
+
+## The pipeline did not change between the freeze and the reruns
+`git diff 9cd24f1 HEAD -- atmos config/settings.yaml` shows only a new `atmos/explain.py` (the `/explain` endpoint), an optional retention method
+in `atmos/store.py`, and an `api:` block in the settings. `evaluate_real.py` changed only to add the paired detection score (memoised predictions, the paired count, and a
+two-table detection printout; Amendment 1 in `config/protocol.md`); the registered count is computed as before.
+
+## What changed in the code after these runs, and why the reported numbers still stand
+`dev_run4`, `holdout_run2` and `coldstart` ran on code in which no pipeline file had changed since `d29eb02`. Afterwards three things were added: the two remedy
+flags and the shipped default of remedy 1 (Amendment 2), a vectorised single-row Isolation Forest scorer, and removal of unused imports. None changes the registered
+configurations. Evidence: (1) `evaluate_real.build_configs` pins `full`, the ablations and the baselines to both remedies off (`tests/test_remedies.py`); (2) a full DEV
+run with the current settings (`dev_check_remedies.json`, made before the scorer was added) reproduces all 234 blocks of `dev_run4` (13 configurations x 6 stations x clean,
+events, detection) exactly; (3) the scorer returns bit-identical numbers to scikit-learn on 35,994 real rows from the six committed models (`tests/test_fast_forest.py`), and
+the evaluation scores whole series through scikit-learn in one batch anyway; (4) the 417+ tests pass, and CI is green on the commit.
+
+## Determinism check
+`python compare_runs.py results/holdout_run1.json results/holdout_run2.json` compared **61,019** numbers (counts, delays and rates for every station and
+configuration; timings excluded) and found **0 differences**. `python compare_runs.py results/dev_run3.json results/dev_run4.json` compared
+**16,615** numbers and found **0 differences**. The rerun is deterministic, so the registered-criterion numbers in `holdout_run2` are exactly those
+of the single registered run, and the only new content is the paired detection score.
+
+## Timing numbers
+The "speed" line at the bottom of each evaluation result was measured while four worker processes shared four cores, so it is an upper bound.
+The number to quote is `scale.json`, measured with `python loadtest.py` on a machine doing nothing else.

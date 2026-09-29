@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import threading
 import time
 from collections import Counter
@@ -43,8 +44,9 @@ def check_path(path: Path, settings: dict, must_be_in_data_dir: bool = False, al
     p = Path(path)
     p = (p if p.is_absolute() else Path.cwd() / p).resolve()
     root = data_root(settings)
-    if not allow_holdout and (p == root / "holdout" or (root / "holdout") in p.parents):
-        raise ValueError("data/holdout/ is read once, by evaluate.py. Replay will not read it.")
+    for sealed in ("holdout", "fresh", "fresh2"):                 # each is read once, by an evaluation run behind its own guard
+        if not allow_holdout and (p == root / sealed or (root / sealed) in p.parents):
+            raise ValueError(f"data/{sealed}/ is read once, by the evaluation, behind its guard. Replay will not read it.")
     if must_be_in_data_dir and root not in p.parents:
         raise ValueError(f"CSV must be inside the data folder ({root}).")
     return p
@@ -106,8 +108,14 @@ def replay(readings: list[Reading], ingest: Callable[[Reading], str], speed: flo
     return summary
 
 
+def api_headers() -> dict:
+    """X-API-Key from the environment (ATMOS_API_KEY), if the API was started with one."""
+    key = os.environ.get("ATMOS_API_KEY")
+    return {"X-API-Key": key} if key else {}
+
+
 def http_ingest(url: str, client: Optional[httpx.Client] = None) -> Callable[[Reading], str]:
-    client = client or httpx.Client(base_url=url, timeout=30)
+    client = client or httpx.Client(base_url=url, timeout=30, headers=api_headers())
 
     def _ingest(reading: Reading) -> str:
         resp = client.post("/ingest", json=reading.model_dump(mode="json"))

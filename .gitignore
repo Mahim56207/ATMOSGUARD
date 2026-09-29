@@ -10,9 +10,19 @@ __pycache__/
 data/raw/*
 data/clean/*
 data/events/*
+data/real/*/
+!data/real/dev/
 data/holdout/*
+!data/holdout/real/
+!data/holdout/.holdout_used
 models/*
+!models/*_normality.json
+!models/*_limits.json
+!models/*_iforest.joblib
+!models/*_mahalanobis.joblib
 !**/.gitkeep
 
 # Node secrets (WiFi password etc.)
 firmware/node/secrets.h
+data/uploads/
+data/peers/*
