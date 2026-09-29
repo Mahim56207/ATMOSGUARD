@@ -53,3 +53,23 @@ def test_report_builds_from_the_committed_summary():
         assert heading in text
     assert "{{" not in text and "TODO" not in text
     assert "0.3%" in text or "3 of 98" in text     # the holdout finding is in the report, not hidden
+
+
+def test_tradeoff_rows_name_each_systems_weakest_fault_type():
+    phase = {
+        "detection": {"rows": [
+            {"configuration": "AtmosGuard (full)", "frozen": "100%", "spike": "97%", "noise burst": "78%"},
+            {"configuration": "without timing layer", "frozen": "100%", "spike": "97%", "noise burst": "78%"},
+            {"configuration": "baseline: Mahalanobis distance only", "frozen": "38%", "spike": "100%", "noise burst": "0%"},
+            {"configuration": "(faults injected)", "frozen": "243", "spike": "243", "noise burst": "243"},
+            {"configuration": "AtmosGuard: median minutes to the alarm", "frozen": "480", "spike": "0", "noise burst": "420"}]},
+        "clean": {"rows": [{"configuration": "AtmosGuard (full)", "any alarm": "1.9%"},
+                           {"configuration": "baseline: Mahalanobis distance only", "any alarm": "0.5%"}]},
+        "extreme_weather": {"rows": [{"configuration": "AtmosGuard (full)", "windows with a FAULT": "0/30"},
+                                     {"configuration": "baseline: Mahalanobis distance only", "windows with a FAULT": "0/30"}]},
+    }
+    rows = mr.tradeoff_rows(phase)
+    assert [r["system"] for r in rows] == ["AtmosGuard (full)", "baseline: Mahalanobis distance only"]   # ablations and count rows left out
+    assert rows[0]["weakest injected-fault type (fault raised the alarm)"] == "noise burst: 78%"
+    assert rows[1]["weakest injected-fault type (fault raised the alarm)"] == "noise burst: 0%"
+    assert rows[1]["false alarms on clean data"] == "0.5%"
