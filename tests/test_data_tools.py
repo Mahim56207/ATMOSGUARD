@@ -198,3 +198,16 @@ def test_update_between_replaces_only_the_marked_block(tmp_path):
     assert f.read_text(encoding="utf-8") == "top\n<!-- A -->\nnew\n<!-- B -->\nbottom\n"
     assert not ms.update_between(f, "<!-- A -->", "<!-- MISSING -->", "x")
     assert "new" in f.read_text(encoding="utf-8")            # untouched when a marker is missing
+
+
+def test_any_minute_keeps_a_20_minute_series_and_drops_the_second_copy_of_a_report():
+    """A US AWOS reports at :15, :35, :55; some years also carry a copy one minute later. Both must not enter the series."""
+    import pandas as pd
+    from data_tools import isd
+    ts = ["2020-01-01T00:15:00", "2020-01-01T00:16:00", "2020-01-01T00:35:00", "2020-01-01T00:55:00", "2020-01-01T00:56:00"]
+    rep = pd.DataFrame({"ts": pd.to_datetime(ts), "rtype": "FM-15", "t": 10.0, "td": 5.0, "slp": float("nan"), "alt": 1013.0,
+                        "qc_t": "1", "qc_td": "1", "qc_slp": "9", "qc_alt": "1"})
+    s = isd.to_series(rep, "metar", 20, any_minute=True)
+    assert list(s["timestamp"]) == ["2020-01-01T00:15:00", "2020-01-01T00:35:00", "2020-01-01T00:55:00"]
+    on_grid = isd.to_series(rep, "metar", 20)                    # the default still keeps only minutes divisible by the cadence
+    assert len(on_grid) == 0
