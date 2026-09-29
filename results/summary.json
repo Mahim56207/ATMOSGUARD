@@ -670,6 +670,48 @@
      }
     ]
    },
+   "detection_ci": {
+    "title": "1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)",
+    "caption": "Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.",
+    "rows": [
+     {
+      "fault type": "frozen",
+      "injected": 243,
+      "raised the alarm (fault-raised)": "100.0% (98.4-100.0)",
+      "named FAULT": "95.1% (91.6-97.2)"
+     },
+     {
+      "fault type": "spike",
+      "injected": 243,
+      "raised the alarm (fault-raised)": "97.5% (94.7-98.9)",
+      "named FAULT": "12.3% (8.8-17.1)"
+     },
+     {
+      "fault type": "level shift",
+      "injected": 243,
+      "raised the alarm (fault-raised)": "97.1% (94.2-98.6)",
+      "named FAULT": "11.5% (8.1-16.1)"
+     },
+     {
+      "fault type": "noise burst",
+      "injected": 243,
+      "raised the alarm (fault-raised)": "77.8% (72.1-82.5)",
+      "named FAULT": "15.6% (11.6-20.7)"
+     },
+     {
+      "fault type": "dropout",
+      "injected": 243,
+      "raised the alarm (fault-raised)": "99.2% (97.0-99.8)",
+      "named FAULT": "99.2% (97.0-99.8)"
+     },
+     {
+      "fault type": "clock 3 h out",
+      "injected": 220,
+      "raised the alarm (fault-raised)": "96.8% (93.6-98.5)",
+      "named FAULT": "0.5% (0.1-2.5)"
+     }
+    ]
+   },
    "tradeoff": {
     "title": "No single simpler system is good at every fault type",
     "caption": "Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.",
@@ -1445,6 +1487,48 @@
       "temperature": "50% of 26 (day 49, 8.0x at detection)",
       "pressure": "54% of 26 (day 55, 6.3x at detection)",
       "humidity": "46% of 26 (day 36, 7.1x at detection)"
+     }
+    ]
+   },
+   "detection_ci": {
+    "title": "1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)",
+    "caption": "Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.",
+    "rows": [
+     {
+      "fault type": "frozen",
+      "injected": 279,
+      "raised the alarm (fault-raised)": "100.0% (98.6-100.0)",
+      "named FAULT": "95.0% (91.8-97.0)"
+     },
+     {
+      "fault type": "spike",
+      "injected": 279,
+      "raised the alarm (fault-raised)": "96.4% (93.5-98.0)",
+      "named FAULT": "14.7% (11.0-19.3)"
+     },
+     {
+      "fault type": "level shift",
+      "injected": 279,
+      "raised the alarm (fault-raised)": "98.2% (95.9-99.2)",
+      "named FAULT": "14.7% (11.0-19.3)"
+     },
+     {
+      "fault type": "noise burst",
+      "injected": 279,
+      "raised the alarm (fault-raised)": "79.2% (74.1-83.6)",
+      "named FAULT": "12.5% (9.2-16.9)"
+     },
+     {
+      "fault type": "dropout",
+      "injected": 279,
+      "raised the alarm (fault-raised)": "99.6% (98.0-99.9)",
+      "named FAULT": "99.6% (98.0-99.9)"
+     },
+     {
+      "fault type": "clock 3 h out",
+      "injected": 260,
+      "raised the alarm (fault-raised)": "96.9% (94.0-98.4)",
+      "named FAULT": "0.0% (0.0-1.5)"
      }
     ]
    },
@@ -2225,6 +2309,48 @@
       "temperature": "64% of 59 (day 47, 7.8x at detection)",
       "pressure": "47% of 59 (day 48, 6.3x at detection)",
       "humidity": "58% of 59 (day 42, 6.7x at detection)"
+     }
+    ]
+   },
+   "detection_ci": {
+    "title": "1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)",
+    "caption": "Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.",
+    "rows": [
+     {
+      "fault type": "frozen",
+      "injected": 702,
+      "raised the alarm (fault-raised)": "99.9% (99.2-100.0)",
+      "named FAULT": "95.9% (94.1-97.1)"
+     },
+     {
+      "fault type": "spike",
+      "injected": 702,
+      "raised the alarm (fault-raised)": "89.7% (87.3-91.8)",
+      "named FAULT": "17.0% (14.4-19.9)"
+     },
+     {
+      "fault type": "level shift",
+      "injected": 702,
+      "raised the alarm (fault-raised)": "89.0% (86.5-91.1)",
+      "named FAULT": "13.4% (11.1-16.1)"
+     },
+     {
+      "fault type": "noise burst",
+      "injected": 702,
+      "raised the alarm (fault-raised)": "67.4% (63.8-70.7)",
+      "named FAULT": "11.3% (9.1-13.8)"
+     },
+     {
+      "fault type": "dropout",
+      "injected": 702,
+      "raised the alarm (fault-raised)": "98.4% (97.2-99.1)",
+      "named FAULT": "98.4% (97.2-99.1)"
+     },
+     {
+      "fault type": "clock 3 h out",
+      "injected": 619,
+      "raised the alarm (fault-raised)": "83.5% (80.4-86.2)",
+      "named FAULT": "0.5% (0.2-1.4)"
      }
     ]
    },
@@ -3128,6 +3254,48 @@
       "temperature": "54% of 74 (day 47, 7.7x at detection)",
       "pressure": "59% of 74 (day 49, 5.8x at detection)",
       "humidity": "73% of 74 (day 52, 7.6x at detection)"
+     }
+    ]
+   },
+   "detection_ci": {
+    "title": "1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)",
+    "caption": "Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.",
+    "rows": [
+     {
+      "fault type": "frozen",
+      "injected": 918,
+      "raised the alarm (fault-raised)": "99.1% (98.3-99.6)",
+      "named FAULT": "89.4% (87.3-91.3)"
+     },
+     {
+      "fault type": "spike",
+      "injected": 918,
+      "raised the alarm (fault-raised)": "91.1% (89.0-92.7)",
+      "named FAULT": "18.1% (15.7-20.7)"
+     },
+     {
+      "fault type": "level shift",
+      "injected": 918,
+      "raised the alarm (fault-raised)": "80.3% (77.6-82.7)",
+      "named FAULT": "14.3% (12.2-16.7)"
+     },
+     {
+      "fault type": "noise burst",
+      "injected": 918,
+      "raised the alarm (fault-raised)": "57.3% (54.1-60.5)",
+      "named FAULT": "9.6% (7.8-11.7)"
+     },
+     {
+      "fault type": "dropout",
+      "injected": 918,
+      "raised the alarm (fault-raised)": "98.4% (97.3-99.0)",
+      "named FAULT": "98.4% (97.3-99.0)"
+     },
+     {
+      "fault type": "clock 3 h out",
+      "injected": 794,
+      "raised the alarm (fault-raised)": "85.1% (82.5-87.4)",
+      "named FAULT": "1.5% (0.9-2.6)"
      }
     ]
    },

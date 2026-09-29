@@ -345,7 +345,7 @@ def render_evaluation(api_url: str) -> None:
     for name, phase in summary.get("phases", {}).items():
         st.subheader(phase.get("title", name))
         st.caption(phase.get("subtitle", ""))
-        for key in ("headline", "detection", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift", "by_station", "speed"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift", "by_station", "speed"):
             table = phase.get(key)
             if not table:
                 continue
