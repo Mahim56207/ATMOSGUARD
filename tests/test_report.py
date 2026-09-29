@@ -39,6 +39,8 @@ def test_every_part_the_report_quotes_exists():
     protocol = (REPO / "config" / "protocol.md").read_text(encoding="utf-8")
     assert mr.section(protocol, "Tuning log (everything changed after looking at DEV, and why)")
     assert mr.section(protocol, "Amendment 1 (written after `holdout_run1` finished; the pipeline was not touched)")
+    assert mr.section(protocol, "Amendment 2 (written before the FRESH stations were evaluated)")
+    assert mr.section(protocol, "Amendment 2: outcome (written after `fresh_run1` finished; nothing was changed to make it come out this way)")
     assert mr.section((REPO / "docs" / "FAILURE_MODES.md").read_text(encoding="utf-8"), "What the system cannot see")
     repro = (REPO / "docs" / "REPRODUCE.md").read_text(encoding="utf-8")
     for h in ("1. Does it work? (about 1 minute)", "3. The evidence", "Determinism"):

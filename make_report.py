@@ -83,6 +83,16 @@ def from_first_section(md: str) -> str:
     return md[i:]
 
 
+def unseen_windows(summary: dict) -> str:
+    """'3 of 98 on the eight holdout stations, 3 of 139 on the twelve fresh ones', from the tables."""
+    parts = []
+    for ph, label in (("HOLDOUT_SPACE", "on the eight holdout stations"), ("FRESH", "on the twelve fresh ones")):
+        if ph in summary["phases"]:
+            with_fault, windows = summary["phases"][ph]["extreme_weather"]["rows"][0]["windows with a FAULT"].split("/")
+            parts.append(f"{with_fault} of {windows} {label}")
+    return ", ".join(parts)
+
+
 def abstract(summary: dict) -> str:
     ph = summary["phases"]
     lines = []
@@ -163,17 +173,22 @@ def build(summary: dict) -> str:
         "verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an "
         "evidence standard: 26 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
         "in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on "
-        "the same data, and the failures kept on record. Headline results:", "",
+        "the same data, and the failures kept on record. After the holdout showed three real-weather failure windows, we registered a decision rule and "
+        "tested the proposed remedies on twelve further stations nobody had looked at: one remedy was adopted and one rejected. Headline results:", "",
         abstract(summary), "",
         "Detection is measured on **injected** faults, because no labelled real faults exist; the data are airport records, not IMD AWS "
-        "records; and on the eight unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict "
-        "(Section 5). Sections 5 and 6 say exactly what we cannot show.", "",
+        "records; and on the unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict "
+        f"({unseen_windows(summary)}; Section 5). Sections 5 and 6 say exactly what we cannot show.", "",
         read(src / "01_introduction.md"), "",
         read(src / "02_data_protocol_intro.md"), "",
         "### 2.5 What was changed after looking at DEV (the tuning log, from `config/protocol.md`)", "",
         section(protocol, "Tuning log (everything changed after looking at DEV, and why)"), "",
-        "### 2.6 Amendment: how detection is scored (from `config/protocol.md`)", "",
+        "### 2.6 Amendment 1: how detection is scored (from `config/protocol.md`)", "",
         section(protocol, "Amendment 1 (written after `holdout_run1` finished; the pipeline was not touched)"), "",
+        "### 2.7 Amendment 2: testing the post-mortem remedies on twelve unseen stations (from `config/protocol.md`)", "",
+        section(protocol, "Amendment 2 (written before the FRESH stations were evaluated)"), "",
+        "### 2.8 Amendment 2: outcome (from `config/protocol.md`)", "",
+        section(protocol, "Amendment 2: outcome (written after `fresh_run1` finished; nothing was changed to make it come out this way)"), "",
         read(DOCS / "TECHNICAL_REPORT_methods.md").rstrip(), "",
         results_section(summary), "",
         "## 5. What the holdout found that development did not", "",

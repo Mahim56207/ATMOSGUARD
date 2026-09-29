@@ -104,15 +104,15 @@ def fig_baselines(aggs: dict) -> None:
     phases = [p for p in ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH") if p in aggs]
     if not phases:
         return
-    fig, axes = plt.subplots(len(phases), 3, figsize=(13, 2.9 * len(phases) + 0.6), squeeze=False)
+    fig, axes = plt.subplots(len(phases), 3, figsize=(14, 3.3 * len(phases) + 0.6), squeeze=False)
     titles = {"DEV": "DEV", "HOLDOUT_TIME": "holdout in time", "HOLDOUT_SPACE": "holdout in space", "FRESH": "fresh stations"}
     for r, ph in enumerate(phases):
         cfg = aggs[ph]["configs"]
         y = np.arange(len(order))[::-1]
         measures = [
-            ("false alarms on clean real data (%)", [100 * cfg[n]["clean"]["alarm"] / cfg[n]["clean"]["n"] for n in order], "{:.1f}%"),
-            ("FAULT on real extreme weather (% of samples)", [_events_fault(cfg[n])[0] for n in order], "{:.1f}%"),
-            ("injected faults detected (mean of types, %)", [_det_mean(cfg[n]) for n in order], "{:.0f}%"),
+            ("false alarms on clean data (%)", [100 * cfg[n]["clean"]["alarm"] / cfg[n]["clean"]["n"] for n in order], "{:.1f}%"),
+            ("FAULT on real extreme weather (%)", [_events_fault(cfg[n])[0] for n in order], "{:.1f}%"),
+            ("injected faults detected (mean, %)", [_det_mean(cfg[n]) for n in order], "{:.0f}%"),
         ]
         for c, (title, vals, fmt) in enumerate(measures):
             ax = axes[r, c]
@@ -123,7 +123,7 @@ def fig_baselines(aggs: dict) -> None:
             ax.set_yticks(y)
             ax.set_yticklabels([LABELS[n] for n in order] if c == 0 else [], fontsize=9)
             ax.set_xlim(0, max(vals) * 1.18 if max(vals) > 0 else 1)
-            style(ax, f"{titles[ph]}: {title}")
+            style(ax, f"{titles[ph]}\n{title}")
     fig.suptitle("Same real data, same three numbers, for AtmosGuard and simpler systems (lower is better in the first two, higher in the third)",
                  x=0.01, ha="left", fontsize=12, fontweight="bold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
@@ -170,9 +170,9 @@ def fig_remedies(aggs: dict) -> None:
         return
     cfg = aggs["FRESH"]["configs"]
     names = ["full", "remedy_frozen", "remedy_step", "remedies"]
-    labels = {"full": "frozen pipeline", "remedy_frozen": "+ remedy 1\n(ceiling-aware frozen)", "remedy_step": "+ remedy 2\n(learned step cap)",
+    labels = {"full": "frozen\npipeline", "remedy_frozen": "+ remedy 1\nceiling-aware\nfrozen rule", "remedy_step": "+ remedy 2\nlearned\nstep cap",
               "remedies": "+ both"}
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2))
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.6))
     fw = [_events_fault(cfg[n])[1] for n in names]
     fs = [_events_fault(cfg[n])[0] for n in names]
     det = [_det_mean(cfg[n]) for n in names]

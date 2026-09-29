@@ -70,8 +70,8 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
   for every type except frozen and dropout (table above).
 - **Simpler detectors beat us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
   pipeline (and level shifts on DEV and the fresh stations) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong
-  clocks. The textbook range + step + persistence rules detect wrong clocks and noise bursts better than we do on the unseen stations, at
-  about 8 % false alarms and a FAULT in nearly every real extreme-weather window. No single simpler system covers all six types without
+  clocks. The textbook range + step + persistence rules detect wrong clocks better than we do on both sets of unseen stations (and noise bursts on
+  the fresh ones), at about 8 % false alarms and a FAULT in nearly every real extreme-weather window. No single simpler system covers all six types without
   paying for it elsewhere; the layers buy coverage. See "No single simpler system" in [`results/REPORT.md`](results/REPORT.md).
 - **Small drift is invisible from one station.** The drift monitor sees a ramp of several times the service limit, not one times the limit;
   the power curve is in the results and is the honest statement of what "drift detection" means here.

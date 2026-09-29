@@ -4,13 +4,14 @@
 
 ## Abstract
 
-AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an evidence standard: 14 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on the same data, and the failures kept on record. Headline results:
+AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an evidence standard: 26 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on the same data, and the failures kept on record. After the holdout showed three real-weather failure windows, we registered a decision rule and tested the proposed remedies on twelve further stations nobody had looked at: one remedy was adopted and one rejected. Headline results:
 
 - **DEV (tuned here).** Clean data: 1.9% (1.8-2.0) of 98340 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 3503 samples (0 of 30 windows); WEATHER on 10.8%, SUSPECT on 9.0%.
 - **holdout in time (same six stations, 2022-2024).** Clean data: 2.5% (2.4-2.6) of 147078 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 4374 samples (0 of 38 windows); WEATHER on 11.8%, SUSPECT on 8.2%.
 - **holdout in space (eight unseen stations).** Clean data: 2.9% (2.8-3.0) of 237411 samples got FAULT or SUSPECT; 0.0% (0.0-0.1) got FAULT. Real extreme weather: FAULT on 0.3% (0.2-0.4) of 9074 samples (3 of 98 windows); WEATHER on 15.7%, SUSPECT on 8.6%.
+- **fresh stations (twelve more, sealed before the remedies were tested).** Clean data: 2.5% (2.5-2.6) of 364440 samples got FAULT or SUSPECT; 0.1% (0.1-0.1) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.2) of 11782 samples (3 of 139 windows); WEATHER on 10.3%, SUSPECT on 6.8%.
 
-Detection is measured on **injected** faults, because no labelled real faults exist; the data are airport records, not IMD AWS records; and on the eight unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict (Section 5). Sections 5 and 6 say exactly what we cannot show.
+Detection is measured on **injected** faults, because no labelled real faults exist; the data are airport records, not IMD AWS records; and on the unseen stations a small number of real extreme-weather windows did receive a `FAULT` verdict (3 of 98 on the eight holdout stations, 3 of 139 on the twelve fresh ones; Section 5). Sections 5 and 6 say exactly what we cannot show.
 
 ## 1. Introduction
 
@@ -102,7 +103,7 @@ DEV result after the changes (`results/dev_run3.txt`, the final code): clean fal
 0.0 % (0 of 30 windows), WEATHER 10.8 %, SUSPECT 9.0 %; detection: frozen 100 %, dropout 100 %, spike 98.8 %, level shift 97.1 %,
 clock shift 96.8 %, noise burst 80.7 %.
 
-### 2.6 Amendment: how detection is scored (from `config/protocol.md`)
+### 2.6 Amendment 1: how detection is scored (from `config/protocol.md`)
 
 `results/holdout_run1.*` was produced under the criterion registered above and is kept unedited. Afterwards we found a flaw in how
 **detection is scored**, not in the pipeline: "any alarm in the fault window" also credits background false alarms (about 2 % of
@@ -122,6 +123,74 @@ its registered-criterion numbers must equal `holdout_run1`'s; `results/RUNS.md` 
 
 `holdout_run1` also showed what a holdout is for: on the eight unseen stations 3 of 98 real extreme-weather windows contain a `FAULT` verdict (0.3 % of
 their samples), where DEV had none. No change was made in response. It is listed as a limitation and analysed in `docs/TECHNICAL_REPORT.md`.
+
+### 2.7 Amendment 2: testing the post-mortem remedies on twelve unseen stations (from `config/protocol.md`)
+
+`docs/HOLDOUT_POSTMORTEM.md` explained the three real-weather windows that got a `FAULT` on the sealed holdout and proposed two remedies, and said
+they could not be evaluated honestly on the stations that revealed the problem. This amendment sets up that evaluation on data nobody has looked at.
+`evaluate_real.py --fresh` refuses to run unless this amendment is in the committed `config/protocol.md` (guard `evaluate.guard_fresh`, lock file
+`data/fresh/.fresh_used`); a second run is refused, as for the holdout; `replay.py` refuses `data/fresh/`.
+
+**The stations.** Twelve Indian airport stations that were not used for training, tuning, DEV, the holdout, the demo or the post-mortem:
+Lucknow, Patna, Indore, Ranchi, Coimbatore, Mangalore, Tiruchirappalli, Amritsar (hourly METAR) and Pune, Goa, Raipur, Jodhpur (3-hourly SYNOP),
+listed in `data_tools/stations_fresh.yaml`. The list was fixed from a coverage scout of the year 2022 only (how many reports carry temperature, dew
+point and pressure) and their identity in the raw files. No AtmosGuard verdict was computed on any of them before this amendment. Coverage varies
+(Indore has 42-69 % of the expected hours in the training years); gaps stay gaps.
+
+**The code.** The two remedies exist behind flags that are off in `full`, so `full` is the pipeline of the holdout, unchanged
+(`git diff 9cd24f1 HEAD -- atmos config/settings.yaml` shows the new `explain.py`, an optional retention method, an `api:` block, and these flags with their
+tests). Remedy 1 (`health.frozen.ceiling_aware`): a frozen humidity pinned at 99.5 % or more, or a frozen temperature while humidity was at or above 99.5 %
+for the whole window, is a `SUSPECT`-level flag at most; a frozen barometer stays hard. Remedy 2 (`limits.learned_step_cap`): the step cap for a channel is
+the larger of the configured cap and 1.1 times the 99.9th percentile of that station's own |change| between consecutive clean readings (gaps up to the
+gap limit included). Configurations evaluated: `full`, `remedy_frozen`, `remedy_step`, `remedies` (both), the seven ablations and the five baselines.
+
+**The data and the numbers.** Same layout and rules as the holdout in space: each station is trained on its own 2016-2019 record (extreme-weather
+windows and NOAA-flagged values removed) and judged on 2020-2024; the extreme-weather windows come from the same rules (`data/fresh/events.json`); the
+same five numbers are reported, detection under the paired criterion of Amendment 1 (the registered criterion is printed beside it).
+
+**Decision rule, registered now.** On the FRESH stations pooled, a remedy (or both) is adopted as the recommended configuration only if
+(a) the number of real extreme-weather windows containing a `FAULT` is not higher than with `full` and the share of `FAULT` samples in those windows does
+not rise; (b) paired detection is not lower than with `full` by more than 2 percentage points for any injected-fault type; and (c) false alarms on clean data
+do not rise by more than 0.2 percentage points. "Adopted" means the flag is switched on in `config/settings.yaml`, the six committed station models are
+retrained, and the remedy is described as validated on unseen stations. Otherwise `full` stays the shipped configuration and the remedy is reported as tested and
+rejected. Each remedy is judged on its own by the same rules, so the report can say which one earned adoption.
+
+**What is reported whatever happens.** Every table for every station, for `full` and for the remedies, including any station where a remedy is worse.
+
+**What this is not.** It is not a repeat of the registered holdout. `full` on the FRESH stations is one more out-of-sample number for the frozen pipeline.
+The remedies are deliberately not run on DEV or on the earlier holdout: the post-mortem read those windows to design them, so those numbers would be
+contaminated and are not evidence. These are airport records again, and injected faults again.
+
+### 2.8 Amendment 2: outcome (from `config/protocol.md`)
+
+`results/fresh_run1.*` was produced by the single run behind the guard (lock `data/fresh/.fresh_used`, protocol commit `aec7b6f`). The decision rule
+registered above was applied by `make_summary.py` (`remedy_rows`) to the pooled numbers of the twelve stations, and every number is printed in
+`results/REPORT.md` under "The two remedies from the post-mortem":
+
+| | (a) windows with a FAULT (full / this, of 139) | (a) FAULT share of extreme-weather samples | (b) worst change in paired detection | (c) change in clean false alarms | adopt |
+|---|---|---|---|---|---|
+| remedy 1, ceiling-aware frozen rule | 3 / 2 | 0.09 % / 0.03 % | none | 0.00 pp | **yes** |
+| remedy 2, learned step cap | 3 / 2 | 0.09 % / 0.08 % | -4.2 pp (clock 3 h out) | -0.18 pp | **no** (rule b) |
+| both | 3 / 1 | 0.09 % / 0.01 % | -4.2 pp (clock 3 h out) | -0.18 pp | **no** (rule b) |
+
+**Decision.** By the registered rule, remedy 1 is adopted: `health.frozen.ceiling_aware` is `true` in `config/settings.yaml`. Remedy 2 is rejected and
+`limits.learned_step_cap` stays `false`. The six committed station models need no retraining (remedy 1 fits nothing). The evaluation's `full`
+configuration, the ablations and the baselines keep both flags forced off (`evaluate_real.build_configs`), so `dev_run4`, `holdout_run1/2` and `fresh_run1`
+reproduce with the shipped default; the remedy rows are the only ones with a flag on. On DEV, `results/dev_check_remedies.*` shows the shipped default
+changes nothing there: identical counts for clean data, extreme weather and every injected-fault type.
+
+**What the three FAULT windows of the frozen pipeline were** (`python window_forensics.py --phase FRESH --station <STN>`; read only after the results were fixed):
+Ranchi, a low-pressure window in May 2021: humidity pinned at 100 % for more than 35 hours (`frozen:humidity_pct`, hard): the same cause as Visakhapatnam,
+and the one remedy 1 removes. Coimbatore, a sharp-change window in February 2021: humidity up 47.3 % in 120 minutes against a 40 % cap (`step:humidity_pct`),
+one sample. Jodhpur, a sharp-change window in December 2020: temperature up 16.2 C across a 6-hour reporting gap and 13 C across a 9-hour one, against a 10 C
+cap (`step:temperature_c`): the same cause as Bhuj. Remedy 2 would remove the last two and costs 4.2 points of wrong-clock detection, because the same fixed
+step cap is what flags the jump when a clock goes wrong; the rule registered first says that is too much.
+
+**What the frozen pipeline did on the twelve stations, for the record:** clean false alarms 2.5 % (FAULT 0.1 %); extreme weather FAULT on 0.1 % of samples
+(3 of 139 windows), WEATHER 10.3 %; paired detection frozen 99 %, spike 91 %, level shift 80 %, noise burst 57 %, dropout 98 %, clock 85 %. That is lower than
+on DEV for level shift, noise bursts and clocks, in line with the first holdout, and two simpler systems are better at some fault types on these stations: a
+Mahalanobis-only detector on spikes and level shifts, and the textbook rules on wrong clocks (94 % against 85 %) and noise bursts (63 % against 57 %), at 8.4 % false
+alarms and a FAULT in 134 of 139 real extreme-weather windows.
 
 ## 3. Method
 
@@ -736,7 +805,210 @@ Each system's weakest fault type from table 1, beside its false-alarm rate and i
 | baseline: Isolation Forest only | dropout: 0% | 0.6% | 0/98 |
 | baseline: Mahalanobis distance only | dropout: 0% | 0.7% | 0/98 |
 
-### 4.4 Scale and speed
+### 4.4 FRESH: twelve more stations nobody had looked at, 2020-2024
+
+*Chosen and sealed before the two remedies from the holdout post-mortem were tested (Amendment 2 in config/protocol.md). Eight hourly airport stations and four 3-hourly SYNOP stations.* Stations: LKO, PAT, IDR, IXR, CJB, IXE, TRZ, ATQ, PNQ, GOI, RPR, JDH.
+
+#### Headline
+
+Five separate numbers. They are never merged.
+
+| question | answer |
+|---|---|
+| False alarms on clean real data (nothing injected) | 2.5% (2.5-2.6) of 364440 samples got FAULT or SUSPECT; 0.1% (0.1-0.1) got FAULT |
+| What happens to real extreme weather (cyclones, heat, cold, sharp fronts; nothing injected) | FAULT on 0.1% (0.1-0.2) of 11782 samples (3 of 139 windows); WEATHER on 10.3%, SUSPECT on 6.8% |
+| Injected faults whose alarm the fault raised (each type on its own; injected, not real) | frozen 99%; spike 91%; level shift 80%; noise burst 57%; dropout 98%; clock 3 h out 85% |
+| Agreement with NOAA's own quality flags (another automated system, not ground truth) | escalated (FAULT, SUSPECT or WEATHER) on 71.1% of 974 NOAA-flagged values (FAULT or SUSPECT alone: 54.9%); escalated on 5.7% of the 375993 values NOAA left alone |
+| Slow drift (health monitor, single station, no reference) | false drift claims on 0.9% of 18493 station-days; an injected ramp reaching 8x the service limit was found in 62% of trials |
+
+#### 1. Detection of injected faults, by type (the fault raised the alarm)
+
+Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault (paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. Ablation rows switch one layer off; baseline rows are simpler systems on the same data.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 99% | 91% | 80% | 57% | 98% | 85% |
+| AtmosGuard + remedy 1 (ceiling-aware frozen rule) | 99% | 91% | 80% | 57% | 98% | 85% |
+| AtmosGuard + remedy 2 (learned step cap) | 99% | 88% | 80% | 56% | 99% | 81% |
+| AtmosGuard + both remedies | 99% | 88% | 80% | 56% | 99% | 81% |
+| without physics layer | 99% | 90% | 77% | 54% | 98% | 85% |
+| without health layer | 47% | 74% | 72% | 40% | 0% | 68% |
+| without normality layer | 99% | 93% | 72% | 56% | 99% | 81% |
+| without Isolation Forest | 99% | 91% | 80% | 57% | 98% | 85% |
+| without Mahalanobis layer | 99% | 78% | 66% | 46% | 98% | 85% |
+| without timing layer | 99% | 91% | 80% | 57% | 98% | 69% |
+| without station-learned limits | 75% | 35% | 57% | 62% | 44% | 72% |
+| baseline: range check only | 0% | 12% | 13% | 9% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 72% | 78% | 63% | 0% | 94% |
+| baseline: climatology z-score only | 27% | 42% | 38% | 9% | 0% | 63% |
+| baseline: Isolation Forest only | 1% | 10% | 13% | 11% | 0% | 51% |
+| baseline: Mahalanobis distance only | 39% | 99% | 82% | 51% | 0% | 45% |
+| (faults injected) | 918 | 918 | 918 | 918 | 918 | 794 |
+| AtmosGuard: median minutes to the alarm | 420 | 0 | 0 | 420 | 0 | 1140 |
+
+#### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
+
+A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
+
+| AtmosGuard, injected faults | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| raised an alarm (FAULT or SUSPECT) | 99% | 91% | 80% | 57% | 98% | 85% |
+| of which named FAULT | 89% | 18% | 14% | 10% | 98% | 2% |
+| missed, but made some samples look like WEATHER | 0% | 7% | 10% | 7% | 0% | 9% |
+
+#### The two remedies from the post-mortem, judged by the decision rule registered in Amendment 2
+
+Rule: adopt only if (a) real extreme-weather windows with a FAULT and the FAULT share do not rise, (b) paired detection loses at most 2 points for any injected-fault type, (c) clean false alarms rise by at most 0.2 points. Compared with the frozen `full` pipeline on the same stations.
+
+| configuration | (a) windows with a FAULT (full / this) | (a) FAULT share of extreme-weather samples (full / this) | (b) worst change in paired detection | (c) change in clean false alarms | rule (a) | rule (b) | rule (c) | adopt |
+|---|---|---|---|---|---|---|---|---|
+| AtmosGuard + remedy 1 (ceiling-aware frozen rule) | 3 / 2 of 139 | 0.09% / 0.03% | none | -0.00 pp | pass | pass | pass | yes |
+| AtmosGuard + remedy 2 (learned step cap) | 3 / 2 of 139 | 0.09% / 0.08% | -4.2 pp (clock 3 h out) | -0.18 pp | pass | FAIL | pass | no |
+| AtmosGuard + both remedies | 3 / 1 of 139 | 0.09% / 0.01% | -4.2 pp (clock 3 h out) | -0.18 pp | pass | FAIL | pass | no |
+
+#### 2. False alarms on clean real data
+
+No fault injected. Extreme-weather windows and NOAA-flagged values removed.
+
+| configuration | any alarm | FAULT only | WEATHER verdicts | samples |
+|---|---|---|---|---|
+| AtmosGuard (full) | 2.5% | 0.1% | 2.8% | 364440 |
+| AtmosGuard + remedy 1 (ceiling-aware frozen rule) | 2.5% | 0.0% | 2.8% | 364440 |
+| AtmosGuard + remedy 2 (learned step cap) | 2.4% | 0.1% | 2.8% | 364440 |
+| AtmosGuard + both remedies | 2.4% | 0.0% | 2.8% | 364440 |
+| without physics layer | 2.5% | 0.1% | 2.8% | 364440 |
+| without health layer | 0.7% | 0.0% | 1.4% | 364440 |
+| without normality layer | 1.4% | 0.1% | 0.8% | 364440 |
+| without Isolation Forest | 2.5% | 0.1% | 2.6% | 364440 |
+| without Mahalanobis layer | 2.4% | 0.1% | 2.6% | 364440 |
+| without timing layer | 2.3% | 0.1% | 2.7% | 364440 |
+| without station-learned limits | 63.8% | 25.6% | 0.8% | 364440 |
+| baseline: range check only | 0.0% | 0.0% | - | 364440 |
+| baseline: textbook range + step + persistence | 8.4% | 8.4% | - | 364440 |
+| baseline: climatology z-score only | 0.9% | 0.0% | - | 364440 |
+| baseline: Isolation Forest only | 0.4% | 0.0% | - | 364440 |
+| baseline: Mahalanobis distance only | 0.5% | 0.0% | - | 364440 |
+
+#### 3. Real extreme weather (nothing injected)
+
+A FAULT here is a failure: real weather called a broken sensor. WEATHER is the escalated, correct verdict.
+
+| configuration | FAULT | SUSPECT | WEATHER | VALID | windows with a FAULT |
+|---|---|---|---|---|---|
+| AtmosGuard (full) | 0.1% | 6.8% | 10.3% | 82.9% | 3/139 |
+| AtmosGuard + remedy 1 (ceiling-aware frozen rule) | 0.0% | 6.8% | 10.3% | 82.9% | 2/139 |
+| AtmosGuard + remedy 2 (learned step cap) | 0.1% | 6.4% | 10.4% | 83.1% | 2/139 |
+| AtmosGuard + both remedies | 0.0% | 6.4% | 10.5% | 83.1% | 1/139 |
+| without physics layer | 0.1% | 6.8% | 10.3% | 82.9% | 3/139 |
+| without health layer | 0.0% | 2.3% | 5.7% | 92.0% | 0/139 |
+| without normality layer | 0.1% | 3.8% | 2.9% | 93.2% | 4/139 |
+| without Isolation Forest | 0.1% | 6.7% | 9.7% | 83.5% | 3/139 |
+| without Mahalanobis layer | 0.1% | 6.4% | 9.6% | 83.9% | 3/139 |
+| without timing layer | 0.1% | 6.7% | 10.2% | 83.0% | 3/139 |
+| without station-learned limits | 20.1% | 45.0% | 2.8% | 32.1% | 90/139 |
+| baseline: range check only | 0.0% | 0.0% | - | 100.0% | 0/139 |
+| baseline: textbook range + step + persistence | 10.3% | 0.0% | - | 89.7% | 134/139 |
+| baseline: climatology z-score only | 0.0% | 4.4% | - | 95.6% | 0/139 |
+| baseline: Isolation Forest only | 0.0% | 2.0% | - | 98.0% | 0/139 |
+| baseline: Mahalanobis distance only | 0.0% | 1.9% | - | 98.1% | 0/139 |
+
+Full pipeline, by kind of extreme weather:
+
+| kind of extreme weather | samples | FAULT | SUSPECT | WEATHER | windows with a FAULT |
+|---|---|---|---|---|---|
+| cold | 1898 | 0.0% | 6.0% | 5.2% | 0/19 |
+| heat | 1266 | 0.0% | 7.0% | 14.3% | 0/16 |
+| low | 4389 | 0.2% | 9.8% | 15.9% | 1/44 |
+| sharp | 4229 | 0.1% | 3.9% | 5.6% | 2/60 |
+
+#### 4. Agreement with NOAA's own quality flags
+
+NOAA's flags come from another automated system. Agreement means consistency with existing practice, not proof of real-world accuracy.
+
+| measure | value |
+|---|---|
+| NOAA-flagged values (suspect or erroneous) | 974 |
+|   of which erroneous | 0 |
+| AtmosGuard alarmed (FAULT or SUSPECT) on flagged values | 54.9% |
+| AtmosGuard escalated at all (also WEATHER) on flagged values | 71.1% |
+| AtmosGuard alarmed on erroneous values | n/a |
+| values NOAA did not flag | 375993 |
+| AtmosGuard alarmed on those (extra flags) | 2.7% |
+| AtmosGuard escalated at all on those | 5.7% |
+
+#### 5. Slow drift, judged by the health monitor
+
+A ramp over 45 days is added to one channel of clean real data. Severity = offset at the end of the ramp in multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.
+
+| drift at end of ramp | temperature | pressure | humidity |
+|---|---|---|---|
+| none (false claims) | 13.5% of 74 chunks | 9.5% of 74 chunks | 16.2% of 74 chunks |
+| 1x service limit | 14% of 74 (day 60, 4.1x at detection) | 4% of 74 (day 22, 4.1x at detection) | 9% of 74 (day 145, 5.2x at detection) |
+| 2x service limit | 16% of 74 (day 58, 4.6x at detection) | 7% of 74 (day 26, 3.1x at detection) | 18% of 74 (day 73, 4.4x at detection) |
+| 4x service limit | 26% of 74 (day 55, 5.6x at detection) | 20% of 74 (day 43, 4.4x at detection) | 31% of 74 (day 52, 5.3x at detection) |
+| 8x service limit | 54% of 74 (day 47, 7.7x at detection) | 59% of 74 (day 49, 5.8x at detection) | 73% of 74 (day 52, 7.6x at detection) |
+
+#### By station (full pipeline)
+
+Each station judged on its own record.
+
+| station | cadence (min) | clean any alarm | clean FAULT | extreme weather FAULT | windows with a FAULT | extreme weather WEATHER | injected faults detected |
+|---|---|---|---|---|---|---|---|
+| LKO | 60 | 2.1% | 0.0% | 0.0% | 0/11 | 9.9% | 91% |
+| PAT | 60 | 2.8% | 0.0% | 0.0% | 0/14 | 8.8% | 94% |
+| IDR | 60 | 2.2% | 0.0% | 0.0% | 0/14 | 5.6% | 91% |
+| IXR | 60 | 2.0% | 0.0% | 0.5% | 1/13 | 9.1% | 92% |
+| CJB | 60 | 2.1% | 0.0% | 0.2% | 1/5 | 3.1% | 95% |
+| IXE | 60 | 2.1% | 0.0% | 0.0% | 0/8 | 24.6% | 97% |
+| TRZ | 60 | 2.3% | 0.0% | 0.0% | 0/7 | 4.2% | 99% |
+| ATQ | 60 | 2.8% | 0.6% | 0.0% | 0/13 | 10.2% | 87% |
+| PNQ | 180 | 6.0% | 0.0% | 0.0% | 0/16 | 8.2% | 73% |
+| GOI | 180 | 3.2% | 0.0% | 0.0% | 0/12 | 13.3% | 77% |
+| RPR | 180 | 3.0% | 0.0% | 0.0% | 0/13 | 20.9% | 71% |
+| JDH | 180 | 3.9% | 0.2% | 0.4% | 1/13 | 12.6% | 66% |
+
+#### 1b. The same, by the criterion registered in the protocol (any alarm in the window)
+
+Background false alarms (about 2 % of samples) also fall inside long fault windows, so this flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. Kept because it was registered before the holdout.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 99% | 93% | 84% | 65% | 100% | 87% |
+| AtmosGuard + remedy 1 (ceiling-aware frozen rule) | 99% | 93% | 84% | 65% | 100% | 87% |
+| AtmosGuard + remedy 2 (learned step cap) | 99% | 90% | 82% | 61% | 100% | 82% |
+| AtmosGuard + both remedies | 99% | 90% | 82% | 61% | 100% | 82% |
+| without physics layer | 99% | 92% | 81% | 62% | 100% | 87% |
+| without health layer | 50% | 74% | 74% | 44% | 1% | 68% |
+| without normality layer | 99% | 94% | 76% | 62% | 100% | 81% |
+| without Isolation Forest | 99% | 93% | 84% | 65% | 100% | 87% |
+| without Mahalanobis layer | 99% | 80% | 71% | 54% | 100% | 86% |
+| without timing layer | 99% | 93% | 84% | 65% | 100% | 71% |
+| without station-learned limits | 100% | 97% | 100% | 99% | 100% | 100% |
+| baseline: range check only | 0% | 12% | 13% | 9% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 82% | 94% | 86% | 19% | 94% |
+| baseline: climatology z-score only | 32% | 43% | 41% | 13% | 2% | 64% |
+| baseline: Isolation Forest only | 6% | 11% | 18% | 18% | 0% | 51% |
+| baseline: Mahalanobis distance only | 44% | 99% | 83% | 53% | 0% | 45% |
+| (faults injected) | 918 | 918 | 918 | 918 | 918 | 794 |
+| AtmosGuard: median minutes to the alarm | 420 | 0 | 0 | 420 | 0 | 1080 |
+
+#### No single simpler system is good at every fault type
+
+Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.
+
+| system | weakest injected-fault type (fault raised the alarm) | false alarms on clean data | real extreme weather, windows with a FAULT |
+|---|---|---|---|
+| AtmosGuard (full) | noise burst: 57% | 2.5% | 3/139 |
+| AtmosGuard + remedy 1 (ceiling-aware frozen rule) | noise burst: 57% | 2.5% | 2/139 |
+| AtmosGuard + remedy 2 (learned step cap) | noise burst: 56% | 2.4% | 2/139 |
+| AtmosGuard + both remedies | noise burst: 56% | 2.4% | 1/139 |
+| baseline: range check only | frozen: 0% | 0.0% | 0/139 |
+| baseline: textbook range + step + persistence | dropout: 0% | 8.4% | 134/139 |
+| baseline: climatology z-score only | dropout: 0% | 0.9% | 0/139 |
+| baseline: Isolation Forest only | dropout: 0% | 0.4% | 0/139 |
+| baseline: Mahalanobis distance only | dropout: 0% | 0.5% | 0/139 |
+
+### 4.5 Scale and speed
 
 Simulated stations on one machine (a design check, not a deployment proof). cpu_count=4, python=3.11.15.
 
@@ -756,7 +1028,7 @@ The same test with the Isolation Forest layer switched off (`layers.mlmodel: fal
 
 Real HTTP server (FastAPI + SQLite), 50 stations, 8 concurrent clients: 58.5 requests/s, median 133.12 ms, p95 164.74 ms, p99 189.15 ms, errors 0.
 
-### 4.5 A new station on day one (cold start)
+### 4.6 A new station on day one (cold start)
 
 Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table from the nearest other station. Injected faults: frozen, spike, level shift.
 
@@ -800,11 +1072,29 @@ evaluated honestly. Re-running them on this holdout would turn it into a tuning 
 The claim is "0 FAULT on real extreme weather" on DEV and on the time holdout, and "0.3 % of samples, 3 of 98 windows" on unseen stations, with the cause of each. It is
 not "never". The textbook rules baseline gets 95 of those 98 windows wrong.
 
+### What happened next: the remedies, tested on stations nobody had looked at
+The two remedies above were not applied to the sealed holdout. Instead we registered a decision rule (Amendment 2 in `config/protocol.md`) and tested both on
+twelve more Indian stations that had not been used for anything (`data_tools/stations_fresh.yaml`), in one run behind its own guard. The result, judged by
+that rule and nothing else:
+
+- **Remedy 1, the ceiling-aware frozen rule, is adopted.** Real extreme-weather windows with a `FAULT`: 3 of 139 become 2; detection and false alarms are
+  unchanged. The window it removed is Ranchi in May 2021: humidity at 100 % for more than 35 hours, the same cause as Visakhapatnam.
+- **Remedy 2, the station-learned step cap, is rejected.** It also takes the windows from 3 to 2 and lowers clean false alarms slightly, but it costs 4.2 points of
+  wrong-clock detection: the same fixed step cap is what flags the jump when a logger clock goes wrong. That breaks rule (b), so it is not shipped.
+- The frozen pipeline on these twelve stations had 3 windows with a `FAULT` out of 139 (0.1 % of samples): Ranchi (saturation), Coimbatore (humidity up 47 %
+  in two hours against a 40 % cap, one sample) and Jodhpur (temperature up 16 C across a 6-hour reporting gap, the Bhuj cause again). So the two step causes are
+  still open. A step cap that scales with the reporting gap, or that applies to the "one channel jumped" rule only, is the obvious next candidate, and it would
+  need a third set of unseen stations to be judged honestly.
+
+What the adopted remedy costs: a humidity sensor that really is stuck at 100 % is now a `SUSPECT` (review), not a `FAULT`, until it disagrees with the other
+channels or the health score drops. We take that trade because sustained saturation is real weather more often than a stuck sensor is, and we say so.
+
+
 ## 6. Limitations: what we do not claim and cannot see
 
 ### About the data
 - **The data are airport records, not IMD AWS records.** IMD AWS data are not public. We use NOAA's Integrated Surface
-  Database (METAR and SYNOP) for 14 Indian airport stations, 2016-2024. The instruments and siting differ from an AWS.
+  Database (METAR and SYNOP) for 26 Indian airport stations, 2016-2024 (14 for development and the first holdouts, 12 fresh). The instruments and siting differ from an AWS.
 - **Relative humidity is derived, not measured.** ISD carries temperature and dew point; RH is computed from them
   (Magnus). So T and RH are not independent measurements in our evaluation, and the humidity channel inherits the rounding
   of two whole-degree numbers.
@@ -860,7 +1150,11 @@ not "never". The textbook rules baseline gets 95 of those 98 windows wrong.
 7. **A weather event that looks exactly like a fault** (a real one-channel jump). Rule 2 would call it a fault. We tune toward
    protecting weather (mixed evidence is `SUSPECT`, not `FAULT`), and we report the FAULT rate on real extreme weather
    separately so the cost is visible.
-8. **Anything that needs a reference:** neighbour stations, a forecast model, a calibration record. By design we use none.
+8. **A humidity sensor stuck exactly at 100 %.** Since the ceiling-aware frozen rule was adopted (Amendment 2), this is a `SUSPECT`, not a `FAULT`: sustained
+   heavy rain holds derived humidity at its ceiling for a day or more, and on twelve unseen stations that was the more common cause of a real-weather FAULT.
+9. **A real one-sample jump larger than the fixed step cap** (a 47 % humidity rise in two hours after rain; a 16 C warming across a 6-hour reporting gap at an
+   arid station). Still called a `FAULT` (3 of 139 real extreme-weather windows on the fresh stations). The fix we tried costs wrong-clock detection.
+10. **Anything that needs a reference:** neighbour stations, a forecast model, a calibration record. By design we use none.
 
 ## 7. Related work and what is ours
 
@@ -893,7 +1187,7 @@ not "never". The textbook rules baseline gets 95 of those 98 windows wrong.
 ### 7.3 What is ours
 
 1. **The evidence standard.** Every other public repository we read for this problem statement is synthetic-only, reports
-   unverified metrics, or has no metrics at all (the survey is in Section 7.4). AtmosGuard is evaluated on **14 real Indian
+   unverified metrics, or has no metrics at all (the survey is in Section 7.4). AtmosGuard is evaluated on **26 real Indian
    airport stations (2016-2024, NOAA ISD)**, with:
    - a protocol written and committed before the holdout was read (`config/protocol.md`, lock file `data/holdout/.holdout_used`);
    - a holdout sealed **in time** (same six stations, 2022-2024) **and in space** (eight stations never used for any tuning,
@@ -921,7 +1215,7 @@ not "never". The textbook rules baseline gets 95 of those 98 windows wrong.
 
 ### 7.4 The field on this problem statement
 
-Read from the public repositories (their READMEs, not run):
+Read from the public repositories (their READMEs, not run; a further search on 29 September 2026 found the four entries at the end of the table, and no entry with a locked holdout, a baseline or an ablation):
 
 | Entry | Real data? | Metrics | Baselines / ablation | Notes |
 |---|---|---|---|---|
@@ -935,6 +1229,10 @@ Read from the public repositories (their READMEs, not run):
 | SkyGuard (vaibhav1874) | Open-Meteo ERA5 (reanalysis, not a station) | none | none | ensemble 35/35/30 |
 | VAYU-GUARD (Aditya123CSE) | synthetic | none | none | 7 tests |
 | ATML (Suryanshsaraf) | Jena, Chicago, Numenta | recall 59.6 %, F1 0.73 | LOF, dense AE | not the AWS problem's data |
+| SkyGuard AI (anushreegoli28) | NOAA GHCNh, one station (Boston Logan), faults injected | "precision 100 %", "false-positive rate 0.0 %" on 150 injected ticks | none stated | physics ensemble + Isolation Forest, single station |
+| Sky_Guard (VHARSHILJOSEPH) | IMD AWS data "with approved access", plus injected faults; volume not stated | none stated | none | uses neighbouring-station evidence; says its confidences "require empirical validation" |
+| SkyGuard-AI (Kaviyakanagaraj77) | its own generator (states IMD data are not downloadable) | overall precision 0.50, recall 0.71, F1 0.59, on the same synthetic data used for development | none stated | five layers including neighbours, SHAP, fleet-wide detection, web app |
+| SkyGuardAI (KATHIR-EEE) | not stated | none | none stated | Isolation Forest + z-score + an external weather API as reference |
 
 None of them, as far as their READMEs show, has: a locked holdout, a real-cyclone false-alarm number, an ablation on real
 data, an agreement check against operational QC flags, or a stated list of what it cannot do.
@@ -964,11 +1262,12 @@ python -m pytest -q                                   # 340+ tests, including th
 | What | Command | Time | Writes |
 |---|---|---|---|
 | DEV results (six stations, 2020-2021) | `python evaluate_real.py --dev --workers 4 --out results/dev_run4.json` | 15 min | text report + JSON |
+| The twelve FRESH stations (Amendment 2) | `python -m data_tools.make_fresh fetch` and `build`, then `python evaluate_real.py --fresh --workers 4 --out results/fresh_run1.json` | 1 h | **refused if already run**; explains verdicts: `python window_forensics.py --phase FRESH --station IXR` |
 | Holdout in time and space | `python evaluate_real.py --holdout --workers 4 --out results/holdout_run1.json` | 30-40 min | **refused if already run**; `--force-rerun-holdout` reproduces it (that is how `holdout_run2` was made, see `results/RUNS.md`) |
-| Summary, tables, README block, Q&A numbers | `python make_summary.py results/dev_run4.json results/holdout_run2.json --scale results/scale.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md` | seconds | `results/summary.json`, `results/REPORT.md` |
+| Summary, tables, README block, Q&A numbers | `python make_summary.py results/dev_run4.json results/holdout_run2.json results/fresh_run1.json --scale results/scale.json --coldstart results/coldstart.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md` | seconds | `results/summary.json`, `results/REPORT.md` |
 | Technical report | `python make_report.py --docx` (`pip install pypandoc_binary` for the .docx) | seconds | `docs/TECHNICAL_REPORT.md`, `.docx` |
-| Scale and speed | `python loadtest.py` (on a quiet machine) | 5 min | `results/scale.json` |
-| Cold start for a new station | `python evaluate_coldstart.py --workers 4` | 10 min | `results/coldstart.json` |
+| Scale and speed | `python loadtest.py --stations 1 10 50 100` (on a quiet machine) | 12 min | `results/scale.json` |
+| Cold start for a new station | `python evaluate_coldstart.py --estimate` first (projects the time), then `python evaluate_coldstart.py --workers 4` (`--resume` continues an interrupted run) | 9 min | `results/coldstart.json` |
 | The same evaluation on your own station CSV | `python evaluate_csv.py your.csv --station NAME` | 5-15 min | prints (see `docs/USE_YOUR_DATA.md`) |
 | Offline demo page | `python make_offline_demo.py` | 1 min | `docs/demo/index.html` |
 | Figures | `python make_figures.py` | 1 min | `docs/figures/*.png` |
