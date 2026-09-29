@@ -5,7 +5,7 @@ also true of the repository as it stands.
 
 ## About the data
 - **The data are airport records, not IMD AWS records.** IMD AWS data are not public. We use NOAA's Integrated Surface
-  Database (METAR and SYNOP) for 14 Indian airport stations, 2016-2024. The instruments and siting differ from an AWS.
+  Database (METAR and SYNOP) for 26 Indian airport stations, 2016-2024 (14 for development and the first holdouts, 12 fresh). The instruments and siting differ from an AWS.
 - **Relative humidity is derived, not measured.** ISD carries temperature and dew point; RH is computed from them
   (Magnus). So T and RH are not independent measurements in our evaluation, and the humidity channel inherits the rounding
   of two whole-degree numbers.

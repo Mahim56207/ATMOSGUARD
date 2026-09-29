@@ -15,10 +15,13 @@ with a plain-English reason, a health score and a service-date estimate. The raw
 ## What makes this submission different (and what it does not claim)
 - **We do not claim a new algorithm.** Physics checks, persistence tests, CUSUM, Isolation Forest and SHAP are standard. See
   [`docs/NOVELTY_AND_PRIOR_ART.md`](docs/NOVELTY_AND_PRIOR_ART.md) for what is standard, what we adapted (and from whom), and what is ours.
-- **We evaluate on real weather.** 14 Indian airport stations, 2016-2024 (NOAA ISD), real cyclones (Vardah, Fani, Amphan, Tauktae,
+- **We evaluate on real weather.** 26 Indian airport stations, 2016-2024 (NOAA ISD; 14 for development and the first holdouts, 12 more sealed for a fresh test), real cyclones (Vardah, Fani, Amphan, Tauktae,
   Michaung, Remal, Biparjoy...), heat waves, cold waves and thunderstorm outflows, chosen by rule on the data. The false-alarm rate
   **on real extreme weather is reported separately** from the injected-fault score.
 - **The holdout was sealed in time and in space and run once**, with the protocol committed first. Whatever it gave is below.
+- **The holdout found failures, and we tested the fix on stations nobody had looked at.** The post-mortem proposed two remedies. Before testing
+  them we registered a decision rule (Amendment 2) and sealed twelve more stations. By that rule the ceiling-aware frozen rule is **adopted** and
+  the learned step cap is **rejected** (it cost detection of wrong clocks). The tables are in the results below and in `results/REPORT.md`.
 - **Real data broke our first version, and we kept the record**: on real airport METAR (whole degrees, whole hPa) the fixed-limit
   pipeline alarmed on 63 % of clean samples (the results row "without station-learned limits"), a real pressure plateau inside a
   cyclone read as a frozen barometer, and real thunderstorm outflows were called faults. What we changed and why is in the tuning log in
@@ -56,17 +59,20 @@ Data caveats that apply to every number: airport METAR/SYNOP records (not IMD AW
 no labelled real faults exist, so detection is measured on injected faults; NOAA's flags are another automated system, not ground truth.
 
 ## Known limits (read before relying on any number)
-- **Real extreme weather is not always safe.** On the eight stations never used for tuning, 3 of 98 extreme-weather windows contain a
+- **Real extreme weather is not always safe.** On the eight unseen stations of the first holdout, 3 of 98 extreme-weather windows contain a
   `FAULT` verdict (0.3 % of those samples): two at Visakhapatnam, where sustained torrential rain pins derived humidity at 100 %, and one at
-  Bhuj, where a desert station warms 15 C across a 6-hour reporting gap. The causes and two untested remedies are in
-  [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md). We did not tune on them.
+  Bhuj, where a desert station warms 15 C across a 6-hour reporting gap. On the twelve fresh stations it is 3 of 139 (0.1 %): Ranchi
+  (saturated humidity again), Coimbatore (humidity up 47 % in two hours, past the 40 % cap) and Jodhpur (an arid temperature step across a
+  reporting gap). Causes and remedies: [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md). The saturation kind is fixed by the adopted
+  remedy; the two step kinds are not (the remedy that fixes them cost more than it gave, by the rule we registered first).
 - **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
   takes hours by design (it has to stay stuck longer than real weather can). On the eight unseen stations detection is lower than on DEV
   for every type except frozen and dropout (table above).
-- **A simpler detector beats us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
-  pipeline (and level shifts on DEV) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong clocks. No single
-  simpler system covers all six types; the layers buy coverage. See "No single simpler system" in
-  [`results/REPORT.md`](results/REPORT.md) and [`docs/TECHNICAL_REPORT.md`](docs/TECHNICAL_REPORT.md).
+- **Simpler detectors beat us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
+  pipeline (and level shifts on DEV and the fresh stations) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong
+  clocks. The textbook range + step + persistence rules detect wrong clocks and noise bursts better than we do on the unseen stations, at
+  about 8 % false alarms and a FAULT in nearly every real extreme-weather window. No single simpler system covers all six types without
+  paying for it elsewhere; the layers buy coverage. See "No single simpler system" in [`results/REPORT.md`](results/REPORT.md).
 - **Small drift is invisible from one station.** The drift monitor sees a ramp of several times the service limit, not one times the limit;
   the power curve is in the results and is the honest statement of what "drift detection" means here.
 - **Not real-AWS validated.** Airport records round to whole degrees and whole hPa and carry derived humidity. A real AWS with 0.1
@@ -144,7 +150,7 @@ Mann-Kendall trend tests, Isolation Forest, Mahalanobis distance, SHAP, weather-
 Mesonet), health scores and maintenance tickets.
 
 ## What is ours
-- The evidence standard: 14 real stations, a holdout sealed in time and space, false alarms on real cyclones reported separately,
+- The evidence standard: 26 real stations, a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, false alarms on real cyclones reported separately,
   baselines and an ablation on the same data, agreement with NOAA's flags, and the failures kept on record.
 - A single-station, neighbour-free integration that copes with the rounded values real stations report.
 - `WEATHER` as a verdict of its own (escalate, never suppress), by movement **and** by level.
