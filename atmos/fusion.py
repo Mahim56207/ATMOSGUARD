@@ -19,10 +19,9 @@ import statistics
 import threading
 from collections import deque
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Optional, Sequence
 
-from . import health, healthscore, impute, mlmodel, normality, physics, timing
+from . import health, healthscore, impute, limits as limits_mod, mlmodel, normality, physics, timing
 from .config import layer_enabled, model_path
 from .schema import CHANNELS, CheckResult, Reading, Verdict, VerdictResult
 
@@ -61,6 +60,28 @@ def movement(history: Sequence[Reading], cadence_minutes: float, settings: dict)
     return out
 
 
+def channel_is_quiet(history: Sequence[Reading], ch: str, settings: dict,
+                     limits: Optional[limits_mod.StationLimits] = None, cadence_minutes: Optional[float] = None) -> bool:
+    """True if `ch` has NOT moved noticeably over the last two intervals. "No check fired" is not the same as "quiet":
+    a real thunderstorm outflow moves temperature by 8 C, which is under the step limit and fires nothing.
+    Quiet = each change is at most `quiet_fraction` of the L1 step allowance for that interval and, when this
+    station's usual step is known, at most `quiet_multiple` times that usual step (it scales with cadence and channel:
+    at 3-hourly reports a 5 C fall is ordinary weather, and derived humidity follows it)."""
+    fcfg = settings["fusion"]
+    usual = limits.typical_step(ch) if (limits is not None and limits_mod.limits_active(settings)) else None
+    for a, b in zip(history[-3:-1], history[-2:]):
+        va, vb = getattr(a, ch), getattr(b, ch)
+        dt = (b.timestamp - a.timestamp).total_seconds() / 60.0
+        if va is None or vb is None or dt <= 0:
+            continue
+        allowed = fcfg["quiet_fraction"] * health._allowed_step(ch, dt, settings)
+        if usual is not None and cadence_minutes and dt <= 1.5 * cadence_minutes:
+            allowed = min(allowed, fcfg["quiet_multiple"] * usual)
+        if abs(vb - va) > allowed:
+            return False
+    return True
+
+
 def match_signature(moves: dict[str, int], settings: dict) -> Optional[dict]:
     for sig in settings["fusion"]["weather"]["signatures"]:
         needed = {k: v for k, v in sig.items() if k in CHANNELS}
@@ -73,12 +94,27 @@ def _join(checks: Sequence[CheckResult]) -> str:
     return " ".join(c.reason for c in checks)
 
 
+def coherent_departures(departures: Optional[dict[str, Optional[float]]], settings: dict) -> dict[str, float]:
+    """Channels whose departure from this station's normal is large (|z| >= `z`), if at least `min_channels` of them
+    depart at once. Weather moves several channels; one failing sensor moves one. This is the same principle as
+    rule 2, applied to LEVELS: a heat wave (hot, dry, low pressure) or a deep low departs on several channels, an
+    offset on one sensor departs on one."""
+    cfg = settings["fusion"]["weather"]["coherent"]
+    if not departures:
+        return {}
+    big = {ch: z for ch, z in departures.items() if z is not None and abs(z) >= cfg["z"]}
+    return big if len(big) >= cfg["min_channels"] else {}
+
+
 def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: dict,
-         cadence_minutes: float) -> VerdictResult:
+         cadence_minutes: float, departures: Optional[dict[str, Optional[float]]] = None,
+         limits: Optional[limits_mod.StationLimits] = None) -> VerdictResult:
     fcfg = settings["fusion"]
     conf = fcfg["confidence"]
     checks = list(checks)
-    flagged = [c for c in checks if c.flagged]
+    info = set(fcfg.get("informational_checks", []))
+    notices = [c.reason for c in checks if c.flagged and _kind(c) in info]
+    flagged = [c for c in checks if c.flagged and _kind(c) not in info]
     hard = [c for c in flagged if c.severity == "hard"]
 
     def confidence(base: float, used: Sequence[CheckResult]) -> float:
@@ -87,7 +123,8 @@ def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: di
         return round(min(conf["max"], base + conf["bonus_per_supporting_flag"] * support), 3)
 
     def result(verdict: Verdict, base: float, used: Sequence[CheckResult], reason: str) -> VerdictResult:
-        return VerdictResult(verdict=verdict, confidence=confidence(base, used), reason=reason, checks=checks)
+        return VerdictResult(verdict=verdict, confidence=confidence(base, used), reason=reason, checks=checks,
+                             notices=notices)
 
     # Rule 1: physically impossible / frozen / dropout
     rule1 = [c for c in hard if _kind(c) in fcfg["fault_checks"]]
@@ -101,18 +138,26 @@ def fuse(checks: Sequence[CheckResult], history: Sequence[Reading], settings: di
     if len(jump_channels) == 1:
         (jumper,) = jump_channels
         others = [c for c in flagged if _channel(c) not in (None, jumper)]
-        if not others:
+        moving = [ch for ch in CHANNELS if ch != jumper and not channel_is_quiet(history, ch, settings, limits, cadence_minutes)]
+        if not others and not moving:
             return result(Verdict.FAULT, conf["fault_rule2"], jumps,
                           f"Sensor fault: only {jumper} jumped while the other two channels stayed quiet. "
                           + _join(jumps))
 
-    # Rule 3: two or three channels move together, smoothly, matching a weather signature
+    # Rule 3: two or three channels move together, smoothly, matching a weather signature - or two or more
+    # channels sit far from normal together (a heat wave, a deep low: the level, not the movement)
     if flagged and not hard:
         sig = match_signature(movement(history, cadence_minutes, settings), settings)
         if sig is not None:
             return result(Verdict.WEATHER, conf["weather"], [],
                           f"Likely real weather: {sig['description']}. Several channels are moving together "
                           "smoothly, so this is escalated, not suppressed. " + _join(flagged))
+        together = coherent_departures(departures, settings)
+        if together:
+            desc = " and ".join(f"{ch} {z:+.1f} standard deviations" for ch, z in together.items())
+            return result(Verdict.WEATHER, conf["weather"], [],
+                          f"Likely real weather: {desc} from normal at the same time. Several channels departing together "
+                          "is how weather looks; one failing sensor departs alone. Escalated, not suppressed. " + _join(flagged))
 
     # Rule 4: unusual but ambiguous
     if flagged:
@@ -128,14 +173,19 @@ class Pipeline:
 
     def __init__(self, settings: dict, stations: Optional[dict[str, dict]] = None,
                  tables: Optional[dict[str, normality.NormalityTable]] = None,
-                 models: Optional[dict[str, mlmodel.IsolationModel]] = None):
+                 models: Optional[dict[str, mlmodel.IsolationModel]] = None,
+                 limits: Optional[dict[str, limits_mod.StationLimits]] = None,
+                 mahalanobis: Optional[dict[str, mlmodel.MahalanobisModel]] = None):
         self.settings = settings
         self.stations = stations or {}
         self.tables = dict(tables or {})
         self.models = dict(models or {})
+        self.limits = dict(limits or {})
+        self.mahalanobis = dict(mahalanobis or {})
         self._history: dict[str, deque] = {}
         self._records: dict[str, deque] = {}
         self._health: dict[str, healthscore.HealthReport] = {}
+        self._drift: dict[str, healthscore.DriftTracker] = {}
         self._clock: dict[str, tuple] = {}
         self._lock = threading.Lock()
 
@@ -147,6 +197,12 @@ class Pipeline:
         p = model_path(self.settings, station_id, "iforest", ".joblib")
         if p.exists():
             self.models[station_id] = mlmodel.IsolationModel.load(p)
+        p = model_path(self.settings, station_id, "limits", ".json")
+        if p.exists():
+            self.limits[station_id] = limits_mod.StationLimits.load(p)
+        p = model_path(self.settings, station_id, "mahalanobis", ".joblib")
+        if p.exists():
+            self.mahalanobis[station_id] = mlmodel.MahalanobisModel.load(p)
 
     def cadence_minutes(self, station_id: str) -> float:
         configured = self.stations.get(station_id, {}).get("cadence_minutes")
@@ -159,11 +215,17 @@ class Pipeline:
             return statistics.median(gaps)
         return float(self.settings["pipeline"]["default_cadence_minutes"])
 
-    def _history_length(self, cadence: float, with_clock_window: bool = False) -> int:
-        """Samples to keep. The health checks need a few hours; the clock check (T1) needs a full day."""
+    def _history_length(self, cadence: float, with_clock_window: bool = False,
+                        station_limits: Optional[limits_mod.StationLimits] = None) -> int:
+        """Samples to keep. The health checks need a few hours (a station-learned frozen window can be longer);
+        the clock check (T1) needs a full day."""
         h, w = self.settings["health"], self.settings["fusion"]["weather"]
+        off = h.get("offset") or {}
         minutes = max(*h["frozen"]["window_minutes"].values(), h["noise"]["window_minutes"],
-                      h["cusum"]["window_minutes"], w["direction_window_minutes"])
+                      h["cusum"]["window_minutes"], w["direction_window_minutes"],
+                      off["window_minutes"] if off.get("enabled") else 0.0)
+        if station_limits is not None and limits_mod.limits_active(self.settings):
+            minutes = max(minutes, station_limits.longest_frozen_window() * h["frozen"].get("hard_multiplier", 1.0))
         if with_clock_window and layer_enabled(self.settings, "timing"):
             minutes = max(minutes, self.settings["timing"]["clock"]["window_minutes"])
         return math.ceil(minutes / cadence) + max(h["frozen"]["min_samples"], h["noise"]["min_samples"]) + 2
@@ -189,35 +251,45 @@ class Pipeline:
 
     def _process(self, reading: Reading, now: Optional[datetime], sid: str, hist: deque, records: deque) -> VerdictResult:
         cadence = self.cadence_minutes(sid)
-        while len(hist) > self._history_length(cadence, with_clock_window=True):
+        station_limits = self.limits.get(sid)
+        while len(hist) > self._history_length(cadence, with_clock_window=True, station_limits=station_limits):
             hist.popleft()
         full_history = list(hist)
-        history = full_history[-self._history_length(cadence):]      # what the health checks need
+        history = full_history[-self._history_length(cadence, station_limits=station_limits):]   # what the health checks need
         table, model = self.tables.get(sid), self.models.get(sid)
 
         use_table = table is not None and layer_enabled(self.settings, "normality")
         expected = table.expected_series(history) if use_table else None
         sigma = table.sigma_series(history) if use_table else None
         checks = [*physics.check_physics(reading, self.settings),
-                  *health.check_health(history, self.settings, cadence, now=now, expected=expected, sigma=sigma)]
+                  *health.check_health(history, self.settings, cadence, now=now, expected=expected, sigma=sigma,
+                                       limits=station_limits)]
         if layer_enabled(self.settings, "timing"):
             checks += [self._clock_check(sid, full_history, table), timing.check_cojump(history, self.settings, cadence)]
         if table:
             checks += normality.check_normality(reading, table, self.settings)
         if model:
             checks += mlmodel.check_ml(history, model, self.settings)
-        verdict = fuse(checks, history, self.settings, cadence)
+        mahal = self.mahalanobis.get(sid)
+        if mahal:
+            checks += mlmodel.check_mahalanobis(history, mahal, table, self.settings)   # needs the table even if L2 checks are off
+        departures = ({ch: table.z_score(reading, ch) for ch in CHANNELS} if use_table else None)
+        verdict = fuse(checks, history, self.settings, cadence, departures, station_limits)
         verdict = impute.apply_imputation(verdict, impute.impute_reading(reading, verdict, list(records), table,
                                                                          self.settings))
 
-        records.append(healthscore.to_health_record(reading, verdict, self.settings))
+        hrec = healthscore.to_health_record(reading, verdict, self.settings)
+        records.append(hrec)
+        faulty = hrec.flagged_channels if verdict.verdict == Verdict.FAULT else frozenset()
+        self._drift.setdefault(sid, healthscore.DriftTracker(self.settings)).update(reading, table, faulty)
         max_records = math.ceil(self.settings["healthscore"]["window_minutes"] / cadence) + 1
         while len(records) > max_records:
             records.popleft()
         report = self._health.get(sid)
         every = timedelta(minutes=self.settings["healthscore"]["recompute_every_minutes"])
         if report is None or reading.timestamp - report.computed_at >= every:
-            report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings)
+            report = healthscore.compute_health(sid, records, table, reading.timestamp, self.settings,
+                                                self._drift.get(sid), cadence)
             self._health[sid] = report
         return verdict.model_copy(update={"health_score": report.score, "service_date": report.service_date})
 
@@ -234,11 +306,12 @@ class Pipeline:
         return used
 
     def _clock_check(self, sid: str, full_history: list, table) -> CheckResult:
-        """T1 result, recomputed once per hour of data time (the normal pattern has one cell per hour)."""
-        hour = full_history[-1].timestamp.replace(minute=0, second=0, microsecond=0)
+        """T1 result, recomputed every `timing.clock.recompute_hours` of data time. A wrong clock lasts days, so this only delays a flag."""
+        step = timedelta(hours=self.settings["timing"]["clock"]["recompute_hours"])
+        now = full_history[-1].timestamp
         cached = self._clock.get(sid)
-        if cached is None or cached[0] != hour:
-            cached = (hour, timing.check_clock(full_history, table, self.settings))
+        if cached is None or now - cached[0] >= step or now < cached[0]:
+            cached = (now, timing.check_clock(full_history, table, self.settings))
             self._clock[sid] = cached
         return cached[1]
 
@@ -249,7 +322,8 @@ class Pipeline:
             if not records:
                 return None
             return healthscore.compute_health(station_id, records, self.tables.get(station_id),
-                                              now or records[-1].timestamp, self.settings)
+                                              now or records[-1].timestamp, self.settings,
+                                              self._drift.get(station_id), self.cadence_minutes(station_id))
 
     def stations_seen(self) -> list[str]:
         with self._lock:                        # another thread may be adding a station

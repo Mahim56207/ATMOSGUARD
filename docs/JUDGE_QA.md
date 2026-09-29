@@ -1,0 +1,128 @@
+# Likely judge questions, and honest answers
+
+Rule for every answer: **agree with what is true, name the prior art, point at what we added, and never defend a claim we cannot
+support.** Numbers below are from `results/REPORT.md`; say which split you are quoting.
+
+<!-- NUMBERS:START -->
+**Numbers to have in your head** (generated from `results/summary.json`; say which split you are quoting):
+
+- **DEV (tuned here):** clean data: 1.9% (1.8-2.0) of 98340 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 3503 samples (0 of 30 windows); WEATHER on 10.8%, SUSPECT on 9.0%. Injected faults raised the alarm: frozen 100%; spike 98%; level shift 97%; noise burst 78%; dropout 99%; clock 3 h out 97%.
+- **holdout, same stations, later years:** clean data: 2.5% (2.4-2.6) of 147078 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 4374 samples (0 of 38 windows); WEATHER on 11.8%, SUSPECT on 8.2%. Injected faults raised the alarm: frozen 100%; spike 96%; level shift 98%; noise burst 79%; dropout 100%; clock 3 h out 97%.
+- **holdout, eight unseen stations:** clean data: 2.9% (2.8-3.0) of 237411 samples got FAULT or SUSPECT; 0.0% (0.0-0.1) got FAULT. Real extreme weather: FAULT on 0.3% (0.2-0.4) of 9074 samples (3 of 98 windows); WEATHER on 15.7%, SUSPECT on 8.6%. Injected faults raised the alarm: frozen 100%; spike 90%; level shift 89%; noise burst 67%; dropout 98%; clock 3 h out 84%.
+- **fresh, twelve more unseen stations:** clean data: 2.5% (2.5-2.6) of 364440 samples got FAULT or SUSPECT; 0.1% (0.1-0.1) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.2) of 11782 samples (3 of 139 windows); WEATHER on 10.3%, SUSPECT on 6.8%. Injected faults raised the alarm: frozen 99%; spike 91%; level shift 80%; noise burst 57%; dropout 98%; clock 3 h out 85%.
+- **fresh-2, twelve more (five Indian airports, seven Australian AWS at 0.1 resolution; `full` = the pipeline as shipped before Amendment 3):** clean data: 9.3% (9.2-9.3) of 453323 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 14732 samples (4 of 134 windows); WEATHER on 4.1%, SUSPECT on 14.1%. Injected faults raised the alarm: frozen 100%; spike 89%; level shift 91%; noise burst 83%; dropout 93%; clock 3 h out 90%.
+- **fresh-2, the seven Australian AWS alone:** clean data: 13.6% (13.5-13.7) of 263732 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 10738 samples (4 of 92 windows); WEATHER on 3.0%, SUSPECT on 17.6%. Injected faults raised the alarm: frozen 100%; spike 87%; level shift 89%; noise burst 84%; dropout 91%; clock 3 h out 86%.
+- **Speed (simulated stations, one machine, one core, in-process, every layer on):** median 0.986 ms and 99th percentile 3.109 ms per reading with 100 stations, 819.0 readings/s.
+- **What that means:** one core keeps up with about 49,140 stations reporting once a minute (readings per second x 60: arithmetic from the figure above, not a load test); more cores or worker processes scale it further.
+- **The same with the Isolation Forest layer off** (a config flag; the ablation shows it adds almost nothing to the verdicts): median 0.526 ms, 1353.0 readings/s.
+- **Speed through the real HTTP server (FastAPI + SQLite, 50 stations, 8 clients):** median 44.89 ms, 95th percentile 59.17 ms, 164.8 requests/s, 0 errors.
+<!-- NUMBERS:END -->
+
+## The three questions the build guide says you will certainly get
+
+**1. How is this different from the standard WMO checks?**
+The range, step and persistence checks are standard and we include them. Three things differ. (a) Fixed limits fail on real data:
+on real airport reports (whole degrees, whole hPa) a fixed-limit version alarmed on 63 % of clean readings on the six DEV stations (the row
+"without station-learned limits") and called real cyclones faults. We learn the frozen-run and noise limits per station from its own clean history (an idea HadISD uses for streaks;
+ours adds resolution detection and a two-tier flag). (b) Real weather is a verdict, not a mistake: a coherent multi-channel change is
+escalated as `WEATHER`. (c) We measured all of it against the textbook rules on the same real data; the rules baseline calls almost
+every real extreme-weather window a fault.
+
+**2. How do you know it works on real faults and not just injected ones?**
+We do not, and we say so. No labelled real-fault set exists that we could reach (the hosts for the public ones are blocked where this was built), and IMD's records are not public. What we did instead: (a) the false-alarm rate on *real*
+weather (clean data and 30+ real extreme-weather windows) with nothing injected, reported separately; (b) agreement with NOAA's own
+quality flags on the raw record (another automated system, so it shows consistency, not truth); (c) injected faults, labelled injected,
+scored so that only alarms the fault itself raised count. Real-fault validation against maintenance records is future work.
+
+**3. What happens during a cyclone?**
+Pressure falls tens of hPa, humidity rises, temperature drops: several channels move together, so the reading is escalated as
+`WEATHER` and kept, never deleted. On the cyclone windows judged in the tables (Amphan in DEV; Tauktae, Biparjoy, Michaung and Remal in the holdouts) the number of
+`FAULT` verdicts is what we report. Fani and Vardah fall in the training years, so they are demo material, not a reported number. Live: replay `data/demo/fani_BBI_2019-05.csv`. A pressure plateau inside the low used to read as a
+frozen barometer; that was a real bug real data found and we fixed it.
+
+## Novelty
+**Is this just Isolation Forest plus rules, like the other teams?** The techniques are standard and we say so
+(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (26 real stations, a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, run once with the
+protocol committed first, baselines and an ablation on the same data, false alarms on real cyclones) and honest engineering results
+(learned limits, the graded frozen flag, the isolated-trend drift rule, the quiet-channel fix). In the ablation the Isolation Forest earns
+almost nothing; the Mahalanobis layer does the work, and we kept the forest because the problem statement lists it.
+
+**Is humidity response time (tau_RH) your novelty?** No, it is research. The physics is established in eddy-covariance and radiosonde work; we
+found no operational AWS QC system using it as a health metric. We built bench-analysis code for the two-sensor experiment and a simulation:
+a co-located pair recovers the relative lag at 1 Hz, the estimate is biased at 1-minute means and wrong at 15-minute means, and one sensor
+alone cannot do it at any resolution. It is not in the pipeline.
+
+## Trust in the numbers
+**Why should we believe the holdout?** The protocol (`config/protocol.md`) was committed before the holdout was read; `evaluate_real.py
+--holdout` refuses to run unless that file is committed and clean, and writes `data/holdout/.holdout_used` with the commit it ran under. The
+holdout is sealed in time (the same six stations, later years) and in space (eight stations never used for any tuning, three of them 3-hourly).
+Everything we changed after looking at DEV is in the tuning log with its reason. After the first holdout run we corrected the *scoring* of
+detection (background alarms inside long fault windows had inflated it); the pipeline was not touched, both scores are reported, and the
+rerun reproduced the first run's registered numbers exactly.
+
+**Your DEV numbers are better than holdout, aren't they?** DEV is where we tuned and looked at failures, so it is the optimistic set. We
+report all four splits (DEV, holdout in time, holdout in space, fresh stations) side by side; see `results/REPORT.md`.
+
+**The holdout showed failures. What did you do about them?** We did not tune on it. We wrote the post-mortem (`docs/HOLDOUT_POSTMORTEM.md`), proposed two
+remedies, registered a decision rule (Amendment 2), sealed twelve more stations nobody had looked at, and ran them once. By the rule, the ceiling-aware frozen
+rule is adopted (windows with a FAULT 3 to 2 of 139, nothing else changes) and the learned step cap is rejected (it cost 4.2 points of wrong-clock detection).
+The tables, the rule and the three windows that still get a FAULT are all in the repository.
+
+**Why not fix the step-cap cases too?** We did, in the next round. The learned step cap was rejected (it cost clock-shift detection), so we registered a different remedy
+first (Amendment 3): judge only the part of a change that the station's own daily cycle does not explain. It was tested once on a third set of twelve stations nobody had looked at
+(five Indian airports and seven Australian automatic weather stations). By the rule it is adopted: windows with a `FAULT` 4 to 1 of 134, nothing else moves. A second Amendment 3 remedy
+(a sustained one-channel offset) missed its target (+1 point of level-shift detection against +5 required, clean false alarms +0.48 points) and is rejected.
+
+**Your false-alarm rate on the Australian stations is 13.6 %. Why?** It is, and we did not hide it. Four of the seven stations reported 16 times a day with alternating one- and two-hour gaps in the
+training years and hourly all day afterwards, so no noise limit could be learned and a fixed floor tuned on coarser data alarmed on their 0.1-resolution readings (33 %, 26 %, 21 % and 8 % of clean samples;
+the other three are 0.9-2.1 %, the five Indian airports 3.2 %). Every earlier station had its limits learned. The pipeline now says so on each reading and the remedy is a refit at the current cadence
+(`python refit.py`): fitted on the hourly years only, the seven stations' false alarms fall from 13.6 % to 2.6 % (`refit_diagnostic.py`; a post-hoc diagnostic on the same stations and different judged years, not sealed evidence).
+
+**A simpler detector beats you on some fault types. Why use yours?** It does, and we show it: a Mahalanobis-only detector is better on spikes and blind to frozen
+sensors, dropouts and clocks; the textbook rules are better on wrong clocks on the unseen stations and blind to dropouts, and on the fresh stations they call a FAULT on 134 of 139 real extreme-weather windows and
+alarm on 8 % of clean data (5 to 7 % on the other splits). The point is coverage of all six fault types without calling a cyclone a broken sensor. The table is "No single simpler system" in `results/REPORT.md`.
+
+**What is your false-alarm rate, and is it acceptable?** Report both: "any alarm" (`FAULT` or `SUSPECT`; `SUSPECT` means "review", the
+reading is kept) and `FAULT` alone. In operations the useful reading is per thousand readings: multiply the percentage by ten.
+
+## What confidence means
+It is agreement between checks, a heuristic, **not** a probability. No metric uses it. The honest way to read reliability is the measured
+rates in the tables. (Calibrating it, with a reliability diagram and isotonic regression, is listed in the build guide; we did not do it.)
+
+## Drift and offsets
+**Can it detect slow drift?** Large drift, yes; small drift, no. A single station with no reference sees drifts of several times the
+service limit within weeks, and the monitor reports the smallest slope it can see at that station. False drift claims on clean real data
+are about 1 % of station-days. **A constant offset from day one?** No single-station method can, and we say so. With three or more neighbours within 250 km an optional peer layer can
+(`docs/PEER_LAYER.md`): on two disjoint clusters of Australian AWS it found a 2 hPa offset in 91-96 % of trials within 21 days where the station alone found 0-4 %, and a 2 C offset in 86-88 % against 1-9 %. It misses
+half-unit offsets, is weak on humidity and was measured on injected faults.
+
+## Design choices
+**Why single-station only?** The places India needs this most (Ladakh, the Thar, the Andamans) have no neighbour within hundreds of km.
+With neighbours we do better for offsets and drift, and that optional layer exists and is measured (`docs/PEER_LAYER.md`); the core does not need it, and the cold-start module borrows a frozen table, not live data.
+**Why airport data, not IMD?** IMD AWS data are not public. We added seven real Australian automatic weather stations at 0.1 resolution in the third sealed set so the claim is not only about airports. The pipeline takes any CSV in the same layout; if a faculty contact can share
+even a few years of real AWS data, run `evaluate_csv.py` on it (or upload it in the dashboard). **Why four verdicts?** Quality control and severe-weather alerting come out of one
+engine, and mixed evidence must not delete a real extreme.
+**What if a real weather event looks exactly like a fault (a real one-channel jump)?** Rule 2 would call it a fault; that is why "quiet" now
+means the other channels actually did not move, and why we report the `FAULT` rate on real extreme weather separately so the cost is visible.
+
+## Explainability
+Every verdict has a plain-English reason and the checks behind it, built before any model runs. For the statistical layers: the Mahalanobis
+squared distance splits **exactly** into per-feature contributions (they add up), and SHAP values for the Isolation Forest are available
+when `shap` is installed (`GET /explain`). SHAP is optional because the forest earns least in the ablation.
+
+## Edge, scale, deployment
+**Does it run on the ESP32?** The L0 logic is plain C++ that is compiled and checked against the Python on thousands of inputs, and the sketch itself is executed on the laptop against a simulator of the
+Arduino-ESP32 pieces (clock, sensor, Wi-Fi, HTTP): the readings, flags, outage queue and clock guard behave, and what it sends is accepted by the real API. It has not been compiled with the real ESP32
+toolchain or run on the chip in this repository, and no energy figure is measured (`docs/HARDWARE_TEST_LOG.md` is the checklist).
+**How does it scale?** State is per station and nothing is shared. In the scale test the median time per reading stays flat from 1 to 100 simulated stations on one
+machine (the speed lines at the top of this file give the numbers and what one core can serve); capacity grows by adding worker processes, each owning a set of stations.
+The Isolation Forest used to be almost the whole per-reading cost; it is now scored by a vectorised routine whose numbers are bit-identical to scikit-learn's (checked on
+35,994 real rows from the six committed models), so verdicts did not change. The real HTTP server is one process with one lock; its numbers are above too. Simulated stations
+on one machine are a design check, not a production load test. (An earlier version of our scale test fed readings under the wrong station id, so the pipeline ran without
+its per-station models and reported 0.2 ms; that bug is fixed and has a regression test.)
+**Docker?** `docker compose up --build` was run once (image built, API healthy, dashboard up, a real cyclone replayed through the containerised API), which also found and fixed a real crash: the API failed when its state folder did not exist. Run it once on the demo machine before the day.
+
+## Things we dropped (say them before a judge does)
+The pressure-tide barometer test (an offset leaves the tide untouched and a gain change scales the tide and weather equally); "35 degC
+wet-bulb is impossible" (it has been observed; it is a soft flag); "nobody separates weather from faults" (ECMWF, the Oklahoma Mesonet and
+several SIH entries do).

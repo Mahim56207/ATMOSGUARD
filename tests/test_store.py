@@ -113,3 +113,12 @@ def test_the_store_survives_many_threads_at_once():
     [t.start() for t in threads]
     [t.join() for t in threads]
     assert errors == [] and store.counts() == {"VALID": 240}
+
+
+def test_sqlite_store_creates_a_missing_state_folder(tmp_path):
+    """A fresh container has no /app/state: the store must make it, not crash the API at start-up."""
+    from atmos.store import SQLiteStore
+    path = tmp_path / "state" / "deeper" / "atmosguard.sqlite"
+    store = SQLiteStore(str(path))
+    assert path.exists()
+    store.close() if hasattr(store, "close") else None

@@ -1,0 +1,16 @@
+# A second, disjoint cluster of twelve Australian Bureau of Meteorology automatic weather stations, in northern Victoria and the southern Riverina, used
+# only to check the peer-layer settings that were fixed on the New South Wales cluster (stations_peers_nsw.yaml). Hourly SYNOP at 0.1 C and 0.1 hPa. Source: NOAA ISD.
+years: {first: 2016, last: 2024}
+stations:
+  BND: {file: '94855099999', name: Bendigo, lat: -36.733, lon: 144.317, elevation_m: 209.0, source: synop, cadence_minutes: 60}
+  HSM: {file: '95839099999', name: Horsham, lat: -36.667, lon: 142.167, elevation_m: 134.0, source: synop, cadence_minutes: 60}
+  SWH: {file: '94843099999', name: Swan Hill, lat: -35.383, lon: 143.533, elevation_m: 71.0, source: synop, cadence_minutes: 60}
+  CHR: {file: '94839099999', name: Charlton, lat: -36.283, lon: 143.35, elevation_m: 132.0, source: synop, cadence_minutes: 60}
+  KLM: {file: '94860099999', name: Kilmore Gap, lat: -37.383, lon: 144.967, elevation_m: 528.0, source: synop, cadence_minutes: 60}
+  YRW: {file: '94862099999', name: Yarrawonga, lat: -36.017, lon: 146.033, elevation_m: 129.0, source: synop, cadence_minutes: 60}
+  SHP: {file: '94875099999', name: Shepparton, lat: -36.433, lon: 145.4, elevation_m: 114.0, source: synop, cadence_minutes: 60}
+  WNG: {file: '94889099999', name: Wangaratta, lat: -36.417, lon: 146.3, elevation_m: 153.0, source: synop, cadence_minutes: 60}
+  DEN: {file: '95869099999', name: Deniliquin, lat: -35.567, lon: 144.95, elevation_m: 95.0, source: synop, cadence_minutes: 60}
+  HAY: {file: '94702099999', name: Hay, lat: -34.533, lon: 144.833, elevation_m: 92.0, source: synop, cadence_minutes: 60}
+  NHL: {file: '94827099999', name: Nhill, lat: -36.317, lon: 141.633, elevation_m: 140.0, source: synop, cadence_minutes: 60}
+  ALB: {file: '95896099999', name: Albury, lat: -36.067, lon: 146.95, elevation_m: 165.0, source: synop, cadence_minutes: 60}

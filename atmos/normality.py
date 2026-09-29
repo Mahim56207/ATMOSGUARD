@@ -6,6 +6,7 @@ Normality flags are SOFT: they can lead to SUSPECT, never to FAULT on their own.
 """
 from __future__ import annotations
 
+import calendar
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -26,6 +27,11 @@ class NormalityTable:
         self.station_id = station_id
         self.cells = cells                    # {"month-hour": {channel: {mean, std, n}}}
         self._min_std = settings["normality"]["min_std"]
+        # the same cells keyed by (month, hour): the checks look cells up thousands of times per reading
+        self._by_mh: dict[tuple[int, int], dict] = {}
+        for key, per_ch in cells.items():
+            m, h = key.split("-")
+            self._by_mh[(int(m), int(h))] = per_ch
 
     @classmethod
     def fit(cls, readings: Sequence[Reading], settings: dict) -> "NormalityTable":
@@ -48,7 +54,8 @@ class NormalityTable:
         return cls(stations.pop(), cells, settings)
 
     def cell(self, ts, ch: str) -> Optional[dict[str, float]]:
-        return self.cells.get(_key(ts), {}).get(ch)
+        per_ch = self._by_mh.get((ts.month, ts.hour))
+        return None if per_ch is None else per_ch.get(ch)
 
     def expected(self, ts, ch: str) -> Optional[float]:
         c = self.cell(ts, ch)
@@ -59,6 +66,27 @@ class NormalityTable:
         if c is None or v is None:
             return None
         return (v - c["mean"]) / max(c["std"], self._min_std[ch])
+
+    def smooth_expected(self, ts, ch: str) -> Optional[float]:
+        """Expected value with NO steps: bilinear between neighbouring hours and neighbouring months (a month's
+        value is taken at the middle of the month). The plain table is a step function, which turns the seasonal
+        cycle into a fake trend when residuals are read over weeks. Uses only cells that exist."""
+        hour = ts.hour + ts.minute / 60.0
+        h0, wh = int(hour) % 24, hour - int(hour)
+        days = calendar.monthrange(ts.year, ts.month)[1]
+        pos = (ts.day - 0.5 + (ts.hour / 24.0)) / days
+        if pos >= 0.5:
+            m0, m1, wm = ts.month, ts.month % 12 + 1, pos - 0.5
+        else:
+            m0, m1, wm = (ts.month - 2) % 12 + 1, ts.month, pos + 0.5
+        num = den = 0.0
+        for m, wmo in ((m0, 1.0 - wm), (m1, wm)):
+            for h, whr in ((h0, 1.0 - wh), ((h0 + 1) % 24, wh)):
+                c = self._by_mh.get((m, h), {}).get(ch)
+                if c is not None and wmo * whr > 0:
+                    num += wmo * whr * c["mean"]
+                    den += wmo * whr
+        return None if den == 0 else num / den
 
     def expected_series(self, history: Sequence[Reading]) -> dict[str, list[Optional[float]]]:
         """Expected value for each reading in `history`. Feeds the CUSUM drift check in health.py."""

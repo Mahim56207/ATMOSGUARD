@@ -12,6 +12,7 @@ services:
       - "8000:8000"
     environment:
       ATMOS_SQLITE_PATH: /app/state/atmosguard.sqlite
+      ATMOS_API_KEY: ${ATMOS_API_KEY:-}            # empty = writes are open; set it to require X-API-Key on POST and DELETE
     volumes:
       - ./config:/app/config
       - ./data:/app/data
@@ -31,6 +32,7 @@ services:
       - "8501:8501"
     environment:
       ATMOS_API_URL: http://api:8000
+      ATMOS_API_KEY: ${ATMOS_API_KEY:-}
     depends_on:
       api:
         condition: service_healthy

@@ -1,14 +1,11 @@
 """Tests for simnode.py: the fake node that mirrors the firmware."""
-import math
 from datetime import datetime
 
-import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 import simnode
 from api import create_app
-from atmos.config import load_settings
 from atmos.schema import Reading
 from atmos.store import SQLiteStore
 

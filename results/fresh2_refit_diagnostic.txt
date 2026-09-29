@@ -1,0 +1,10 @@
+full clean alarm 2.62% {'frozen': 100, 'spike': 96, 'step': 91, 'noise': 82, 'dropout': 98, 'clock_shift': 83}
+r3_expected_step clean alarm 2.60% {'frozen': 100, 'spike': 96, 'step': 91, 'noise': 82, 'dropout': 98, 'clock_shift': 83}
+baseline_rules clean alarm 1.75% {'frozen': 100, 'spike': 77, 'step': 87, 'noise': 60, 'dropout': 0, 'clock_shift': 48}
+CWS clean alarm 3.6% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}
+LEI clean alarm 2.6% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}
+WIL clean alarm 2.5% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}
+GLS clean alarm 2.9% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}
+COT clean alarm 1.3% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}
+THB clean alarm 3.6% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}
+MTC clean alarm 2.0% {'temperature_c': True, 'pressure_hpa': True, 'humidity_pct': True}

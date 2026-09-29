@@ -8,7 +8,7 @@ from atmos.fusion import Pipeline
 from atmos.normality import NormalityTable
 from atmos.schema import Verdict
 from atmos.timing import check_clock, check_cojump, check_timing
-from tests.conftest import by_name, make_history, make_reading
+from tests.conftest import make_history, make_reading
 
 
 @pytest.fixture(scope="module")
@@ -113,7 +113,7 @@ def test_pipeline_cojump_gives_a_suspect_with_the_explanation(settings):
     assert v.verdict == Verdict.SUSPECT and "jumped in the same sample" in v.reason
 
 
-def test_clock_check_is_only_recomputed_once_per_hour(day, table, settings, monkeypatch):
+def test_clock_check_is_only_recomputed_every_few_hours(day, table, settings, monkeypatch):
     import atmos.fusion as fusion
     calls = []
     real = fusion.timing.check_clock
@@ -121,4 +121,5 @@ def test_clock_check_is_only_recomputed_once_per_hour(day, table, settings, monk
     pipe = Pipeline(settings, {"S1": {"cadence_minutes": 15}}, {"S1": table})
     for r in day[:48]:                                                # 12 hours of 15-min data
         pipe.process(r)
-    assert 10 <= len(calls) <= 13
+    hours = settings["timing"]["clock"]["recompute_hours"]
+    assert 12 // hours <= len(calls) <= 12 // hours + 1                # once per `recompute_hours`, not once per reading

@@ -10,3 +10,5 @@ scikit-learn==1.9.1
 scipy==1.18.1
 streamlit==1.64.0
 plotly==7.1.0
+pandas==3.0.6
+matplotlib==3.11.2

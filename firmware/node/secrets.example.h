@@ -5,3 +5,5 @@
 #define WIFI_PASSWORD "your-wifi-password"
 #define API_URL "http://192.168.1.10:8000/ingest"   // where the AtmosGuard API runs
 #define STATION_ID "S1"                               // must match config/stations.yaml
+// If the API runs with ATMOS_API_KEY set, the node must send the same key. Uncomment and fill in:
+// #define API_KEY "change-me"
