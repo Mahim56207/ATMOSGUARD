@@ -254,6 +254,27 @@ def test_guard_refuses_uncommitted_changes_and_unfinished_markers(cfg, repo, tmp
         ev.guard_holdout(cfg, repo, tmp_path / "data")
 
 
+def test_fresh_guard_needs_amendment_2_in_the_committed_protocol_and_passes_once(cfg, repo, tmp_path):
+    with pytest.raises(ev.HoldoutError, match="Amendment 2"):
+        ev.guard_fresh(cfg, repo, tmp_path / "data")                              # the committed protocol has no Amendment 2
+    assert not (tmp_path / "data/fresh/.fresh_used").exists()
+    (repo / "config/protocol.md").write_text("# Protocol\nDone.\n\n## Amendment 2\nThe fresh stations.\n")
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "amendment"], check=True)
+    ev.guard_fresh(cfg, repo, tmp_path / "data")
+    assert (tmp_path / "data/fresh/.fresh_used").exists()
+    assert not (tmp_path / "data/holdout/.holdout_used").exists()                 # its own lock, not the holdout's
+    with pytest.raises(ev.HoldoutError, match="already used"):
+        ev.guard_fresh(cfg, repo, tmp_path / "data")
+
+
+def test_replay_refuses_the_fresh_folder_like_the_holdout(cfg, tmp_path):
+    import replay
+    for sealed in ("holdout", "fresh"):
+        with pytest.raises(ValueError, match="Replay will not read it"):
+            replay.check_path(tmp_path / "data" / sealed / "x.csv", cfg)
+    replay.check_path(tmp_path / "data" / "fresh" / "x.csv", cfg, allow_holdout=True)      # the evaluation, behind its guard
+
+
 def test_the_real_protocol_file_is_finished(cfg):
     assert "TODO" not in (ev.REPO_ROOT / "config/protocol.md").read_text()
 

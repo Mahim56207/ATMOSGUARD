@@ -22,6 +22,9 @@ import numpy as np
 import evaluate_real as er
 
 PHASE_TITLES = {
+    "FRESH": ("FRESH: twelve more stations nobody had looked at, 2020-2024",
+              "Chosen and sealed before the two remedies from the holdout post-mortem were tested (Amendment 2 in config/protocol.md). "
+              "Eight hourly airport stations and four 3-hourly SYNOP stations."),
     "DEV": ("DEV: the six stations we were allowed to tune on, 2020-2021",
             "Tuning happened here. These numbers are the optimistic ones."),
     "HOLDOUT_TIME": ("HOLDOUT in time: the same six stations, 2022-2024",
@@ -33,6 +36,8 @@ FULL_NAMES = {"full": "AtmosGuard (full)", "no_physics": "without physics layer"
               "no_normality": "without normality layer", "no_mlmodel": "without Isolation Forest",
               "no_timing": "without timing layer", "no_limits": "without station-learned limits",
               "no_mahalanobis": "without Mahalanobis layer",
+              "remedy_frozen": "AtmosGuard + remedy 1 (ceiling-aware frozen rule)", "remedy_step": "AtmosGuard + remedy 2 (learned step cap)",
+              "remedies": "AtmosGuard + both remedies",
               "baseline_range": "baseline: range check only",
               "baseline_rules": "baseline: textbook range + step + persistence",
               "baseline_climatology": "baseline: climatology z-score only",

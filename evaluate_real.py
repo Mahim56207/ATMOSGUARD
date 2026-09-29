@@ -49,6 +49,8 @@ REPO = CONFIG_DIR.parent
 REAL_DEV_DIR = REPO / "data" / "real" / "dev"
 REAL_HOLDOUT_DIR = REPO / "data" / "holdout" / "real"
 EVENTS_JSON = REPO / "data" / "real" / "events.json"
+REAL_FRESH_DIR = REPO / "data" / "fresh" / "real"
+FRESH_EVENTS_JSON = REPO / "data" / "fresh" / "events.json"
 RESULTS_DIR = REPO / "results"
 TRAIN_END = pd.Timestamp("2020-01-01")          # training = everything before this
 DEV_END = pd.Timestamp("2022-01-01")
@@ -265,6 +267,11 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
                   mahal: Optional[MahalanobisModel] = None) -> list[tuple[str, str, Predictor]]:
     cfgs: list[tuple[str, str, Predictor]] = [
         ("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
+    for name, frozen, step in (("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True)):
+        variant = copy.deepcopy(settings)                       # the two remedies of docs/HOLDOUT_POSTMORTEM.md (off in "full")
+        variant["health"]["frozen"]["ceiling_aware"] = frozen
+        variant["limits"]["learned_step_cap"] = step
+        cfgs.append((name, "remedy", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
     for layer in ("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits"):
         variant = copy.deepcopy(settings)
         variant["layers"][layer] = False
@@ -564,8 +571,8 @@ def _worker(args):
 # ====================================================================================================
 # orchestration and report
 # ====================================================================================================
-def load_events() -> dict:
-    return json.loads(EVENTS_JSON.read_text(encoding="utf-8"))
+def load_events(phase: str = "DEV") -> dict:
+    return json.loads((FRESH_EVENTS_JSON if phase == "FRESH" else EVENTS_JSON).read_text(encoding="utf-8"))
 
 
 def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
@@ -583,13 +590,17 @@ def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
         for sid in sealed:                                           # stations never seen
             p = REAL_HOLDOUT_DIR / f"{sid}.csv"
             plans.append(PhasePlan("HOLDOUT_SPACE", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
+    elif phase == "FRESH":
+        for sid in sealed:                                           # stations nobody had looked at (Amendment 2)
+            p = REAL_FRESH_DIR / f"{sid}.csv"
+            plans.append(PhasePlan("FRESH", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
     return plans
 
 
 def run(phase: str, quick: bool, workers: int, only: Optional[list[str]] = None,
         parts: frozenset = frozenset({"detect", "events", "noaa", "drift", "latency"})) -> dict:
     settings = load_settings()
-    meta = load_events()
+    meta = load_events(phase)
     plans = [p for p in make_plans(phase, meta) if not only or p.station in only]
     jobs = [(p, settings, quick, meta["events"][p.station], parts) for p in plans]
     if workers > 1 and len(jobs) > 1:
@@ -738,6 +749,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--dev", action="store_true")
     g.add_argument("--holdout", action="store_true")
+    g.add_argument("--fresh", action="store_true", help="the twelve FRESH stations (Amendment 2 in config/protocol.md)")
     ap.add_argument("--quick", action="store_true", help="one year and one fault round: for tuning loops only")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stations", nargs="*", help="only these stations")
@@ -748,7 +760,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="reproduce a holdout run that was already made (the original lock file stays in git history)")
     args = ap.parse_args(argv)
     settings = load_settings()
-    phase = "HOLDOUT" if args.holdout else "DEV"
+    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "DEV"
+    if args.fresh:
+        lock = REPO / "data" / "fresh" / ev.FRESH_LOCK_NAME
+        if args.force_rerun_holdout and lock.exists():
+            print(f"Re-running the fresh evaluation to reproduce it. The first run is recorded in {lock}.")
+        else:
+            try:
+                ev.guard_fresh(settings, REPO, REPO / "data")
+            except ev.HoldoutError as e:
+                print(f"Cannot run the fresh evaluation: {e}")
+                return 2
     if args.holdout:
         lock = REPO / "data" / "holdout" / ev.LOCK_NAME
         if args.force_rerun_holdout and lock.exists():
@@ -764,7 +786,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     for ph in dict.fromkeys(r["phase"] for r in res["stations"]):
         text.append(format_phase(aggregate(res["stations"], ph), {"DEV": "DEV (tuning allowed)",
                                                                   "HOLDOUT_TIME": "HOLDOUT in time (DEV stations, 2022-2024)",
-                                                                  "HOLDOUT_SPACE": "HOLDOUT in space (sealed stations, 2020-2024)"}[ph]))
+                                                                  "HOLDOUT_SPACE": "HOLDOUT in space (sealed stations, 2020-2024)",
+                                                                  "FRESH": "FRESH (twelve stations nobody had looked at, 2020-2024)"}[ph]))
     print("\n\n".join(text))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
