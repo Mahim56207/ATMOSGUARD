@@ -1,7 +1,6 @@
 """Tests for atmos/explain.py and the /explain route."""
 import importlib.util
 
-import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 

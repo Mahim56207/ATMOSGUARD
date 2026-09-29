@@ -1,7 +1,6 @@
 """End-to-end replay test: historical CSV -> /ingest -> verdicts, with the raw data kept unchanged."""
 import csv
 
-import pytest
 from fastapi.testclient import TestClient
 
 import replay as rp

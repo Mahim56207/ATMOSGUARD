@@ -1,8 +1,7 @@
 """Operational settings: API key on writes, rate limit on /ingest, data retention, richer /status."""
 import copy
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import pytest
 from fastapi.testclient import TestClient
 
 import api

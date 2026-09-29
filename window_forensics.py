@@ -11,7 +11,6 @@ This is for explaining verdicts that are already reported. It never writes a loc
 from __future__ import annotations
 
 import argparse
-import copy
 from typing import Optional
 
 import pandas as pd

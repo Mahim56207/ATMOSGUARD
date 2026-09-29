@@ -1,5 +1,4 @@
 """Tests for data_tools/ (ISD parsing, series building, event rules) and the helpers evaluate_real.py relies on."""
-import io
 import json
 from pathlib import Path
 
