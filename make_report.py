@@ -22,9 +22,10 @@ from make_summary import markdown_table
 
 REPO = Path(__file__).resolve().parent
 DOCS = REPO / "docs"
-PHASE_ORDER = ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE")
+PHASE_ORDER = ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH")
 PHASE_SHORT = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "holdout in time (same six stations, 2022-2024)",
-               "HOLDOUT_SPACE": "holdout in space (eight unseen stations)"}
+               "HOLDOUT_SPACE": "holdout in space (eight unseen stations)",
+               "FRESH": "fresh stations (twelve more, sealed before the remedies were tested)"}
 
 REFERENCES = """\
 1. Smith, A., Lott, N., Vose, R. (2011). The Integrated Surface Database: recent developments and partnering with the National Climatic Data Center. *Bulletin of the American Meteorological Society* 92, 704-708.
@@ -111,7 +112,9 @@ def results_section(summary: dict) -> str:
             continue
         p = summary["phases"][k]
         L += [head(p["title"]), "", f"*{p['subtitle']}* Stations: {', '.join(p['stations'])}.", ""]
-        for key in ("headline", "detection", "detection_named", "clean", "extreme_weather", "noaa", "drift", "by_station"):
+        for key in ("headline", "detection", "detection_named", "remedies", "clean", "extreme_weather", "noaa", "drift", "by_station"):
+            if key not in p:
+                continue
             t = p[key]
             L += [f"#### {t['title']}", "", t["caption"], ""] + markdown_table(t["rows"])
             if key == "extreme_weather":

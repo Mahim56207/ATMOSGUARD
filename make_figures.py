@@ -101,11 +101,11 @@ def _events_fault(c: dict) -> tuple[float, int, int]:
 
 def fig_baselines(aggs: dict) -> None:
     order = ["full", "baseline_rules", "baseline_mahalanobis", "baseline_climatology", "baseline_isolation_forest", "baseline_range", "no_limits"]
-    phases = [p for p in ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE") if p in aggs]
+    phases = [p for p in ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH") if p in aggs]
     if not phases:
         return
     fig, axes = plt.subplots(len(phases), 3, figsize=(13, 2.9 * len(phases) + 0.6), squeeze=False)
-    titles = {"DEV": "DEV", "HOLDOUT_TIME": "holdout in time", "HOLDOUT_SPACE": "holdout in space"}
+    titles = {"DEV": "DEV", "HOLDOUT_TIME": "holdout in time", "HOLDOUT_SPACE": "holdout in space", "FRESH": "fresh stations"}
     for r, ph in enumerate(phases):
         cfg = aggs[ph]["configs"]
         y = np.arange(len(order))[::-1]
@@ -164,6 +164,38 @@ def fig_ablation(aggs: dict) -> None:
     plt.close(fig)
 
 
+def fig_remedies(aggs: dict) -> None:
+    """The two post-mortem remedies against the frozen pipeline, on stations nobody had looked at (Amendment 2)."""
+    if "FRESH" not in aggs or "remedies" not in aggs["FRESH"]["configs"]:
+        return
+    cfg = aggs["FRESH"]["configs"]
+    names = ["full", "remedy_frozen", "remedy_step", "remedies"]
+    labels = {"full": "frozen pipeline", "remedy_frozen": "+ remedy 1\n(ceiling-aware frozen)", "remedy_step": "+ remedy 2\n(learned step cap)",
+              "remedies": "+ both"}
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2))
+    fw = [_events_fault(cfg[n])[1] for n in names]
+    fs = [_events_fault(cfg[n])[0] for n in names]
+    det = [_det_mean(cfg[n]) for n in names]
+    for ax, vals, title, fmt in ((axes[0], fw, "real extreme-weather windows with a FAULT", "{:.0f}"),
+                                 (axes[1], fs, "FAULT share of extreme-weather samples (%)", "{:.2f}%"),
+                                 (axes[2], det, "injected faults detected (mean of types, %)", "{:.1f}%")):
+        ax.bar(range(len(names)), vals, color=[C["full"], C["ok"], C["ok"], C["weather"]], width=0.6)
+        for i, v in enumerate(vals):
+            ax.text(i, v + max(max(vals) * 0.02, 0.01), fmt.format(v), ha="center", fontsize=9, color=INK)
+        ax.set_xticks(range(len(names)))
+        ax.set_xticklabels([labels[n] for n in names], fontsize=8.5)
+        ax.set_ylim(0, max(vals) * 1.18 if max(vals) > 0 else 1)
+        ax.set_title(title, loc="left", fontsize=10, color=INK, fontweight="bold")
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="y", color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+    fig.suptitle("Fresh stations, sealed before the test: what the two remedies from the holdout post-mortem do", x=0.01, ha="left",
+                 fontsize=12, fontweight="bold", color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(OUT / "fig_remedies.png", dpi=150)
+    plt.close(fig)
+
+
 def fig_drift(aggs: dict) -> None:
     ph = "HOLDOUT_TIME" if "HOLDOUT_TIME" in aggs else "DEV" if "DEV" in aggs else None
     if ph is None:
@@ -198,6 +230,10 @@ def fig_scale() -> None:
     fig, ax = plt.subplots(figsize=(7.5, 4.2))
     for key, lab, col in (("median_ms", "median", C["full"]), ("p95_ms", "95th percentile", C["warn"]), ("p99_ms", "99th percentile", C["bad"])):
         ax.plot(n, [r[key] for r in rows], marker="o", color=col, lw=2, label=lab)
+    nf = d.get("pipeline_without_isolation_forest") or []
+    if nf:
+        ax.plot([r["stations"] for r in nf], [r["median_ms"] for r in nf], marker="s", ls="--", color=C["ok"], lw=2,
+                label="median, Isolation Forest layer off")
     ax.set_xscale("log")
     ax.set_xticks(n)
     ax.set_xticklabels([str(x) for x in n])
@@ -245,6 +281,7 @@ def main() -> int:
     fig_events()
     fig_baselines(aggs)
     fig_ablation(aggs)
+    fig_remedies(aggs)
     fig_drift(aggs)
     fig_scale()
     fig_coldstart()
