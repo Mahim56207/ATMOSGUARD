@@ -47,6 +47,14 @@ program wrote them, in five separate numbers that are never merged. Section 5 ex
 Section 6 is the limitations. Section 7 is related work and what is ours. Section 8 shows how to reproduce everything.
 
 
+![Figure 1. What one reading goes through.](figures/diagram_pipeline.png)
+
+*Figure 1. What one reading goes through.*
+
+![Figure 2. The four verdicts and what each looks like on the three channels (sketches).](figures/diagram_sensor_or_sky.png)
+
+*Figure 2. The four verdicts and what each looks like on the three channels (sketches).*
+
 ## 2. Data and evaluation protocol
 
 ### 2.1 Data
@@ -1116,6 +1124,40 @@ Leave-one-station-out on the six DEV stations, judged on their DEV years. A star
 
 The study ran 42 jobs in 8.7 minutes on 4 workers (`python evaluate_coldstart.py`; `--estimate` projects the running time first).
 
+### 4.8 Figures
+
+![Figure 3. The same real data and the same three numbers for AtmosGuard and simpler systems, in every split (lower is better in the first two columns, higher in the third).](figures/fig_baselines.png)
+
+*Figure 3. The same real data and the same three numbers for AtmosGuard and simpler systems, in every split (lower is better in the first two columns, higher in the third).*
+
+![Figure 4. Ablation on DEV: what each layer is worth (bars) and what it costs in false alarms on clean real data (top).](figures/fig_ablation.png)
+
+*Figure 4. Ablation on DEV: what each layer is worth (bars) and what it costs in false alarms on clean real data (top).*
+
+![Figure 5. Three real cyclones with nothing injected: the pressure crash is escalated as weather, never called a fault.](figures/fig_real_cyclones.png)
+
+*Figure 5. Three real cyclones with nothing injected: the pressure crash is escalated as weather, never called a fault.*
+
+![Figure 6. The fresh stations: what the two remedies from the holdout post-mortem do (registered decision rule, Section 2.7).](figures/fig_remedies.png)
+
+*Figure 6. The fresh stations: what the two remedies from the holdout post-mortem do (registered decision rule, Section 2.7).*
+
+![Figure 7. How big must a fault be? Detection against fault size on the DEV stations (injected faults, tuning set).](figures/fig_detectability.png)
+
+*Figure 7. How big must a fault be? Detection against fault size on the DEV stations (injected faults, tuning set).*
+
+![Figure 8. A new station on day one: with a starter from the nearest other station, and with its own data only.](figures/fig_coldstart.png)
+
+*Figure 8. A new station on day one: with a starter from the nearest other station, and with its own data only.*
+
+![Figure 9. Per-reading cost against the number of stations (state is per station).](figures/fig_scale.png)
+
+*Figure 9. Per-reading cost against the number of stations (state is per station).*
+
+![Figure 10. Slow drift: the share of chunks where the drift monitor claims drift, against the size of the ramp.](figures/fig_drift_power.png)
+
+*Figure 10. Slow drift: the share of chunks where the drift monitor claims drift, against the size of the ramp.*
+
 
 ## 5. What the holdout found that development did not
 
@@ -1338,9 +1380,10 @@ python -m pytest -q                                   # 400+ tests, including th
 | DEV results (six stations, 2020-2021) | `python evaluate_real.py --dev --workers 4 --out results/dev_run4.json` | 15 min | text report + JSON |
 | The twelve FRESH stations (Amendment 2) | `python -m data_tools.make_fresh fetch` and `build`, then `python evaluate_real.py --fresh --workers 4 --out results/fresh_run1.json` | 1 h | **refused if already run**; explains verdicts: `python window_forensics.py --phase FRESH --station IXR` |
 | Holdout in time and space | `python evaluate_real.py --holdout --workers 4 --out results/holdout_run1.json` | 30-40 min | **refused if already run**; `--force-rerun-holdout` reproduces it (that is how `holdout_run2` was made, see `results/RUNS.md`) |
-| Summary, tables, README block, Q&A numbers | `python make_summary.py results/dev_run4.json results/holdout_run2.json results/fresh_run1.json --scale results/scale.json --coldstart results/coldstart.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md` | seconds | `results/summary.json`, `results/REPORT.md` |
+| Summary, tables, README block, Q&A numbers | `python make_summary.py results/dev_run4.json results/holdout_run2.json results/fresh_run1.json --scale results/scale.json --coldstart results/coldstart.json --sensitivity results/sensitivity.json --readme README.md --numbers docs/JUDGE_QA.md docs/SUBMISSION_TEXT.md` | seconds | `results/summary.json`, `results/REPORT.md` |
 | Technical report | `python make_report.py --docx` (`pip install pypandoc_binary` for the .docx) | seconds | `docs/TECHNICAL_REPORT.md`, `.docx` |
 | Scale and speed | `python loadtest.py --stations 1 10 50 100` (on a quiet machine) | 12 min | `results/scale.json` |
+| How big must a fault be? (detection against fault size, DEV) | `python evaluate_sensitivity.py --workers 4` (`--estimate` first) | 3 min | `results/sensitivity.json` |
 | Cold start for a new station | `python evaluate_coldstart.py --estimate` first (projects the time), then `python evaluate_coldstart.py --workers 4` (`--resume` continues an interrupted run) | 9 min | `results/coldstart.json` |
 | The same evaluation on your own station CSV | `python evaluate_csv.py your.csv --station NAME` | 5-15 min | prints (see `docs/USE_YOUR_DATA.md`) |
 | Offline demo page | `python make_offline_demo.py` | 1 min | `docs/demo/index.html` |
