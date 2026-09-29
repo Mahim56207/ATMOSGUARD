@@ -30,7 +30,7 @@ never "does not exist".
 
 | What | From | What we changed | What we measured |
 |---|---|---|---|
-| Learned frozen-run limit | HadISD streak thresholds | Learned per station from clean history *online*, detects the station's reporting resolution, and grades the flag: a run just past the limit is `SUSPECT`, a run twice the limit is `FAULT` | On real Bhubaneswar METAR the fixed limits alarmed on **67.6 %** of clean samples; with learned, graded limits **3.1 %**, and 0 FAULT verdicts on real cyclone windows (the fixed-limit version produced FAULTs from a real pressure plateau inside a cyclone) |
+| Learned frozen-run limit | HadISD streak thresholds | Learned per station from clean history *online*, detects the station's reporting resolution, and grades the flag: a run just past the limit is `SUSPECT`, a run twice the limit is `FAULT` | On the six real DEV stations, switching the learned limits off (the ablation; fixed limits) makes **63.1 %** of clean samples alarm and gives FAULT on 28.6 % of real extreme-weather samples (all 30 windows); with learned, graded limits it is **1.9 %** and 0 FAULT verdicts in 30 windows (the fixed-limit version produced FAULTs from a real pressure plateau inside a cyclone) |
 | Isolated-trend rule for drift | blind-calibration / environmental-vs-instrumental drift literature | Applied to the daily-mean residuals of a single station's three channels, with a persistence requirement | False drift claims on clean real data fell from **97.7 %** to about **1 %** of station-days |
 | Autocorrelation-aware drift test | Mann-Kendall prewhitening literature | Daily means, AR(1)-inflated standard error, winsorised residuals, smooth (not stepped) climatology | see the drift table in `results/REPORT.md` |
 | Common-mode / clock checks | HadISD diurnal-cycle timing check; industrial FDI | Implemented as layers T1/T2 that can be switched off; T1 evaluated on real data with an injected 3-hour clock shift | ablation row "without timing layer" |
@@ -97,7 +97,7 @@ data, an agreement check against operational QC flags, or a stated list of what 
 
 | Finding | Evidence | Fix |
 |---|---|---|
-| Fixed frozen and noise limits treat rounded values as stuck sensors | 67.6 % of clean Bhubaneswar samples alarmed | station-learned limits (`atmos/limits.py`) |
+| Fixed frozen and noise limits treat rounded values as stuck sensors | 63.1 % of clean DEV samples alarmed without them (1.9 % with), results table 2 | station-learned limits (`atmos/limits.py`) |
 | A pressure plateau inside a cyclone reads as a frozen barometer | FAULT verdicts on real cyclone windows | two-tier frozen rule: soft just past the limit, hard at twice the limit |
 | The drift monitor claimed drift almost every day | 97.7 % of station-days | daily means, autocorrelation-aware test, isolated-trend rule, persistence (about 1 %) |
 | The seasonal cycle read as drift through a step-function climatology | reproduced in a unit test | smooth (bilinear in month and hour) expected value |

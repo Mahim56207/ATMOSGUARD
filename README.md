@@ -15,9 +15,9 @@ with a plain-English reason, a health score and a service-date estimate. The raw
   Michaung, Remal, Biparjoy...), heat waves, cold waves and thunderstorm outflows, chosen by rule on the data. The false-alarm rate
   **on real extreme weather is reported separately** from the injected-fault score.
 - **The holdout was sealed in time and in space and run once**, with the protocol committed first. Whatever it gave is below.
-- **Real data broke our first version, and we kept the record**: on real Bhubaneswar METAR (whole degrees, whole hPa) the
-  synthetic-tuned pipeline alarmed on 63-68 % of clean samples, a real pressure plateau inside a cyclone read as a frozen
-  barometer, and real thunderstorm outflows were called faults. What we changed and why is in the tuning log in
+- **Real data broke our first version, and we kept the record**: on real airport METAR (whole degrees, whole hPa) the fixed-limit
+  pipeline alarmed on 63 % of clean samples (the results row "without station-learned limits"), a real pressure plateau inside a
+  cyclone read as a frozen barometer, and real thunderstorm outflows were called faults. What we changed and why is in the tuning log in
   [`config/protocol.md`](config/protocol.md).
 - **We say what we cannot do:** [`docs/WHAT_WE_DO_NOT_CLAIM.md`](docs/WHAT_WE_DO_NOT_CLAIM.md) and
   [`docs/FAILURE_MODES.md`](docs/FAILURE_MODES.md).
