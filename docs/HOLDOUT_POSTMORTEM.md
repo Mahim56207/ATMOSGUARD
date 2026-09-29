@@ -44,3 +44,10 @@ that rule and nothing else:
 What the adopted remedy costs: a humidity sensor that really is stuck at 100 % is now a `SUSPECT` (review), not a `FAULT`, until it disagrees with the other
 channels or the health score drops. We take that trade because sustained saturation is real weather more often than a stuck sensor is, and we say so.
 
+
+## What happened after that: the third set (Amendment 3)
+The step causes were the open item. A step cap that scales with what the station's own daily cycle explains was registered as remedy 3 (with a second remedy aimed at level shifts) and tested once on twelve more
+stations nobody had looked at: five Indian airports and seven Australian automatic weather stations (`data_tools/stations_fresh2.yaml`). By the rule registered first, **remedy 3 is adopted**: real
+extreme-weather windows with a `FAULT` 4 to 1 of 134 (the four were fast humidity drops and an afternoon warming at Giles in the desert and Thredbo in the Alps), no detection type moved, clean false alarms
+-0.02 points. The one window left is Thredbo, October 2023 (humidity -48.9 % in two hours). Remedy 4 (a sustained one-channel offset) is **rejected**: level-shift detection +1 point against the +5 registered,
+clean false alarms +0.48 points. Details and every number: Amendment 3 and its outcome in `config/protocol.md`, `results/REPORT.md`.

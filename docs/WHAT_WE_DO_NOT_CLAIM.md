@@ -4,8 +4,10 @@ Read this before the demo. Every line is something a judge could take apart if w
 also true of the repository as it stands.
 
 ## About the data
-- **The data are airport records, not IMD AWS records.** IMD AWS data are not public. We use NOAA's Integrated Surface
-  Database (METAR and SYNOP) for 26 Indian airport stations, 2016-2024 (14 for development and the first holdouts, 12 fresh). The instruments and siting differ from an AWS.
+- **The data are not IMD AWS records.** IMD AWS data are not public, and the hosts that might serve one are blocked where this was built. We use NOAA's Integrated Surface
+  Database (METAR and SYNOP) for 26 Indian airport stations, 2016-2024 (14 for development and the first holdouts, 12 fresh), and, in the third sealed set, five more Indian airports and seven
+  Australian Bureau of Meteorology automatic weather stations (hourly SYNOP at 0.1 C and 0.1 hPa). Those are real automatic weather stations at fine resolution, but Australian, hourly, and not IMD.
+- **No sub-hourly record has been tested.** Every record is hourly or 3-hourly. The pipeline scales its windows with the cadence and is unit-tested at 1, 15 and 60 minutes, but 1-15 minute real data at 0.1 resolution has not been run.
 - **Relative humidity is derived, not measured.** ISD carries temperature and dew point; RH is computed from them
   (Magnus). So T and RH are not independent measurements in our evaluation, and the humidity channel inherits the rounding
   of two whole-degree numbers.
@@ -23,7 +25,9 @@ also true of the repository as it stands.
   service limit within weeks and reports the smallest slope it can see. Drifts smaller than that need a reference (a
   neighbour, a redundant sensor, or a calibration visit).
 - **Offset with no reference is invisible.** A humidity sensor that reads 3 % high from day one, with nothing else changing,
-  cannot be seen by any single-station method, including this one.
+  cannot be seen by any single-station method, including the core of this one. The optional peer layer (`docs/PEER_LAYER.md`) sees offsets and drifts against three or more neighbours within 250 km
+  (a 2 hPa offset in 91-96 % of trials within 21 days on two Australian AWS clusters, against 0-4 % for the station alone), but it needs a dense network, misses half-unit offsets, is weak on humidity,
+  cannot see a fault that moves all the neighbours too, and was measured on injected faults.
 - **Long-term drift behaviour is not validated.** Real calibration drift plays out over months and years; we tested ramps
   of 45 days.
 - **The holdout was run once.** The result is whatever it was, including if it is worse than DEV. `data/holdout/.holdout_used`
@@ -31,8 +35,12 @@ also true of the repository as it stands.
   every registered number reproduced exactly (`python compare_runs.py`).
 - **The shipped default is not exactly what the holdout ran.** After the fresh-station test, one remedy (the ceiling-aware frozen rule) was adopted by a
   rule registered before that test. The evaluation's `full` configuration still forces it off, so every reported number reproduces; the remedy's own numbers
-  are on the fresh stations only, and it changed nothing on DEV. The frozen pipeline still gets a `FAULT` in 3 of 98 and 3 of 139 real extreme-weather windows on
-  unseen stations.
+  are on the fresh stations only, and it changed nothing on DEV. A second remedy (the expected-change-aware step rule) was adopted after the fresh-2 test by a rule registered before it (4 windows with a `FAULT` to 1 of 134). The
+  frozen pipeline got a `FAULT` in 3 of 98, 3 of 139 and 4 of 134 real extreme-weather windows on the three sets of unseen stations. A third remedy (a sustained one-channel offset) was
+  tested and rejected.
+- **Fresh-2 false alarms are 9.3 %, not 2.5 %.** Four Australian AWS whose 2016-2019 records had 16 reports a day with alternating 1 h and 2 h gaps (hourly all day from 2020) have no learned noise
+  limit, so a fixed floor tuned on coarser data alarms on them (33 %, 26 %, 21 % and 8 % of clean samples). Every other station in every set had its limits learned. Refit on the current cadence is the
+  fix (a post-hoc diagnostic, `refit_diagnostic.py`, not sealed evidence); the pipeline says so in an informational notice on each reading.
 - **Detection is lower on unseen stations than on DEV,** and most detections of spikes, level shifts, noise bursts and wrong clocks are `SUSPECT`, not `FAULT`.
   Simpler detectors beat the full pipeline on some fault types (see `results/REPORT.md`).
 - **The cold-start study covers six stations,** each borrowing from its nearest neighbour among the other five. A new station in a climate none of them share may

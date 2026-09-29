@@ -27,7 +27,7 @@ escalated as `WEATHER`. (c) We measured all of it against the textbook rules on 
 every real extreme-weather window a fault.
 
 **2. How do you know it works on real faults and not just injected ones?**
-We do not, and we say so. No labelled real-fault set exists for Indian AWS. What we did instead: (a) the false-alarm rate on *real*
+We do not, and we say so. No labelled real-fault set exists that we could reach (the hosts for the public ones are blocked where this was built), and IMD's records are not public. What we did instead: (a) the false-alarm rate on *real*
 weather (clean data and 30+ real extreme-weather windows) with nothing injected, reported separately; (b) agreement with NOAA's own
 quality flags on the raw record (another automated system, so it shows consistency, not truth); (c) injected faults, labelled injected,
 scored so that only alarms the fault itself raised count. Real-fault validation against maintenance records is future work.
@@ -66,8 +66,15 @@ remedies, registered a decision rule (Amendment 2), sealed twelve more stations 
 rule is adopted (windows with a FAULT 3 to 2 of 139, nothing else changes) and the learned step cap is rejected (it cost 4.2 points of wrong-clock detection).
 The tables, the rule and the three windows that still get a FAULT are all in the repository.
 
-**Why not fix the step-cap cases too?** The fix we tried would have, and it made another number worse by more than the rule allows, so we did not ship it. A step
-cap that scales with the reporting gap is the next candidate, and it would need a third set of unseen stations to be judged honestly.
+**Why not fix the step-cap cases too?** We did, in the next round. The learned step cap was rejected (it cost clock-shift detection), so we registered a different remedy
+first (Amendment 3): judge only the part of a change that the station's own daily cycle does not explain. It was tested once on a third set of twelve stations nobody had looked at
+(five Indian airports and seven Australian automatic weather stations). By the rule it is adopted: windows with a `FAULT` 4 to 1 of 134, nothing else moves. A second Amendment 3 remedy
+(a sustained one-channel offset) missed its target (+1 point of level-shift detection against +5 required, clean false alarms +0.48 points) and is rejected.
+
+**Your false-alarm rate on the Australian stations is 13.6 %. Why?** It is, and we did not hide it. Four of the seven stations reported 16 times a day with alternating one- and two-hour gaps in the
+training years and hourly all day afterwards, so no noise limit could be learned and a fixed floor tuned on coarser data alarmed on their 0.1-resolution readings (33 %, 26 %, 21 % and 8 % of clean samples;
+the other three are 0.9-2.1 %, the five Indian airports 3.2 %). Every earlier station had its limits learned. The pipeline now says so on each reading and the remedy is a refit at the current cadence
+(`refit_diagnostic.py`; a post-hoc diagnostic, not sealed evidence).
 
 **A simpler detector beats you on some fault types. Why use yours?** It does, and we show it: a Mahalanobis-only detector is better on spikes and blind to frozen
 sensors, dropouts and clocks; the textbook rules are better on wrong clocks on the unseen stations and blind to dropouts, and on the fresh stations they call a FAULT on 134 of 139 real extreme-weather windows and
@@ -83,12 +90,14 @@ rates in the tables. (Calibrating it, with a reliability diagram and isotonic re
 ## Drift and offsets
 **Can it detect slow drift?** Large drift, yes; small drift, no. A single station with no reference sees drifts of several times the
 service limit within weeks, and the monitor reports the smallest slope it can see at that station. False drift claims on clean real data
-are about 1 % of station-days. **A constant offset from day one?** No single-station method can. We say so.
+are about 1 % of station-days. **A constant offset from day one?** No single-station method can, and we say so. With three or more neighbours within 250 km an optional peer layer can
+(`docs/PEER_LAYER.md`): on two disjoint clusters of Australian AWS it found a 2 hPa offset in 91-96 % of trials within 21 days where the station alone found 0-4 %, and a 2 C offset in 86-88 % against 1-9 %. It misses
+half-unit offsets, is weak on humidity and was measured on injected faults.
 
 ## Design choices
 **Why single-station only?** The places India needs this most (Ladakh, the Thar, the Andamans) have no neighbour within hundreds of km.
-With neighbours we would do better, and that is future work; the cold-start module borrows a frozen table, not live data.
-**Why airport data, not IMD?** IMD AWS data are not public. The pipeline takes any CSV in the same layout; if a faculty contact can share
+With neighbours we do better for offsets and drift, and that optional layer exists and is measured (`docs/PEER_LAYER.md`); the core does not need it, and the cold-start module borrows a frozen table, not live data.
+**Why airport data, not IMD?** IMD AWS data are not public. We added seven real Australian automatic weather stations at 0.1 resolution in the third sealed set so the claim is not only about airports. The pipeline takes any CSV in the same layout; if a faculty contact can share
 even a few years of real AWS data, run `evaluate_csv.py` on it (or upload it in the dashboard). **Why four verdicts?** Quality control and severe-weather alerting come out of one
 engine, and mixed evidence must not delete a real extreme.
 **What if a real weather event looks exactly like a fault (a real one-channel jump)?** Rule 2 would call it a fault; that is why "quiet" now
@@ -100,9 +109,9 @@ squared distance splits **exactly** into per-feature contributions (they add up)
 when `shap` is installed (`GET /explain`). SHAP is optional because the forest earns least in the ablation.
 
 ## Edge, scale, deployment
-**Does it run on the ESP32?** The L0 logic is plain C++ that is compiled and checked against the Python on thousands of inputs, and the
-sketch type-checks against stand-ins for the Arduino libraries. It has not been compiled with the real toolchain or run on hardware in this
-repository, and no energy figure is measured.
+**Does it run on the ESP32?** The L0 logic is plain C++ that is compiled and checked against the Python on thousands of inputs, and the sketch itself is executed on the laptop against a simulator of the
+Arduino-ESP32 pieces (clock, sensor, Wi-Fi, HTTP): the readings, flags, outage queue and clock guard behave, and what it sends is accepted by the real API. It has not been compiled with the real ESP32
+toolchain or run on the chip in this repository, and no energy figure is measured (`docs/HARDWARE_TEST_LOG.md` is the checklist).
 **How does it scale?** State is per station and nothing is shared. In the scale test the median time per reading stays flat from 1 to 100 simulated stations on one
 machine (the speed lines at the top of this file give the numbers and what one core can serve); capacity grows by adding worker processes, each owning a set of stations.
 The Isolation Forest used to be almost the whole per-reading cost; it is now scored by a vectorised routine whose numbers are bit-identical to scikit-learn's (checked on
