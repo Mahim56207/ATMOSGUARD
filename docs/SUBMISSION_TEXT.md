@@ -38,8 +38,8 @@ channels moving or departing together is weather; anything ambiguous is suspect.
 off, and the system still runs.
 
 ## Feasibility and viability
-Runs on a laptop (about 7 ms per reading in the full pipeline; state is per station so cost does not grow with the number of stations, see
-the scale table). Committed models and real data mean a fresh clone runs in a minute. Docker Compose, an OpenAPI interface, an optional
+Runs on a laptop (the speed lines above are measured; state is per station so the cost of a reading does not grow with the number of
+stations). Committed models and real data mean a fresh clone runs in a minute. Docker Compose, an OpenAPI interface, an optional
 API key and rate limit, retention, CI on every commit. The edge node is an ESP32 with a BME280 (about Rs 700-1,500); its checks are one
 portable header that the tests compile and compare with the Python. **Not yet done:** running on hardware, measuring energy (an estimate
 and the measurement recipe are in `docs/HARDWARE.md`).
