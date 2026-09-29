@@ -621,7 +621,9 @@ def judge_block(summary: dict) -> str:
     """The numbers to have in your head at the demo table, per split, straight from the summary."""
     L = ["**Numbers to have in your head** (generated from `results/summary.json`; say which split you are quoting):", ""]
     names = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "holdout, same stations, later years",
-             "HOLDOUT_SPACE": "holdout, eight unseen stations", "FRESH": "fresh, twelve more unseen stations"}
+             "HOLDOUT_SPACE": "holdout, eight unseen stations", "FRESH": "fresh, twelve more unseen stations",
+             "FRESH2": "fresh-2, twelve more (five Indian airports, seven Australian AWS at 0.1 resolution; `full` = the pipeline as shipped before Amendment 3)",
+             "FRESH2_AWS": "fresh-2, the seven Australian AWS alone"}
     for k, label in names.items():
         if k not in summary["phases"]:
             continue
