@@ -619,7 +619,7 @@ def readme_block(summary: dict) -> str:
         cells = [ph[k]["headline"]["rows"][i]["answer"] for k in order]
         L.append(f"| **{label}** | " + " | ".join(c.replace("|", "/") for c in cells) + " |")
     L.append("")
-    L.append("Real NOAA records: 26 Indian airport stations in DEV, holdout and Fresh, then Fresh 2 with five more Indian airports and seven Australian automatic weather stations. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
+    L.append("Real NOAA records: 26 Indian airport stations in DEV, holdout and Fresh, then Fresh 2 (five more Indian airports, seven Australian automatic stations) and Fresh 3 (seven US automated stations reporting every 20 minutes, five Australian automatic stations); 50 stations in all. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
              "Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).")
     return "\n".join(L)
 

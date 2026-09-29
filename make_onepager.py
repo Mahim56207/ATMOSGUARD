@@ -108,7 +108,7 @@ footer {{ margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; 
   <section>
     <h2>How we know (no new algorithm claimed)</h2>
     <ul>
-      <li>26 real Indian airport stations (NOAA ISD, 2016-24): cyclones, heat and cold waves, outflows.</li>
+      <li>50 real stations (NOAA ISD, 2016-24): 31 Indian airports, 12 Australian automatic weather stations, 7 US automated stations reporting every 20 minutes; cyclones, heat and cold waves, outflows.</li>
       <li>Protocol committed first; holdout sealed in time and space, run once, lock file.</li>
       <li>The holdout showed failures: we registered a rule, sealed 12 more stations, ran once: one remedy adopted, one rejected.</li>
       <li>Baselines and an ablation on the same data; NOAA's own flags; one command per result.</li>

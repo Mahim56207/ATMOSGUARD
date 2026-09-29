@@ -51,3 +51,9 @@ stations nobody had looked at: five Indian airports and seven Australian automat
 extreme-weather windows with a `FAULT` 4 to 1 of 134 (the four were fast humidity drops and an afternoon warming at Giles in the desert and Thredbo in the Alps), no detection type moved, clean false alarms
 -0.02 points. The one window left is Thredbo, October 2023 (humidity -48.9 % in two hours). Remedy 4 (a sustained one-channel offset) is **rejected**: level-shift detection +1 point against the +5 registered,
 clean false alarms +0.48 points. Details and every number: Amendment 3 and its outcome in `config/protocol.md`, `results/REPORT.md`.
+
+## And a fourth set (Amendment 4)
+Twelve more stations (seven US automated stations reporting every 20 minutes at 0.1 C, five Australian stations with irregular training years) tested a limits warm-up for stations whose training record left the noise limit unlearned. It cut their
+false alarms from 45.4 % to 1.8 % and cost 6 points of noise-burst detection, so by the rule registered first it is **rejected** (kept as an operator's option, `refit.py --complete`). The fourth set also produced five more real-weather windows with a `FAULT`
+(5 of 160): temperature pinned at 0 C for about nine hours in freezing rain (Fitch H Beach and La Porte, January 2024), and a +12.5 C night-time jump at Alice Springs. The freezing-point plateau is the same kind of cause as the saturated humidity of the first
+post-mortem, and would need its own registered remedy and another unseen set. Details: Amendment 4 and its outcome in `config/protocol.md`.

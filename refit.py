@@ -80,7 +80,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--station", required=True)
     ap.add_argument("--from", dest="start", default=None, help="first timestamp to learn from (UTC, e.g. 2020-01-01)")
     ap.add_argument("--to", dest="end", default=None, help="learn up to, not including, this timestamp")
-    ap.add_argument("--complete", action="store_true", help="keep the saved limits and fill only the ones that were never learned from this stretch (needs saved limits)")
+    ap.add_argument("--complete", action="store_true", help="keep the saved limits and fill only the ones that were never learned from this stretch (needs saved limits). Tested in Amendment 4: it removes the false-alarm flood at stations with an irregular training record (45 % to 2 %) and costs noise-burst detection (about 6 points pooled), so it is an operator's choice, not a default")
     args = ap.parse_args(argv)
     settings = load_settings()
     try:
