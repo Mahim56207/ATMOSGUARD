@@ -44,15 +44,19 @@ break-the-sensor-on-demand control. That maps to the criteria as follows.
 1. **Run `docker compose up --build` once on your own machine** (Docker was not available where this was built). If it does not
    come up in one command, fix it or drop the claim.
 2. **Flash the ESP32** (`docs/HARDWARE.md`), let it run for an hour, press the fault controls from the dashboard. If anything
-   fails, `simnode.py` gives the same readings.
+   fails, `simnode.py` gives the same readings. The real Arduino/ESP32 toolchain could not be downloaded where this was built, so the sketch
+   was type-checked against stubs only.
 3. **Measure the current** in three states with a USB power meter (the energy table).
-4. **Record the backup demo video** from `docs/DEMO_RUNBOOK.md` with the venue's network off, and keep it on the laptop.
+4. **Record the backup demo video with your own voice.** A silent screen recording of the real dashboard is already in
+   `docs/demo/dashboard_walkthrough.webm`; follow `docs/DEMO_RUNBOOK.md` and keep a copy on the laptop with the venue's network off.
 5. **Rehearse with the Q&A** in `docs/JUDGE_QA.md`, out loud, with a stopwatch.
 6. **Optional but the strongest addition: real IMD or AWS data.** If any faculty or contact can share a real AWS record (about two
    years are needed so every month has data), run `python evaluate_csv.py their.csv --station NAME` and read
    [`USE_YOUR_DATA.md`](USE_YOUR_DATA.md). It gives the same tables for that station. Even a shorter record is worth trying with `--quick`;
    the script says how weak the result will be.
-7. **The PPT** - after you have read the results and decided what to lead with.
+7. **The PPT.** Content is planned slide by slide in [`SLIDE_PLAN.md`](SLIDE_PLAN.md), with the figure, diagram or screenshot for each slide in
+   `docs/figures/` and `docs/screenshots/`. Copy numbers from the generated block in `JUDGE_QA.md`, never from memory.
+8. **Read the three windows the frozen pipeline still calls a FAULT** ([`HOLDOUT_POSTMORTEM.md`](HOLDOUT_POSTMORTEM.md)) so you can say them before a judge does.
 
 ## The three claims to lead with, and the three not to make
 Lead with: (1) the false-alarm rate on **real** cyclones and heat waves, reported separately from injected faults;
