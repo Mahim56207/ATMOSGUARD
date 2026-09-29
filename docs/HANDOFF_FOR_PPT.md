@@ -73,4 +73,4 @@ The exact upload format and fields are set by the SIH portal and your nodal cent
 **Do not claim:** that any technique is new (the novelty is the integration and the evidence: `docs/NOVELTY_AND_PRIOR_ART.md`); that injected-fault accuracy is real-world accuracy; that the humidity response-time idea works in the field; that the firmware has run on hardware; that the peer layer works without neighbours.
 
 ## 9. Things only your team can still do (about two hours of work)
-Run Docker once; flash the ESP32 and fill `docs/HARDWARE_TEST_LOG.md` if you have a board; send `docs/IMD_DATA_REQUEST.md` to a mentor or IMD contact (and use `evaluate_csv.py` if a file arrives); record the narrated video; rehearse; choose a licence (none is added); make the deck.
+Run Docker once; flash the ESP32 and fill `docs/HARDWARE_TEST_LOG.md` if you have a board; send `docs/IMD_DATA_REQUEST.md` to a mentor or IMD contact (and use `evaluate_csv.py` if a file arrives); record the narrated video; rehearse; make the deck. (The licence is done: Apache-2.0, see `LICENSE` and `NOTICE`. Check that SIH's own IP terms and every team member are happy with it.)
