@@ -1014,19 +1014,19 @@ Simulated stations on one machine (a design check, not a deployment proof). cpu_
 
 | stations | readings/s | median ms | p95 ms | p99 ms | MB/station | KB stored/station |
 |---|---|---|---|---|---|---|
-| 1 | 130.9 | 7.383 | 9.891 | 11.591 | 5.99 | 1584.4 |
-| 10 | 124.8 | 7.626 | 10.956 | 13.092 | 2.07 | 1584.4 |
-| 50 | 124.8 | 7.638 | 10.952 | 13.594 | 1.9 | 1584.4 |
-| 100 | 123.9 | 7.682 | 10.978 | 13.824 | 1.26 | 1584.4 |
+| 1 | 923.8 | 0.921 | 2.368 | 2.787 | 6.92 | 1584.5 |
+| 10 | 851.4 | 0.968 | 2.553 | 2.994 | 3.05 | 1584.5 |
+| 50 | 836.6 | 0.968 | 2.559 | 3.065 | 2.99 | 1584.5 |
+| 100 | 819.0 | 0.986 | 2.555 | 3.109 | 1.78 | 1584.5 |
 
 The same test with the Isolation Forest layer switched off (`layers.mlmodel: false`). In the ablation (tables above) the forest adds almost nothing to the verdicts, and it is most of the per-reading time:
 
 | stations | readings/s | median ms | p95 ms | p99 ms |
 |---|---|---|---|---|
-| 1 | 1395.4 | 0.521 | 1.948 | 3.678 |
-| 50 | 1430.1 | 0.526 | 1.947 | 2.346 |
+| 1 | 1536.9 | 0.499 | 1.713 | 2.071 |
+| 50 | 1353.0 | 0.526 | 1.977 | 2.395 |
 
-Real HTTP server (FastAPI + SQLite), 50 stations, 8 concurrent clients: 58.5 requests/s, median 133.12 ms, p95 164.74 ms, p99 189.15 ms, errors 0.
+Real HTTP server (FastAPI + SQLite), 50 stations, 8 concurrent clients: 164.8 requests/s, median 44.89 ms, p95 59.17 ms, p99 66.33 ms, errors 0.
 
 ### 4.6 A new station on day one (cold start)
 

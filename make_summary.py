@@ -472,9 +472,11 @@ def judge_block(summary: dict) -> str:
         big = sc["pipeline"][-1]
         L.append(f"- **Speed (simulated stations, one machine, one core, in-process, every layer on):** median {big['median_ms']} ms and "
                  f"99th percentile {big['p99_ms']} ms per reading with {big['stations']} stations, {big['readings_per_second']} readings/s.")
+        L.append(f"- **What that means:** one core keeps up with about {int(big['readings_per_second'] * 60):,} stations reporting once a minute "
+                 f"(readings per second x 60: arithmetic from the figure above, not a load test); more cores or worker processes scale it further.")
         nf = sc.get("pipeline_no_forest")
         if nf:
-            L.append(f"- **The same with the Isolation Forest layer off** (a config flag; the ablation shows it adds almost nothing): "
+            L.append(f"- **The same with the Isolation Forest layer off** (a config flag; the ablation shows it adds almost nothing to the verdicts): "
                      f"median {nf[-1]['median_ms']} ms, {nf[-1]['readings_per_second']} readings/s.")
         h = sc.get("http")
         if h:

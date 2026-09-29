@@ -43,6 +43,62 @@ def build_features(readings: Sequence[Reading]) -> tuple[np.ndarray, np.ndarray]
     return X, usable
 
 
+class _FastForest:
+    """Single-row scoring for a fitted sklearn IsolationForest that gives the SAME numbers as `decision_function`.
+
+    sklearn's call costs about 6 ms for one row, almost all of it per-call machinery (100 trees, joblib). Here every tree is
+    walked at once with numpy and the per-tree depths are added in the same order and with the same arithmetic as sklearn's
+    (float32 input compared against float64 thresholds, (path length + average path length) - 1, added tree by tree), so the
+    result is bit-identical (tests/test_fast_forest.py checks it on real data). Any forest it does not understand falls
+    back to sklearn: `build` returns None."""
+
+    def __init__(self, forest: IsolationForest):
+        trees = forest.estimators_
+        n, m = len(trees), max(t.tree_.node_count for t in trees)
+        self.rows = np.arange(n)
+        self.feature = np.zeros((n, m), dtype=np.intp)
+        self.threshold = np.zeros((n, m))
+        self.left = np.zeros((n, m), dtype=np.intp)
+        self.right = np.zeros((n, m), dtype=np.intp)
+        self.is_leaf = np.ones((n, m), dtype=bool)
+        self.value = np.zeros((n, m))
+        depth = 0
+        for i, t in enumerate(trees):
+            tr, k = t.tree_, t.tree_.node_count
+            self.feature[i, :k] = np.maximum(tr.feature, 0)              # leaves carry -2; they are never read (masked below)
+            self.threshold[i, :k] = tr.threshold
+            self.left[i, :k], self.right[i, :k] = tr.children_left, tr.children_right
+            self.is_leaf[i, :k] = tr.children_left == -1
+            self.value[i, :k] = (forest._decision_path_lengths[i] + forest._average_path_length_per_tree[i]) - 1.0
+            depth = max(depth, tr.max_depth)
+        self.max_depth = depth
+        from sklearn.ensemble._iforest import _average_path_length         # sklearn's own helper (private: build() falls back if it moves)
+        self.denominator = len(trees) * _average_path_length([forest._max_samples])
+        self.offset = forest.offset_
+
+    @classmethod
+    def build(cls, forest: IsolationForest) -> Optional["_FastForest"]:
+        try:
+            if getattr(forest, "max_features", 1.0) != 1.0 or not hasattr(forest, "_decision_path_lengths"):
+                return None
+            return cls(forest)
+        except Exception:                                                # a different sklearn layout: use sklearn itself
+            return None
+
+    def decision(self, x: np.ndarray) -> float:
+        xf = np.asarray(x, dtype=np.float32).astype(np.float64)
+        idx = np.zeros(len(self.rows), dtype=np.intp)
+        for _ in range(self.max_depth + 1):
+            at = (self.rows, idx)
+            nxt = np.where(xf[self.feature[at]] <= self.threshold[at], self.left[at], self.right[at])
+            idx = np.where(self.is_leaf[at], idx, nxt)
+        depths = np.zeros(1)
+        for v in self.value[self.rows, idx]:                            # tree by tree, as sklearn accumulates them
+            depths += v
+        scores = 2 ** (-np.divide(depths, self.denominator, out=np.ones_like(depths), where=self.denominator != 0))
+        return float((-scores - self.offset)[0])
+
+
 class IsolationModel:
     def __init__(self, station_id: str, forest: IsolationForest, threshold: float):
         self.station_id = station_id
@@ -64,13 +120,26 @@ class IsolationModel:
         threshold = float(np.quantile(scores, settings["mlmodel"]["threshold_quantile"]))
         return cls(stations.pop(), forest, threshold)
 
+    FAST_MAX_ROWS = 4                        # a live reading scores one pair; whole series go through sklearn in one batch
+
     def score(self, readings: Sequence[Reading]) -> np.ndarray:
         """Score per reading (NaN where unusable). Lower = more unusual."""
         X, usable = build_features(readings)
         out = np.full(len(readings), np.nan)
         if usable.any():
+            if len(readings) <= self.FAST_MAX_ROWS:
+                fast = self._fast_forest()
+                if fast is not None:
+                    for i in np.nonzero(usable)[0]:
+                        out[i] = fast.decision(X[i])
+                    return out
             out[usable] = self.forest.decision_function(X[usable])
         return out
+
+    def _fast_forest(self) -> Optional[_FastForest]:
+        if not hasattr(self, "_fast"):
+            self._fast = _FastForest.build(self.forest)
+        return self._fast
 
     def save(self, path: Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)

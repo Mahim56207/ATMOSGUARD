@@ -65,7 +65,7 @@ optional imputed value are stored beside the raw reading.
 | `atmos/health.py` | L1 checks (frozen two-tier, step, spike, noise, gap, timestamp, CUSUM) |
 | `atmos/limits.py` | station-learned frozen and noise limits, resolution detection |
 | `atmos/normality.py` | L2 table, smooth expected value |
-| `atmos/mlmodel.py` | L3 Isolation Forest |
+| `atmos/mlmodel.py` | L3 Isolation Forest and the Mahalanobis model. A live reading is scored by a vectorised routine whose numbers are bit-identical to scikit-learn's (`tests/test_fast_forest.py`), about 25 times faster per reading; whole series in the evaluation still go through scikit-learn in one batch |
 | `atmos/timing.py` | T1 clock phase, T2 co-jump |
 | `atmos/fusion.py` | verdict rules, `Pipeline` (state per station) |
 | `atmos/healthscore.py` | score, `DriftTracker`, drift test, ticket |
