@@ -20,6 +20,14 @@ Every result file here was written by a command in this table, on the code state
 in `atmos/store.py`, and an `api:` block in the settings. `evaluate_real.py` changed only to add the paired detection score (memoised predictions, the paired count, and a
 two-table detection printout; Amendment 1 in `config/protocol.md`); the registered count is computed as before.
 
+## What changed in the code after these runs, and why the reported numbers still stand
+`dev_run4`, `holdout_run2` and `coldstart` ran on code in which no pipeline file had changed since `d29eb02`. Afterwards three things were added: the two remedy
+flags and the shipped default of remedy 1 (Amendment 2), a vectorised single-row Isolation Forest scorer, and removal of unused imports. None changes the registered
+configurations. Evidence: (1) `evaluate_real.build_configs` pins `full`, the ablations and the baselines to both remedies off (`tests/test_remedies.py`); (2) a full DEV
+run with the current settings (`dev_check_remedies.json`, made before the scorer was added) reproduces all 234 blocks of `dev_run4` (13 configurations x 6 stations x clean,
+events, detection) exactly; (3) the scorer returns bit-identical numbers to scikit-learn on 35,994 real rows from the six committed models (`tests/test_fast_forest.py`), and
+the evaluation scores whole series through scikit-learn in one batch anyway; (4) the 417+ tests pass, and CI is green on the commit.
+
 ## Determinism check
 `python compare_runs.py results/holdout_run1.json results/holdout_run2.json` compared **61,019** numbers (counts, delays and rates for every station and
 configuration; timings excluded) and found **0 differences**. `python compare_runs.py results/dev_run3.json results/dev_run4.json` compared

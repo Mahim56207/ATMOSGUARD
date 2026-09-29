@@ -32,7 +32,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 import yaml
 

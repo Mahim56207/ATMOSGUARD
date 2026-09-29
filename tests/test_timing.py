@@ -8,7 +8,7 @@ from atmos.fusion import Pipeline
 from atmos.normality import NormalityTable
 from atmos.schema import Verdict
 from atmos.timing import check_clock, check_cojump, check_timing
-from tests.conftest import by_name, make_history, make_reading
+from tests.conftest import make_history, make_reading
 
 
 @pytest.fixture(scope="module")

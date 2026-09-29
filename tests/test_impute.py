@@ -9,7 +9,7 @@ from atmos.healthscore import HealthRecord
 from atmos.impute import apply_imputation, fill_gaps, impute_reading, impute_value
 from atmos.normality import NormalityTable
 from atmos.schema import CHANNELS, CheckResult, Verdict, VerdictResult
-from tests.conftest import T0, make_history, make_reading
+from tests.conftest import make_history, make_reading
 
 
 @pytest.fixture(scope="module")

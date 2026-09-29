@@ -28,7 +28,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 
 from atmos.config import load_settings
 from atmos.fusion import Pipeline

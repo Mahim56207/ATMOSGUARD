@@ -14,7 +14,6 @@ import json
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
 
 from . import isd, make_dataset
 

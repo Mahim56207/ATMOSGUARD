@@ -23,8 +23,6 @@ Usage:  python -m data_tools.make_dataset
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd

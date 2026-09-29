@@ -14,7 +14,6 @@ import argparse
 import json
 from typing import Optional
 
-import pandas as pd
 
 import evaluate_real as er
 from atmos.config import load_settings, model_path

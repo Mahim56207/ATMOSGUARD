@@ -10,7 +10,7 @@ T2: two or more channels jumping in the same sample is not smooth weather. It po
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional, Sequence
 
 from .config import layer_enabled

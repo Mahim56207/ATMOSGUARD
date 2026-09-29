@@ -2,16 +2,14 @@
 import copy
 import csv
 import subprocess
-from datetime import timedelta
 
 import pytest
 
 import evaluate as ev
 import replay as rp
 from atmos.config import load_settings
-from atmos.injector import FaultEvent, FaultSpec, InjectionResult, inject
+from atmos.injector import FaultEvent, InjectionResult
 from atmos.mlmodel import IsolationModel
-from atmos.normality import NormalityTable
 from tests.conftest import make_history
 
 

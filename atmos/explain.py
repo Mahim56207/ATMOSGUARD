@@ -13,7 +13,6 @@ Sign convention for SHAP here: negative = pushes the reading toward "unusual" (s
 from __future__ import annotations
 
 import importlib
-import math
 from typing import Optional, Sequence
 
 import numpy as np

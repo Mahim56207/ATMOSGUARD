@@ -1,6 +1,5 @@
 """The single-row Isolation Forest scorer must give exactly sklearn's numbers, or the speed-up would change verdicts."""
 import numpy as np
-import pytest
 
 import evaluate_real as er
 from atmos.config import load_settings, model_path

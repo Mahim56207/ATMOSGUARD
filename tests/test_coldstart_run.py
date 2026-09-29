@@ -1,5 +1,4 @@
 """evaluate_coldstart.py: the runner's bookkeeping, and that batch scoring of the forest does not change a single verdict."""
-import copy
 
 import pytest
 
