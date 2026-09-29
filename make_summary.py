@@ -64,6 +64,34 @@ def _events_total(c: dict) -> dict:
     return tot
 
 
+def _num(cell: str) -> Optional[float]:
+    try:
+        return float(str(cell).rstrip("%"))
+    except ValueError:
+        return None
+
+
+def tradeoff_rows(phase: dict) -> list[dict]:
+    """One line per system: its weakest injected-fault type, its clean false-alarm rate and its real-weather FAULT windows.
+
+    Built from the phase's own tables, so it cannot drift from them. It shows that no single simpler system covers every type.
+    """
+    det = {r["configuration"]: r for r in phase["detection"]["rows"] if not r["configuration"].startswith(("(", "AtmosGuard: median"))}
+    clean = {r["configuration"]: r for r in phase["clean"]["rows"]}
+    ev = {r["configuration"]: r for r in phase["extreme_weather"]["rows"]}
+    out = []
+    for name, row in det.items():
+        if name.startswith("without"):
+            continue
+        vals = {k: _num(v) for k, v in row.items() if k != "configuration"}
+        vals = {k: v for k, v in vals.items() if v is not None}
+        weakest = min(vals, key=vals.get)
+        out.append({"system": name, "weakest injected-fault type (fault raised the alarm)": f"{weakest}: {vals[weakest]:.0f}%",
+                    "false alarms on clean data": clean[name]["any alarm"],
+                    "real extreme weather, windows with a FAULT": ev[name]["windows with a FAULT"]})
+    return out
+
+
 def phase_tables(agg: dict) -> dict:
     cfgs = agg["configs"]
     full = cfgs["full"]
@@ -168,7 +196,7 @@ def phase_tables(agg: dict) -> dict:
                 off = f"{np.median(a['offset_over_limit']):.1f}x" if a["offset_over_limit"] else "-"
                 row[label] = f"{pct(a['detected'], a['trials'], 0)} of {a['trials']} ({day}, {off} at detection)"
         drift_rows.append(row)
-    return {
+    result = {
         "stations": agg["stations"],
         "headline": {"title": "Headline", "caption": "Five separate numbers. They are never merged.", "rows": headline},
         "detection": {"title": "1. Detection of injected faults, by type (the fault raised the alarm)",
@@ -197,6 +225,12 @@ def phase_tables(agg: dict) -> dict:
                              "(T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.",
                   "rows": drift_rows},
     }
+    result["tradeoff"] = {"title": "No single simpler system is good at every fault type",
+                          "caption": "Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real "
+                                     "extreme weather. A system that is best at one fault type is blind to another; the layers exist for "
+                                     "coverage, and the WEATHER verdict exists so that coverage does not cost real storms.",
+                          "rows": tradeoff_rows(result)}
+    return result
 
 
 def station_rows(rows: list[dict], phase: str) -> list[dict]:
@@ -254,7 +288,7 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "detection_named", "detection_registered", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_named", "detection_registered", "tradeoff", "clean", "extreme_weather", "noaa", "drift"):
             t = ph[key]
             L += [f"### {t['title']}", "", t["caption"], ""]
             table(t["rows"])

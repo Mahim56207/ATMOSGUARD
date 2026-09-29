@@ -4,6 +4,13 @@ Rule for every answer: **agree with what is true, name the prior art, point at w
 support.** Numbers below are from `results/REPORT.md`; say which split you are quoting.
 
 <!-- NUMBERS:START -->
+**Numbers to have in your head** (generated from `results/summary.json`; say which split you are quoting):
+
+- **DEV (tuned here):** clean data: 1.9% (1.8-2.0) of 98340 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 3503 samples (0 of 30 windows); WEATHER on 10.8%, SUSPECT on 9.0%. Injected faults raised the alarm: frozen 100%; spike 98%; level shift 97%; noise burst 78%; dropout 99%; clock 3 h out 97%.
+- **holdout, same stations, later years:** clean data: 2.5% (2.4-2.6) of 147078 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 4374 samples (0 of 38 windows); WEATHER on 11.8%, SUSPECT on 8.2%. Injected faults raised the alarm: frozen 100%; spike 96%; level shift 98%; noise burst 79%; dropout 100%; clock 3 h out 97%.
+- **holdout, eight unseen stations:** clean data: 2.9% (2.8-3.0) of 237411 samples got FAULT or SUSPECT; 0.0% (0.0-0.1) got FAULT. Real extreme weather: FAULT on 0.3% (0.2-0.4) of 9074 samples (3 of 98 windows); WEATHER on 15.7%, SUSPECT on 8.6%. Injected faults raised the alarm: frozen 100%; spike 90%; level shift 89%; noise burst 67%; dropout 98%; clock 3 h out 84%.
+- **Speed (simulated stations, one machine, in-process):** median 0.239 ms and 99th percentile 1.281 ms per reading with 200 stations, 2996.1 readings/s.
+- **Speed through the real HTTP server (FastAPI + SQLite, 50 stations, 8 clients):** median 28.99 ms, 95th percentile 36.06 ms, 256.4 requests/s, 0 errors.
 <!-- NUMBERS:END -->
 
 ## The three questions the build guide says you will certainly get

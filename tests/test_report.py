@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import make_report as mr
+import make_summary as ms
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -68,7 +69,7 @@ def test_tradeoff_rows_name_each_systems_weakest_fault_type():
         "extreme_weather": {"rows": [{"configuration": "AtmosGuard (full)", "windows with a FAULT": "0/30"},
                                      {"configuration": "baseline: Mahalanobis distance only", "windows with a FAULT": "0/30"}]},
     }
-    rows = mr.tradeoff_rows(phase)
+    rows = ms.tradeoff_rows(phase)
     assert [r["system"] for r in rows] == ["AtmosGuard (full)", "baseline: Mahalanobis distance only"]   # ablations and count rows left out
     assert rows[0]["weakest injected-fault type (fault raised the alarm)"] == "noise burst: 78%"
     assert rows[1]["weakest injected-fault type (fault raised the alarm)"] == "noise burst: 0%"
