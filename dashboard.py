@@ -352,7 +352,10 @@ def render_evaluation(api_url: str) -> None:
             st.markdown(f"**{table['title']}**")
             if table.get("caption"):
                 st.caption(table["caption"])
-            st.dataframe(table["rows"], width="stretch", hide_index=True)
+            if key == "headline":
+                st.table(table["rows"])                 # long sentences: a static table wraps them, a dataframe cuts them off
+            else:
+                st.dataframe(table["rows"], width="stretch", hide_index=True)
 
 
 def render_method() -> None:
