@@ -59,32 +59,37 @@ Data caveats that apply to every number: airport METAR/SYNOP records (not IMD AW
 no labelled real faults exist, so detection is measured on injected faults; NOAA's flags are another automated system, not ground truth.
 
 ## Known limits (read before relying on any number)
-- **Real extreme weather is not always safe.** On the eight unseen stations of the first holdout, 3 of 98 extreme-weather windows contain a
-  `FAULT` verdict (0.3 % of those samples): two at Visakhapatnam, where sustained torrential rain pins derived humidity at 100 %, and one at
-  Bhuj, where a desert station warms 15 C across a 6-hour reporting gap. On the twelve fresh stations it is 3 of 139 (0.1 %): Ranchi
-  (saturated humidity again), Coimbatore (humidity up 47 % in two hours, past the 40 % cap) and Jodhpur (an arid temperature step across a
-  reporting gap). Causes and remedies: [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md). The saturation kind is fixed by the adopted
-  remedy; the two step kinds are not (the remedy that fixes them cost more than it gave, by the rule we registered first).
+- **Real extreme weather is not always safe.** With the pipeline as frozen for each set, real extreme-weather windows that contain a `FAULT`: 3 of 98 on the eight unseen stations of the first holdout
+  (Visakhapatnam saturation twice, Bhuj temperature across a 6-hour gap), 3 of 139 on the twelve fresh stations (Ranchi saturation, Coimbatore humidity +47 % in two hours, Jodhpur temperature across a
+  gap) and 4 of 134 on the twelve fresh-2 stations (a fast humidity drop or afternoon warming in a desert or alpine air mass at Giles and Thredbo). Two remedies were adopted by rules registered before
+  each test: the ceiling-aware frozen rule (fresh) and the expected-change-aware step rule (fresh-2, 4 windows to 1). The one that remains is Thredbo, October 2023, humidity -48.9 % in two hours.
+  Causes and remedies: [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md), Amendments 2 and 3 in [`config/protocol.md`](config/protocol.md).
+- **A station whose training record is irregular can flood with false alarms.** On fresh-2, false alarms on clean data are 3.2 % on the five Indian airports and 13.6 % on the seven Australian AWS, and
+  almost all of the excess sits at four AWS (Mount Crawford 33 %, Cape Wessel 26 %, Lady Elliot Island 21 %, Willis Island 8 %) whose 2016-2019 records had 16 reports a day with alternating 1 h and 2 h
+  gaps and were hourly all day from 2020: no noise limit could be learned, and the fixed floor alarms on 0.1-resolution data. The pipeline now says so on every reading (an informational `limits` notice)
+  and a refit on the current cadence is the remedy ([`refit_diagnostic.py`](refit_diagnostic.py), post-hoc, not sealed evidence; numbers in `results/REPORT.md` and the protocol's Amendment 3 outcome).
 - **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
-  takes hours by design (it has to stay stuck longer than real weather can). On the unseen stations (both sets) detection is lower than on DEV
-  for spikes, level shifts, noise bursts and wrong clocks (table above).
+  takes hours by design (it has to stay stuck longer than real weather can). On the unseen stations (all three sets) detection is lower than on DEV
+  for spikes, level shifts, noise bursts and wrong clocks (table above). A remedy aimed at level shifts (a sustained one-channel offset) was tested on fresh-2 and rejected: +1 point against the +5 registered.
 - **Most detections of spikes, level shifts, noise bursts and wrong clocks are `SUSPECT` (review), not `FAULT`.** `FAULT` is for frozen sensors, dropouts,
   impossible values and a lone jumping channel; the table "How AtmosGuard names what it detects" in [`results/REPORT.md`](results/REPORT.md) gives the share named
-  `FAULT` for every type. "Detected" in the tables means an alarm of either kind.
+  `FAULT` for every type. "Detected" in the tables means an alarm of either kind. This is a design choice: promoting a persistent `SUSPECT` to `FAULT` would put real storms in the `FAULT` column.
 - **Simpler detectors beat us on some fault types.** A Mahalanobis-distance-only baseline detects spikes at least as well as the full
   pipeline (and level shifts on DEV and the fresh stations) with fewer false alarms, and is blind to frozen sensors, dropouts and wrong
-  clocks. The textbook range + step + persistence rules detect wrong clocks better than we do on both sets of unseen stations (and noise bursts on
-  the fresh ones), at 5 to 8 % false alarms and a FAULT in nearly every real extreme-weather window. No single simpler system covers all six types without
-  paying for it elsewhere; the layers buy coverage. See "No single simpler system" in [`results/REPORT.md`](results/REPORT.md).
+  clocks. The textbook range + step + persistence rules detect wrong clocks better than we do on unseen stations, at 5 to 8 % false alarms and a FAULT in nearly every real extreme-weather window.
+  No single simpler system covers all six types without paying for it elsewhere; the layers buy coverage. See "No single simpler system" in [`results/REPORT.md`](results/REPORT.md).
 - **Small faults are missed.** Detection climbs steeply with the size of a spike, level shift or noise burst: below about half of the size we
   inject (a level shift of 5 C, 5 hPa or 20 % RH), most are missed, and at the full size most are found. The curve, against two simpler systems, is
   [`docs/figures/fig_detectability.png`](docs/figures/fig_detectability.png) (DEV stations, injected faults).
-- **Small drift is invisible from one station.** The drift monitor sees a ramp of several times the service limit, not one times the limit;
-  the power curve is in the results and is the honest statement of what "drift detection" means here.
-- **Not real-AWS validated.** Airport records round to whole degrees and whole hPa and carry derived humidity. A real AWS with 0.1
-  resolution is easier in some ways and untested in others. [`docs/USE_YOUR_DATA.md`](docs/USE_YOUR_DATA.md) gives the one command that
-  produces the same numbers for a real AWS record.
-- **The firmware has been compiled against stubs and its L0 logic compared with the Python; it has not run on hardware.**
+- **Constant offsets and slow drift are invisible from one station, and visible with neighbours.** The single-station drift monitor sees a ramp of several times the service limit. The optional peer layer
+  ([`docs/PEER_LAYER.md`](docs/PEER_LAYER.md)) compares a station with three or more neighbours within 250 km: on two disjoint clusters of Australian AWS it finds a 2 hPa offset 91-96 % of the time within
+  21 days where the station alone finds 0-4 %. It needs a dense network, misses offsets of half a unit, is weak on humidity, and was measured on injected faults.
+- **No IMD record, and no sub-hourly record, has been tested.** IMD AWS records are not public and the hosts that might serve one are blocked where this was built ([`docs/IMD_DATA_REQUEST.md`](docs/IMD_DATA_REQUEST.md)
+  is a draft request). Fresh-2 adds seven real Australian Bureau of Meteorology automatic weather stations at 0.1 C and 0.1 hPa (hourly), which is real AWS data at fine resolution but not IMD and not 1-15 minute cadence.
+  [`docs/USE_YOUR_DATA.md`](docs/USE_YOUR_DATA.md) gives the one command that produces the same numbers for a real AWS record.
+- **The firmware runs on the laptop, not on the chip.** `node.ino` executes unmodified against a simulator of the Arduino-ESP32 pieces (clock, sensor, Wi-Fi, HTTP) and what it sends is accepted by the real API;
+  the L0 header is compared with the Python. Compilation with the real ESP32 toolchain and a run on hardware are not done ([`docs/HARDWARE_TEST_LOG.md`](docs/HARDWARE_TEST_LOG.md) is the checklist).
+- **Docker was built and run once** (image, compose, health check, a cyclone replay); it is not part of CI.
 
 ## Run it (one minute, no internet, no downloads)
 ```bash
