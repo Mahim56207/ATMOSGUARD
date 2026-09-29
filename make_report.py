@@ -11,6 +11,7 @@ results/coldstart.json.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import re
 import subprocess
@@ -224,8 +225,8 @@ def build(summary: dict, coldstart: Optional[list[dict]]) -> str:
 
 def to_docx(md_path: Path) -> Path:
     out = md_path.with_suffix(".docx")
-    try:
-        import pypandoc  # type: ignore
+    try:                                        # optional: `pip install pypandoc_binary` (not in requirements.txt on purpose)
+        pypandoc = importlib.import_module("pypandoc")
         pypandoc.convert_file(str(md_path), "docx", outputfile=str(out), extra_args=["--toc"])
     except (ImportError, OSError):
         subprocess.run(["pandoc", str(md_path), "-o", str(out), "--toc"], check=True)
