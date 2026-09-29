@@ -337,7 +337,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--scale", type=Path, default=None, help="JSON written by loadtest.py")
     ap.add_argument("--out-dir", type=Path, default=er.RESULTS_DIR)
     ap.add_argument("--readme", type=Path, default=None, help="refresh the block between the RESULTS markers in this README")
-    ap.add_argument("--judge-qa", type=Path, default=None, help="refresh the block between the NUMBERS markers in this file")
+    ap.add_argument("--numbers", type=Path, nargs="*", default=[], help="refresh the block between the NUMBERS markers in these files")
     args = ap.parse_args(argv)
     results = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in args.results}
     scale = json.loads(args.scale.read_text(encoding="utf-8")) if args.scale and args.scale.exists() else None
@@ -348,8 +348,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(f"wrote {args.out_dir / 'summary.json'} and {args.out_dir / 'REPORT.md'}")
     if args.readme:
         print("README updated" if update_readme(summary, args.readme) else "README has no RESULTS markers: not updated")
-    if args.judge_qa:
-        print("judge Q&A updated" if update_judge_qa(summary, args.judge_qa) else "judge Q&A has no NUMBERS markers: not updated")
+    for f in args.numbers:
+        print(f"{f}: numbers updated" if update_judge_qa(summary, f) else f"{f}: no NUMBERS markers, not updated")
     return 0
 
 

@@ -1,4 +1,4 @@
-"""Scale test: N simulated stations, each with its OWN normality table, Isolation Forest and learned limits.
+"""Scale test: N simulated stations, each with its OWN normality table, Isolation Forest, Mahalanobis model and learned limits.
 
   python loadtest.py                       # 1, 10, 50, 200 stations, in-process pipeline, then the HTTP server
   python loadtest.py --stations 10 50 --http-clients 8
@@ -33,7 +33,7 @@ import numpy as np
 from atmos.config import load_settings
 from atmos.fusion import Pipeline
 from atmos.limits import fit_limits
-from atmos.mlmodel import IsolationModel
+from atmos.mlmodel import IsolationModel, MahalanobisModel
 from atmos.normality import NormalityTable
 from atmos.schema import Reading
 import evaluate as ev
@@ -59,26 +59,31 @@ def station_series(settings: dict, i: int, days: int) -> list[Reading]:
     return ev.synthetic_series(s, days, seed=settings["seed"] + i, station=f"ST{i:03d}")
 
 
-def build_fleet(settings: dict, n: int, train_days: int = 12) -> tuple[dict, dict, dict, dict, dict]:
-    tables, models, limits, streams, cad = {}, {}, {}, {}, float(settings["evaluate"]["synthetic"]["cadence_minutes"])
+def build_fleet(settings: dict, n: int, train_days: int = 12) -> tuple[dict, dict, dict, dict, dict, dict]:
+    """Per-station models for n simulated stations: every layer of the shipped pipeline, none shared between stations."""
+    tables, models, limits, mahal, streams = {}, {}, {}, {}, {}
+    cad = float(settings["evaluate"]["synthetic"]["cadence_minutes"])
     for i in range(n):
         train = station_series(settings, i, train_days)
         sid = train[0].station_id
         tables[sid] = NormalityTable.fit(train, settings)
         models[sid] = IsolationModel.fit(train, settings)
         limits[sid] = fit_limits(train, settings, cad)
+        mahal[sid] = MahalanobisModel.fit(train, settings, tables[sid])
         streams[sid] = station_series(settings, i + 10_000, 3)             # the days that get judged
-    return tables, models, limits, streams, {sid: {"cadence_minutes": cad} for sid in tables}
+    return tables, models, limits, mahal, streams, {sid: {"cadence_minutes": cad} for sid in tables}
 
 
-def storage_per_station(tables: dict, models: dict, limits: dict) -> dict:
+def storage_per_station(tables: dict, models: dict, limits: dict, mahal: dict) -> dict:
     with tempfile.TemporaryDirectory() as d:
         sid = next(iter(tables))
         tables[sid].save(Path(d) / "n.json")
         models[sid].save(Path(d) / "m.joblib")
         limits[sid].save(Path(d) / "l.json")
+        mahal[sid].save(Path(d) / "h.joblib")
         sizes = {"normality_json_kb": (Path(d) / "n.json").stat().st_size / 1024,
                  "isolation_forest_kb": (Path(d) / "m.joblib").stat().st_size / 1024,
+                 "mahalanobis_kb": (Path(d) / "h.joblib").stat().st_size / 1024,
                  "limits_json_kb": (Path(d) / "l.json").stat().st_size / 1024}
     sizes["total_kb"] = sum(sizes.values())
     return {k: round(v, 1) for k, v in sizes.items()}
@@ -89,9 +94,9 @@ def run_pipeline(settings: dict, n: int) -> dict:
     s = copy.deepcopy(settings)
     s["healthscore"]["recompute_every_minutes"] = 60          # the real setting: health is recomputed hourly
     before = rss_mb()
-    tables, models, limits, streams, stations = build_fleet(s, n)
+    tables, models, limits, mahal, streams, stations = build_fleet(s, n)
     after_fit = rss_mb()
-    pipe = Pipeline(s, stations, tables, models, limits)
+    pipe = Pipeline(s, stations, tables, models, limits, mahal)
     order = max(len(v) for v in streams.values())
     lat: list[float] = []
     t_all = time.perf_counter()
@@ -110,7 +115,7 @@ def run_pipeline(settings: dict, n: int) -> dict:
             "p99_ms": round(lat_sorted[int(0.99 * (len(lat_sorted) - 1))], 3),
             "rss_mb_after_fit": round(after_fit, 1), "rss_mb_after_run": round(after, 1),
             "memory_per_station_mb": round((after - before) / n, 2),
-            "storage_per_station": storage_per_station(tables, models, limits)}
+            "storage_per_station": storage_per_station(tables, models, limits, mahal)}
 
 
 def run_http(settings: dict, n_stations: int, clients: int, readings_per_station: int = 60) -> dict:
@@ -120,8 +125,8 @@ def run_http(settings: dict, n_stations: int, clients: int, readings_per_station
     import api as api_module
     from atmos.store import SQLiteStore
     s = copy.deepcopy(settings)
-    tables, models, limits, streams, stations = build_fleet(s, n_stations, train_days=8)
-    pipe = Pipeline(s, stations, tables, models, limits)
+    tables, models, limits, mahal, streams, stations = build_fleet(s, n_stations, train_days=8)
+    pipe = Pipeline(s, stations, tables, models, limits, mahal)
     app = api_module.create_app(store=SQLiteStore(), settings=s, pipeline=pipe)
     port = 8765
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error"))
