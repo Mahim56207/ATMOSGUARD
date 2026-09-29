@@ -265,6 +265,9 @@ def baseline_mahalanobis(train: list[Reading], quantile: float = 0.995) -> Predi
 def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, limits: StationLimits,
                   train: list[Reading], sid: str, cadence: float,
                   mahal: Optional[MahalanobisModel] = None) -> list[tuple[str, str, Predictor]]:
+    settings = copy.deepcopy(settings)                # `full`, the ablations and the baselines are the pipeline that was
+    settings["health"]["frozen"]["ceiling_aware"] = False       # registered and reported (both remedies off), whatever the shipped
+    settings["limits"]["learned_step_cap"] = False              # default is now (remedy 1 was adopted after the fresh run)
     cfgs: list[tuple[str, str, Predictor]] = [
         ("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
     for name, frozen, step in (("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True)):
