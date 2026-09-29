@@ -97,6 +97,51 @@ def tradeoff_rows(phase: dict) -> list[dict]:
     return out
 
 
+REMEDY_CONFIGS = ("remedy_frozen", "remedy_step", "remedies")
+RULE_DETECTION_DROP_PP = 2.0          # Amendment 2 (b): no injected-fault type may lose more than this many points
+RULE_CLEAN_RISE_PP = 0.2              # Amendment 2 (c): clean false alarms may not rise by more than this many points
+
+
+def remedy_rows(agg: dict) -> list[dict]:
+    """The decision rule registered in Amendment 2 of config/protocol.md, applied to a phase's pooled numbers.
+
+    (a) windows with a FAULT on real extreme weather not higher than `full`, and the FAULT share of those samples not higher;
+    (b) paired detection not lower than `full` by more than 2 points for any injected-fault type;
+    (c) clean false alarms not higher by more than 0.2 points.  Every number is shown, so the verdict can be checked by eye."""
+    cfgs = agg["configs"]
+    if "full" not in cfgs or not any(r in cfgs for r in REMEDY_CONFIGS):
+        return []
+    full = cfgs["full"]
+    f_ev, f_ck = _events_total(full), full["clean"]
+    rows = []
+    for name in REMEDY_CONFIGS:
+        if name not in cfgs:
+            continue
+        c = cfgs[name]
+        ev_, ck = _events_total(c), c["clean"]
+        worst_type, worst = None, 0.0
+        for ty in er.REAL_TYPES:
+            d0, d1 = full["detection"][ty], c["detection"][ty]
+            if not d0["injected"]:
+                continue
+            change = 100.0 * (d1.get("detected_new", 0) - d0.get("detected_new", 0)) / d0["injected"]
+            if change < worst:
+                worst_type, worst = ty, change
+        clean_rise = 100.0 * (ck["alarm"] / ck["n"] - f_ck["alarm"] / f_ck["n"])
+        share = lambda e: e["FAULT"] / e["n"] if e["n"] else 0.0
+        a = ev_["windows_with_fault"] <= f_ev["windows_with_fault"] and share(ev_) <= share(f_ev)
+        b = worst >= -RULE_DETECTION_DROP_PP
+        cc = clean_rise <= RULE_CLEAN_RISE_PP
+        rows.append({"configuration": FULL_NAMES.get(name, name),
+                     "(a) windows with a FAULT (full / this)": f"{f_ev['windows_with_fault']} / {ev_['windows_with_fault']} of {ev_['windows']}",
+                     "(a) FAULT share of extreme-weather samples (full / this)": f"{100 * share(f_ev):.2f}% / {100 * share(ev_):.2f}%",
+                     "(b) worst change in paired detection": "none" if worst_type is None else f"{worst:+.1f} pp ({TYPE_NAMES[worst_type]})",
+                     "(c) change in clean false alarms": f"{clean_rise:+.2f} pp",
+                     "rule (a)": "pass" if a else "FAIL", "rule (b)": "pass" if b else "FAIL", "rule (c)": "pass" if cc else "FAIL",
+                     "adopt": "yes" if (a and b and cc) else "no"})
+    return rows
+
+
 def phase_tables(agg: dict) -> dict:
     cfgs = agg["configs"]
     full = cfgs["full"]
@@ -230,6 +275,12 @@ def phase_tables(agg: dict) -> dict:
                              "(T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.",
                   "rows": drift_rows},
     }
+    rr = remedy_rows(agg)
+    if rr:
+        result["remedies"] = {"title": "The two remedies from the post-mortem, judged by the decision rule registered in Amendment 2",
+                              "caption": "Rule: adopt only if (a) real extreme-weather windows with a FAULT and the FAULT share do not rise, (b) paired "
+                                         "detection loses at most 2 points for any injected-fault type, (c) clean false alarms rise by at most 0.2 "
+                                         "points. Compared with the frozen `full` pipeline on the same stations.", "rows": rr}
     result["tradeoff"] = {"title": "No single simpler system is good at every fault type",
                           "caption": "Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real "
                                      "extreme weather. A system that is best at one fault type is blind to another; the layers exist for "
@@ -298,7 +349,9 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "detection_named", "detection_registered", "tradeoff", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift"):
+            if key not in ph:
+                continue
             t = ph[key]
             L += [f"### {t['title']}", "", t["caption"], ""]
             table(t["rows"])
@@ -334,17 +387,19 @@ README_START, README_END = "<!-- RESULTS:START -->", "<!-- RESULTS:END -->"
 
 def readme_block(summary: dict) -> str:
     """A compact headline table for the README, straight from the summary (so it cannot drift from the results)."""
-    L = ["| | DEV (tuned here) | Holdout, same stations, later years | Holdout, eight unseen stations |", "|---|---|---|---|"]
-    order = ["DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE"]
     ph = summary["phases"]
+    heads = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "Holdout, same stations, later years",
+             "HOLDOUT_SPACE": "Holdout, eight unseen stations", "FRESH": "Fresh, twelve more unseen stations (sealed before the remedies were tested)"}
+    order = [k for k in heads if k in ph]
+    L = ["| | " + " | ".join(heads[k] for k in order) + " |", "|---|" + "---|" * len(order)]
     questions = [("False alarms on clean real data", 0), ("Real cyclones, heat, cold, fronts (nothing injected)", 1),
                  ("Injected faults detected (injected, not real)", 2), ("Agreement with NOAA quality flags", 3),
                  ("Slow drift (one station, no reference)", 4)]
     for label, i in questions:
-        cells = [ph[k]["headline"]["rows"][i]["answer"] if k in ph else "not run" for k in order]
+        cells = [ph[k]["headline"]["rows"][i]["answer"] for k in order]
         L.append(f"| **{label}** | " + " | ".join(c.replace("|", "/") for c in cells) + " |")
     L.append("")
-    L.append("Real NOAA airport records, 14 Indian stations. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
+    L.append("Real NOAA airport records, 26 Indian stations in all. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
              "Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).")
     return "\n".join(L)
 
@@ -405,7 +460,7 @@ def judge_block(summary: dict) -> str:
     """The numbers to have in your head at the demo table, per split, straight from the summary."""
     L = ["**Numbers to have in your head** (generated from `results/summary.json`; say which split you are quoting):", ""]
     names = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "holdout, same stations, later years",
-             "HOLDOUT_SPACE": "holdout, eight unseen stations"}
+             "HOLDOUT_SPACE": "holdout, eight unseen stations", "FRESH": "fresh, twelve more unseen stations"}
     for k, label in names.items():
         if k not in summary["phases"]:
             continue
