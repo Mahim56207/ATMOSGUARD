@@ -24,6 +24,7 @@ never "does not exist".
 | Distribution-based (station-learned) thresholds for repeated-value streaks | **HadISD**: the streak threshold is set from the distribution of run lengths |
 | "Weather moves several channels, a drifting sensor moves one" as an attribution idea | blind-calibration and sensor-network literature (e.g. probabilistic separation of environmental variation from instrumental drift) |
 | Common-mode fault detection by analytical redundancy | standard in industrial fault detection and isolation |
+| Spatial consistency against neighbouring stations (the optional peer layer, `docs/PEER_LAYER.md`) | spatial regression test (Hubbard et al. 2005, J. Atmos. Oceanic Technol. 22, 105-112); spatial corroboration in GHCN-Daily QA (Durre et al. 2010, J. Appl. Meteor. Climatol. 49, 1615-1633); MADIS spatial consistency check; HadISD neighbour checks (Dunn et al. 2012). Ours is the same idea in its simplest form (median neighbour anomaly, learned 7-day limit); we claim the measurement on 24 Australian AWS, not the method |
 | Pressure response is fast, humidity response is slow (and slower when fouled) | eddy-covariance flux literature (Ibrom et al. 2007; Mammarella et al. 2009); radiosonde lag correction |
 
 ## 2. What we adapted (their idea, our engineering)

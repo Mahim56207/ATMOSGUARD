@@ -41,8 +41,10 @@ break-the-sensor-on-demand control. That maps to the criteria as follows.
 | Potential for future work | `docs/WHAT_WE_DO_NOT_CLAIM.md` (the honest boundary), cold-start for new stations, tau_RH paired-sensor roadmap |
 
 ## What is left for the team (things only you can do)
-1. **Run `docker compose up --build` once on your own machine** (Docker was not available where this was built). If it does not
-   come up in one command, fix it or drop the claim.
+1. **Run `docker compose up --build` once on your own machine.** It was built and run once in the environment that produced this repository (image 903 MB; API healthy,
+   dashboard up, a replay of Cyclone Vardah through the containerised API worked), and that run found and fixed a real bug (the API crashed when its state folder did not exist).
+   That environment's network proxy re-signs TLS, so the build there needed the proxy's CA certificate injected; on an ordinary machine nothing extra is needed. If it does not
+   come up in one command on yours, fix it or drop the claim.
 2. **Flash the ESP32** (`docs/HARDWARE.md`), let it run for an hour, press the fault controls from the dashboard. If anything
    fails, `simnode.py` gives the same readings. The real Arduino/ESP32 toolchain could not be downloaded where this was built, so the sketch
    was type-checked against stubs only.

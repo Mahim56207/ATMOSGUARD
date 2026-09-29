@@ -196,6 +196,74 @@ def fig_remedies(aggs: dict) -> None:
     plt.close(fig)
 
 
+def fig_amendment3(aggs: dict) -> None:
+    """The two Amendment 3 remedies against the shipped pipeline on FRESH2, twelve stations sealed before the test."""
+    if "FRESH2" not in aggs or "r4_offset" not in aggs["FRESH2"]["configs"]:
+        return
+    cfg = aggs["FRESH2"]["configs"]
+    names = ["full", "r3_expected_step", "r4_offset", "r34_both"]
+    labels = {"full": "shipped\npipeline", "r3_expected_step": "+ remedy 3\nexpected-change\nstep rule", "r4_offset": "+ remedy 4\nsustained\noffset", "r34_both": "+ both"}
+    colors = [C["full"], C["ok"], C["warn"], C["weather"]]
+
+    def level_shift(c: dict) -> float:
+        d = c["detection"]["step"]
+        return 100.0 * d.get("detected_new", 0) / max(d["injected"], 1)
+
+    def clean_alarm(c: dict) -> float:
+        return 100.0 * c["clean"]["alarm"] / c["clean"]["n"]
+    panels = ((lambda c: _events_fault(c)[1], "real extreme-weather windows with a FAULT", "{:.0f}"),
+              (level_shift, "level-shift detection (fault raised the alarm, %)", "{:.1f}%"),
+              (clean_alarm, "false alarms on clean data (%)", "{:.2f}%"),
+              (_det_mean, "injected faults detected (mean of types, %)", "{:.1f}%"))
+    fig, axes = plt.subplots(1, 4, figsize=(15, 4.6))
+    for ax, (fn, title, fmt) in zip(axes, panels):
+        vals = [fn(cfg[n]) for n in names]
+        ax.bar(range(len(names)), vals, color=colors, width=0.62)
+        for i, v in enumerate(vals):
+            ax.text(i, v + max(max(vals) * 0.02, 0.01), fmt.format(v), ha="center", fontsize=9, color=INK)
+        ax.set_xticks(range(len(names)))
+        ax.set_xticklabels([labels[n] for n in names], fontsize=8)
+        ax.set_ylim(0, max(vals) * 1.2 if max(vals) > 0 else 1)
+        ax.set_title(title, loc="left", fontsize=9.5, color=INK, fontweight="bold")
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="y", color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+    fig.suptitle("FRESH2, twelve stations sealed before the test (five Indian airports, seven Australian AWS): the two Amendment 3 remedies", x=0.01, ha="left",
+                 fontsize=12, fontweight="bold", color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(OUT / "fig_amendment3.png", dpi=150)
+    plt.close(fig)
+
+
+def fig_peers() -> None:
+    """Constant offsets seen with neighbours and from the station alone, two disjoint clusters of Australian AWS (injected faults)."""
+    files = {"NSW": RES / "peers_nsw.json", "VIC": RES / "peers_vic.json"}
+    if not all(p.exists() for p in files.values()):
+        return
+    data = {k: json.loads(p.read_text(encoding="utf-8"))["summary"]["detection"] for k, p in files.items()}
+    chans = (("temperature_c", "temperature offset (C)"), ("pressure_hpa", "pressure offset (hPa)"), ("humidity_pct", "humidity offset (%)"))
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True)
+    for ax, (ch, title) in zip(axes, chans):
+        for cl, ls in (("NSW", "-"), ("VIC", ":")):
+            for mode, color, lab in (("peer", C["full"], "with neighbours"), ("own", C["base"], "the station alone")):
+                pts = sorted((d["size"], 100 * d["rate"]) for d in data[cl] if d["channel"] == ch and d["kind"] == "offset" and d["mode"] == mode)
+                ax.plot(range(len(pts)), [v for _, v in pts], ls, marker="o", color=color, lw=2.2 if mode == "peer" else 1.6, label=f"{lab}, {cl}")
+        sizes = sorted({d["size"] for d in data["NSW"] if d["channel"] == ch and d["kind"] == "offset"})
+        ax.set_xticks(range(len(sizes)))
+        ax.set_xticklabels([f"{x:g}" for x in sizes])
+        ax.set_xlabel(title, color=MUTED, fontsize=9)
+        ax.set_ylim(0, 102)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.grid(axis="y", color=GRID, linewidth=0.6)
+    axes[0].set_ylabel("offsets found within 21 days (%)", color=MUTED)
+    axes[0].legend(frameon=False, fontsize=8, loc="upper left")
+    fig.suptitle("The optional peer layer: a constant offset that one station cannot see, with and without three or more neighbours (injected, 60-day faults)", x=0.01, ha="left",
+                 fontsize=11.5, fontweight="bold", color=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(OUT / "fig_peers.png", dpi=150)
+    plt.close(fig)
+
+
 def fig_detectability() -> None:
     """Detection against the size of the injected fault, AtmosGuard and two simpler systems (DEV, injected)."""
     p = RES / "sensitivity.json"
@@ -313,6 +381,8 @@ def main() -> int:
     fig_baselines(aggs)
     fig_ablation(aggs)
     fig_remedies(aggs)
+    fig_amendment3(aggs)
+    fig_peers()
     fig_detectability()
     fig_drift(aggs)
     fig_scale()

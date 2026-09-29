@@ -21,7 +21,7 @@ uvicorn api:app --port 8000                           # API, docs at http://loca
 streamlit run dashboard.py                            # dashboard, http://localhost:8501
 python replay.py data/demo/fani_BBI_2019-05.csv --speed 0   # or use the dashboard's Control panel
 open docs/demo/index.html                             # the offline replay page: no server needed
-docker compose up --build                             # the same, in containers
+docker compose up --build                             # the same, in containers (built and run once; not part of CI)
 ```
 Retrain the six station models from the committed real data (deterministic, about 1 minute): `python train.py --all`.
 

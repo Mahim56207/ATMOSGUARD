@@ -21,7 +21,16 @@ import numpy as np
 
 import evaluate_real as er
 
+FRESH2_INDIAN = ("HYD", "BLR", "CCJ", "IXM", "VGA")            # the other seven FRESH2 stations are Australian AWS at 0.1 resolution
 PHASE_TITLES = {
+    "FRESH2": ("FRESH2: a third set of twelve stations, 2020-2024",
+               "Chosen and sealed before the two Amendment 3 remedies were tested (config/protocol.md). Five Indian airport stations (hourly METAR, whole "
+               "degrees) and seven Australian automatic weather stations (hourly SYNOP at 0.1 C and 0.1 hPa). `AtmosGuard (full)` here is the pipeline as "
+               "shipped before Amendment 3 (remedy 1 on)."),
+    "FRESH2_INDIA": ("FRESH2, the five Indian airport stations only",
+                     "Subset of FRESH2: hourly METAR at whole-degree resolution."),
+    "FRESH2_AWS": ("FRESH2, the seven Australian automatic weather stations only",
+                   "Subset of FRESH2: hourly SYNOP from Bureau of Meteorology AWS at 0.1 C and 0.1 hPa, including two Coral Sea cyclone-track islands."),
     "FRESH": ("FRESH: twelve more stations nobody had looked at, 2020-2024",
               "Chosen and sealed before the two remedies from the holdout post-mortem were tested (Amendment 2 in config/protocol.md). "
               "Eight hourly airport stations and four 3-hourly SYNOP stations."),
@@ -36,6 +45,10 @@ FULL_NAMES = {"full": "AtmosGuard (full)", "no_physics": "without physics layer"
               "no_normality": "without normality layer", "no_mlmodel": "without Isolation Forest",
               "no_timing": "without timing layer", "no_limits": "without station-learned limits",
               "no_mahalanobis": "without Mahalanobis layer",
+              "registered": "AtmosGuard as registered (every remedy off)",
+              "r3_expected_step": "AtmosGuard + remedy 3 (expected-change-aware step rule)",
+              "r4_offset": "AtmosGuard + remedy 4 (sustained one-channel offset)",
+              "r34_both": "AtmosGuard + remedies 3 and 4",
               "remedy_frozen": "AtmosGuard + remedy 1 (ceiling-aware frozen rule)", "remedy_step": "AtmosGuard + remedy 2 (learned step cap)",
               "remedies": "AtmosGuard + both remedies",
               "baseline_range": "baseline: range check only",
@@ -139,6 +152,68 @@ def remedy_rows(agg: dict) -> list[dict]:
                      "(c) change in clean false alarms": f"{clean_rise:+.2f} pp",
                      "rule (a)": "pass" if a else "FAIL", "rule (b)": "pass" if b else "FAIL", "rule (c)": "pass" if cc else "FAIL",
                      "adopt": "yes" if (a and b and cc) else "no"})
+    return rows
+
+
+A3_CONFIGS = ("r3_expected_step", "r4_offset", "r34_both")
+A3_DETECTION_DROP_PP = 2.0            # Amendment 3 (b) for both remedies
+A3_R3_CLEAN_RISE_PP, A3_R4_CLEAN_RISE_PP = 0.2, 0.5
+A3_R4_LEVEL_SHIFT_GAIN_PP = 5.0       # Amendment 3 remedy 4 (d)
+A3_R4_SUSPECT_RISE_PP = 2.0           # Amendment 3 remedy 4 (e)
+
+
+def amendment3_rows(agg: dict) -> list[dict]:
+    """The decision rules registered in Amendment 3 of config/protocol.md, applied to the pooled FRESH2 numbers. Every number is shown."""
+    cfgs = agg["configs"]
+    if "full" not in cfgs or not any(r in cfgs for r in A3_CONFIGS):
+        return []
+    full = cfgs["full"]
+    f_ev, f_ck = _events_total(full), full["clean"]
+    share = lambda e: e["FAULT"] / e["n"] if e["n"] else 0.0
+    susp = lambda e: 100.0 * e["SUSPECT"] / e["n"] if e["n"] else 0.0
+    rows = []
+    for name in A3_CONFIGS:
+        if name not in cfgs:
+            continue
+        c = cfgs[name]
+        ev_, ck = _events_total(c), c["clean"]
+        worst_type, worst = None, 0.0
+        for ty in er.REAL_TYPES:
+            d0, d1 = full["detection"][ty], c["detection"][ty]
+            if not d0["injected"]:
+                continue
+            change = 100.0 * (d1.get("detected_new", 0) - d0.get("detected_new", 0)) / d0["injected"]
+            if change < worst:
+                worst_type, worst = ty, change
+        d0, d1 = full["detection"]["step"], c["detection"]["step"]
+        level_gain = 100.0 * (d1.get("detected_new", 0) - d0.get("detected_new", 0)) / d0["injected"] if d0["injected"] else 0.0
+        clean_rise = 100.0 * (ck["alarm"] / ck["n"] - f_ck["alarm"] / f_ck["n"])
+        susp_rise = susp(ev_) - susp(f_ev)
+        no_more_faults = ev_["windows_with_fault"] <= f_ev["windows_with_fault"] and share(ev_) <= share(f_ev)
+        strictly_fewer = ev_["windows_with_fault"] < f_ev["windows_with_fault"] and share(ev_) <= share(f_ev)
+        b = worst >= -A3_DETECTION_DROP_PP
+        row = {"configuration": FULL_NAMES.get(name, name),
+               "windows with a FAULT (full / this)": f"{f_ev['windows_with_fault']} / {ev_['windows_with_fault']} of {ev_['windows']}",
+               "FAULT share of extreme-weather samples (full / this)": f"{100 * share(f_ev):.2f}% / {100 * share(ev_):.2f}%",
+               "worst change in paired detection": "none" if worst_type is None else f"{worst:+.1f} pp ({TYPE_NAMES[worst_type]})",
+               "level-shift detection change": f"{level_gain:+.1f} pp",
+               "change in clean false alarms": f"{clean_rise:+.2f} pp",
+               "SUSPECT share in extreme weather (change)": f"{susp_rise:+.2f} pp"}
+        r3 = strictly_fewer and b and clean_rise <= A3_R3_CLEAN_RISE_PP
+        r4 = no_more_faults and b and clean_rise <= A3_R4_CLEAN_RISE_PP and level_gain >= A3_R4_LEVEL_SHIFT_GAIN_PP and susp_rise <= A3_R4_SUSPECT_RISE_PP
+        row["remedy 3 rule (a: fewer FAULT windows, b, c)"] = "pass" if r3 else "FAIL"
+        row["remedy 4 rule (a, b, c 0.5 pp, d +5 pp level shift, e)"] = "pass" if r4 else "FAIL"
+        if name == "r3_expected_step":
+            row["adopt"] = "yes" if r3 else "no"
+        elif name == "r4_offset":
+            row["adopt"] = "yes" if r4 else "no"
+        else:
+            row["adopt"] = "both only"
+        rows.append(row)
+    both = [r for r in rows if r["configuration"] in (FULL_NAMES["r3_expected_step"], FULL_NAMES["r4_offset"])]
+    for r in rows:
+        if r["adopt"] == "both only":
+            r["adopt"] = "yes" if len(both) == 2 and all(x["adopt"] == "yes" for x in both) else "no"
     return rows
 
 
@@ -289,6 +364,15 @@ def phase_tables(agg: dict) -> dict:
                               "caption": "Rule: adopt only if (a) real extreme-weather windows with a FAULT and the FAULT share do not rise, (b) paired "
                                          "detection loses at most 2 points for any injected-fault type, (c) clean false alarms rise by at most 0.2 "
                                          "points. Compared with the frozen `full` pipeline on the same stations.", "rows": rr}
+    a3 = amendment3_rows(agg)
+    if a3:
+        result["amendment3"] = {"title": "The two Amendment 3 remedies, judged by the decision rule registered before the run",
+                                "caption": "Remedy 3 (expected-change-aware step rule): adopt only if the windows with a FAULT are fewer than with `full`, "
+                                           "the FAULT share does not rise, no fault type loses more than 2 points and clean false alarms rise by at most 0.2 "
+                                           "points. Remedy 4 (sustained one-channel offset): adopt only if the windows with a FAULT and the FAULT share do "
+                                           "not rise, no type loses more than 2 points, clean false alarms rise by at most 0.5 points, level-shift detection "
+                                           "gains at least 5 points and the SUSPECT share in real extreme weather rises by at most 2 points. Compared with "
+                                           "`full` (the shipped pipeline before this amendment) on the same stations.", "rows": a3}
     result["tradeoff"] = {"title": "No single simpler system is good at every fault type",
                           "caption": "Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real "
                                      "extreme weather. A system that is best at one fault type is blind to another; the layers exist for "
@@ -333,6 +417,11 @@ def sensitivity_rows(sens: dict) -> list[dict]:
 def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optional[dict] = None, sens: Optional[dict] = None) -> dict:
     phases = {}
     for label, res in results.items():
+        rows_all = list(res["stations"])
+        for r in res["stations"]:
+            if r["phase"] == "FRESH2":                      # the same stations again, as two groups, so the airport and AWS records can be read apart
+                rows_all.append({**r, "phase": "FRESH2_INDIA" if r["station"] in FRESH2_INDIAN else "FRESH2_AWS"})
+        res = {**res, "stations": rows_all}
         for ph in dict.fromkeys(r["phase"] for r in res["stations"]):
             agg = er.aggregate(res["stations"], ph)
             title, sub = PHASE_TITLES[ph]
@@ -340,7 +429,7 @@ def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optiona
                           "quick": res.get("quick", False), **phase_tables(agg),
                           "by_station": {"title": "By station (full pipeline)", "caption": "Each station judged on its own record.",
                                          "rows": station_rows(res["stations"], ph)}}
-    out = {"note": "Real NOAA ISD airport records (METAR and SYNOP), 2016-2024. RH is derived from dew point. Injected faults are "
+    out = {"note": "Real NOAA ISD records (airport METAR and SYNOP from airports and automatic weather stations), 2016-2024. RH is derived from dew point. Injected faults are "
                    "injected. NOAA agreement is not ground truth. See docs/WHAT_WE_DO_NOT_CLAIM.md.",
            "phases": phases}
     if sens:
@@ -378,7 +467,7 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "amendment3", "clean", "extreme_weather", "noaa", "drift"):
             if key not in ph:
                 continue
             t = ph[key]
@@ -414,6 +503,45 @@ def to_markdown(summary: dict) -> str:
     return "\n".join(L)
 
 
+PEERS_START, PEERS_END = "<!-- PEERS:START -->", "<!-- PEERS:END -->"
+CHANNEL_SHORT = {"temperature_c": "temperature", "pressure_hpa": "pressure", "humidity_pct": "humidity"}
+UNITS = {"temperature_c": "C", "pressure_hpa": "hPa", "humidity_pct": "%"}
+
+
+def peers_tables(clusters: dict[str, dict]) -> str:
+    """Markdown for docs/PEER_LAYER.md from the JSON that evaluate_peers.py wrote (one entry per cluster name)."""
+    def cell(d: Optional[dict]) -> str:
+        if d is None:
+            return "n/a"
+        days = "" if d["median_days"] is None else f", {d['median_days']:.0f} d"
+        return f"{100 * d['rate']:.0f}% ({d['detected']}/{d['trials']}{days})"
+    L = []
+    keys = sorted({(d["channel"], d["kind"], d["size"]) for res in clusters.values() for d in res["summary"]["detection"]},
+                  key=lambda k: (list(CHANNEL_SHORT).index(k[0]), k[1] != "offset", k[2]))
+    idx = {name: {(d["channel"], d["kind"], d["size"], d["mode"]): d for d in res["summary"]["detection"]} for name, res in clusters.items()}
+    head = ["fault (60 days long)"] + [f"{name}: with neighbours / alone" for name in clusters]
+    rows = []
+    for ch, kind, size in keys:
+        label = (f"{CHANNEL_SHORT[ch]} offset of {size:g} {UNITS[ch]}" if kind == "offset"
+                 else f"{CHANNEL_SHORT[ch]} drift, 0 to {size:g} {UNITS[ch]}")
+        rows.append({head[0]: label, **{h: f"{cell(idx[n].get((ch, kind, size, 'peer')))} / {cell(idx[n].get((ch, kind, size, 'own')))}"
+                                        for h, n in zip(head[1:], clusters)}})
+    L += markdown_table(rows)
+    fa = []
+    for ch in CHANNEL_SHORT:
+        row = {"share of clean days with an alarm": CHANNEL_SHORT[ch]}
+        for n, res in clusters.items():
+            vals = {(f["channel"], f["mode"]): f["mean_alarm_day_fraction"] for f in res["summary"]["false_alarms"]}
+            row[f"{n}: with neighbours / alone"] = f"{100 * vals[(ch, 'peer')]:.2f}% / {100 * vals[(ch, 'own')]:.2f}%"
+        fa.append(row)
+    L += markdown_table(fa)
+    return "\n".join(L)
+
+
+def update_peers(clusters: dict[str, dict], path: Path) -> bool:
+    return update_between(path, PEERS_START, PEERS_END, peers_tables(clusters))
+
+
 README_START, README_END = "<!-- RESULTS:START -->", "<!-- RESULTS:END -->"
 
 
@@ -421,7 +549,8 @@ def readme_block(summary: dict) -> str:
     """A compact headline table for the README, straight from the summary (so it cannot drift from the results)."""
     ph = summary["phases"]
     heads = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "Holdout, same stations, later years",
-             "HOLDOUT_SPACE": "Holdout, eight unseen stations", "FRESH": "Fresh, twelve more unseen stations (sealed before the remedies were tested)"}
+             "HOLDOUT_SPACE": "Holdout, eight unseen stations", "FRESH": "Fresh, twelve more unseen stations (sealed before the remedies were tested)",
+             "FRESH2": "Fresh 2, twelve more: five Indian airports and seven Australian AWS at 0.1 resolution"}
     order = [k for k in heads if k in ph]
     L = ["| | " + " | ".join(heads[k] for k in order) + " |", "|---|" + "---|" * len(order)]
     questions = [("False alarms on clean real data", 0), ("Real cyclones, heat, cold, fronts (nothing injected)", 1),
@@ -431,7 +560,7 @@ def readme_block(summary: dict) -> str:
         cells = [ph[k]["headline"]["rows"][i]["answer"] for k in order]
         L.append(f"| **{label}** | " + " | ".join(c.replace("|", "/") for c in cells) + " |")
     L.append("")
-    L.append("Real NOAA airport records, 26 Indian stations in all. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
+    L.append("Real NOAA records: 26 Indian airport stations in DEV, holdout and Fresh, then Fresh 2 with five more Indian airports and seven Australian automatic weather stations. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
              "Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).")
     return "\n".join(L)
 
@@ -528,6 +657,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--scale", type=Path, default=None, help="JSON written by loadtest.py")
     ap.add_argument("--coldstart", type=Path, default=None, help="JSON written by evaluate_coldstart.py")
     ap.add_argument("--sensitivity", type=Path, default=None, help="JSON written by evaluate_sensitivity.py")
+    ap.add_argument("--peers", type=Path, nargs="*", default=[], help="JSON files written by evaluate_peers.py (cluster name = the part of the file name after peers_)")
+    ap.add_argument("--peers-doc", type=Path, default=None, help="refresh the block between the PEERS markers in this file")
     ap.add_argument("--out-dir", type=Path, default=er.RESULTS_DIR)
     ap.add_argument("--readme", type=Path, default=None, help="refresh the block between the RESULTS markers in this README")
     ap.add_argument("--numbers", type=Path, nargs="*", default=[], help="refresh the block between the NUMBERS markers in these files")
@@ -547,6 +678,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("README cold-start block updated" if update_coldstart(cold, args.readme) else "README has no COLDSTART markers: not updated")
     for f in args.numbers:
         print(f"{f}: numbers updated" if update_judge_qa(summary, f) else f"{f}: no NUMBERS markers, not updated")
+    if args.peers and args.peers_doc:
+        clusters = {p.stem.replace("peers_", "").upper(): json.loads(p.read_text(encoding="utf-8")) for p in args.peers}
+        print("peer-layer doc updated" if update_peers(clusters, args.peers_doc) else "peer-layer doc has no PEERS markers: not updated")
     return 0
 
 

@@ -126,3 +126,56 @@ def test_fresh2_configs_full_is_the_shipped_pipeline_and_registered_has_every_re
     assert not any(p.verdict == "FAULT" for p in by["full"](stuck))                # remedy 1 is the shipped default
 
 
+
+
+# ---- the decision rule, applied by make_summary ----------------------------------------------------------------
+def _cfg(windows_with_fault=3, fault_n=20, ev_n=1000, suspect=80, alarm=25, clean_n=1000, step=(80, 100), others=(90, 100), kind="full"):
+    det = {t: {"detected_new": others[0], "injected": others[1], "detected": others[0]} for t in ("frozen", "spike", "step", "noise", "dropout", "clock_shift")}
+    det["step"] = {"detected_new": step[0], "injected": step[1], "detected": step[0]}
+    return {"kind": kind, "clean": {"n": clean_n, "alarm": alarm, "fault": 1, "weather": 0},
+            "events": {"low_pressure": {"n": ev_n, "FAULT": fault_n, "SUSPECT": suspect, "WEATHER": 100, "VALID": ev_n - fault_n - suspect - 100,
+                                        "windows": 100, "windows_with_fault": windows_with_fault}},
+            "detection": det}
+
+
+def _agg(**over):
+    cfgs = {"full": _cfg(kind="full"), "r3_expected_step": _cfg(kind="remedy"), "r4_offset": _cfg(kind="remedy"), "r34_both": _cfg(kind="remedy")}
+    for k, v in over.items():
+        cfgs[k] = _cfg(kind="remedy", **v)
+    return {"configs": cfgs}
+
+
+def _adopt(rows):
+    return {r["configuration"]: r["adopt"] for r in rows}
+
+
+def test_rule_remedy_3_needs_strictly_fewer_fault_windows():
+    import make_summary as ms
+    same = _adopt(ms.amendment3_rows(_agg()))
+    fewer = _adopt(ms.amendment3_rows(_agg(r3_expected_step=dict(windows_with_fault=2, fault_n=15))))
+    assert same[ms.FULL_NAMES["r3_expected_step"]] == "no" and fewer[ms.FULL_NAMES["r3_expected_step"]] == "yes"
+
+
+def test_rule_remedy_3_fails_on_lost_detection_or_more_clean_alarms():
+    import make_summary as ms
+    lost = _adopt(ms.amendment3_rows(_agg(r3_expected_step=dict(windows_with_fault=2, fault_n=15, others=(85, 100)))))
+    noisy = _adopt(ms.amendment3_rows(_agg(r3_expected_step=dict(windows_with_fault=2, fault_n=15, alarm=28))))
+    assert lost[ms.FULL_NAMES["r3_expected_step"]] == "no" and noisy[ms.FULL_NAMES["r3_expected_step"]] == "no"
+
+
+def test_rule_remedy_4_needs_five_points_of_level_shift_and_few_clean_and_suspect_rises():
+    import make_summary as ms
+    name = ms.FULL_NAMES["r4_offset"]
+    good = _adopt(ms.amendment3_rows(_agg(r4_offset=dict(step=(86, 100), alarm=28))))              # +6 pp level shift, +0.3 pp clean
+    small = _adopt(ms.amendment3_rows(_agg(r4_offset=dict(step=(83, 100), alarm=28))))             # only +3 pp
+    noisy = _adopt(ms.amendment3_rows(_agg(r4_offset=dict(step=(90, 100), alarm=32))))             # +0.7 pp clean
+    storms = _adopt(ms.amendment3_rows(_agg(r4_offset=dict(step=(90, 100), alarm=26, suspect=110))))   # SUSPECT +3 pp in real weather
+    assert good[name] == "yes" and small[name] == "no" and noisy[name] == "no" and storms[name] == "no"
+
+
+def test_both_is_adopted_only_if_each_is():
+    import make_summary as ms
+    both = ms.FULL_NAMES["r34_both"]
+    a = _adopt(ms.amendment3_rows(_agg(r3_expected_step=dict(windows_with_fault=2, fault_n=15), r4_offset=dict(step=(86, 100), alarm=28))))
+    b = _adopt(ms.amendment3_rows(_agg(r4_offset=dict(step=(86, 100), alarm=28))))
+    assert a[both] == "yes" and b[both] == "no"

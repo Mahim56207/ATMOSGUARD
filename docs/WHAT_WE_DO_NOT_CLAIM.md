@@ -50,10 +50,12 @@ also true of the repository as it stands.
 
 ## About the hardware and deployment
 - **The ESP32 firmware has not been compiled with the ESP32 toolchain or run on hardware in this repository.** The L0 logic
-  it runs is a portable C++ header that *is* compiled and tested against Python on a laptop, and the sketch is type-checked
-  against stand-ins for the Arduino libraries. That catches logic and type errors, not toolchain or timing problems.
-- **The Docker files have not been built here** (no Docker on the machine that produced this repository). They are checked
-  statically. Run `docker compose up --build` once before the demo.
+  it runs is a portable C++ header that *is* compiled and tested against Python on a laptop, and the sketch itself is executed on the laptop against a simulator of the
+  Arduino-ESP32 pieces it uses (virtual clock, scripted sensor, dropping Wi-Fi, recording HTTP client): sampling, the range check, the minute mean, the frozen counter,
+  the JSON, the offline queue and the clock guard are exercised, and what it POSTs is accepted by the real API (`tests/test_firmware_sim.py`). That catches logic,
+  type and contract errors, not toolchain, bus, radio or timing problems on the chip. `docs/HARDWARE_TEST_LOG.md` is the one-hour checklist for the board.
+- **Docker was built and run once, not continuously.** `docker compose up --build` produced an image, both services started, the API's health check passed and a replay through the
+  containerised API worked (in an environment whose proxy needed its CA injected into the build). It is not part of CI, so run it once on the demo machine.
 - **The scale test uses simulated stations on one machine.** It shows that per-station cost does not grow with the number
   of stations. It is not a production load test.
 - **This is a validated prototype, not a system ready for an IMD server.** The gap is deployment engineering, security
