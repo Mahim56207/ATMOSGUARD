@@ -190,3 +190,12 @@ def test_memoize_returns_the_same_predictions_for_the_same_series_and_can_be_cle
     m.clear()
     m(series)
     assert len(calls) == 2
+
+
+def test_update_between_replaces_only_the_marked_block(tmp_path):
+    f = tmp_path / "doc.md"
+    f.write_text("top\n<!-- A -->\nold\n<!-- B -->\nbottom\n", encoding="utf-8")
+    assert ms.update_between(f, "<!-- A -->", "<!-- B -->", "new")
+    assert f.read_text(encoding="utf-8") == "top\n<!-- A -->\nnew\n<!-- B -->\nbottom\n"
+    assert not ms.update_between(f, "<!-- A -->", "<!-- MISSING -->", "x")
+    assert "new" in f.read_text(encoding="utf-8")            # untouched when a marker is missing

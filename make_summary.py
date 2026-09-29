@@ -296,13 +296,39 @@ def readme_block(summary: dict) -> str:
     return "\n".join(L)
 
 
-def update_readme(summary: dict, path: Path) -> bool:
+def update_between(path: Path, start: str, end: str, body: str) -> bool:
+    """Replace what lies between two marker lines in a file; False (file untouched) if a marker is missing."""
     text = path.read_text(encoding="utf-8")
-    if README_START not in text or README_END not in text:
+    if start not in text or end not in text:
         return False
-    a, b = text.index(README_START) + len(README_START), text.index(README_END)
-    path.write_text(text[:a] + "\n" + readme_block(summary) + "\n" + text[b:], encoding="utf-8")
+    a, b = text.index(start) + len(start), text.index(end)
+    path.write_text(text[:a] + "\n" + body + "\n" + text[b:], encoding="utf-8")
     return True
+
+
+def update_readme(summary: dict, path: Path) -> bool:
+    return update_between(path, README_START, README_END, readme_block(summary))
+
+
+JUDGE_START, JUDGE_END = "<!-- NUMBERS:START -->", "<!-- NUMBERS:END -->"
+
+
+def judge_block(summary: dict) -> str:
+    """The numbers to have in your head at the demo table, per split, straight from the summary."""
+    L = ["**Numbers to have in your head** (generated from `results/summary.json`; say which split you are quoting):", ""]
+    names = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "holdout, same stations, later years",
+             "HOLDOUT_SPACE": "holdout, eight unseen stations"}
+    for k, label in names.items():
+        if k not in summary["phases"]:
+            continue
+        rows = summary["phases"][k]["headline"]["rows"]
+        L.append(f"- **{label}:** clean data: {rows[0]['answer']}. Real extreme weather: {rows[1]['answer']}. "
+                 f"Injected faults raised the alarm: {rows[2]['answer']}.")
+    return "\n".join(L)
+
+
+def update_judge_qa(summary: dict, path: Path) -> bool:
+    return update_between(path, JUDGE_START, JUDGE_END, judge_block(summary))
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -311,6 +337,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--scale", type=Path, default=None, help="JSON written by loadtest.py")
     ap.add_argument("--out-dir", type=Path, default=er.RESULTS_DIR)
     ap.add_argument("--readme", type=Path, default=None, help="refresh the block between the RESULTS markers in this README")
+    ap.add_argument("--judge-qa", type=Path, default=None, help="refresh the block between the NUMBERS markers in this file")
     args = ap.parse_args(argv)
     results = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in args.results}
     scale = json.loads(args.scale.read_text(encoding="utf-8")) if args.scale and args.scale.exists() else None
@@ -321,6 +348,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(f"wrote {args.out_dir / 'summary.json'} and {args.out_dir / 'REPORT.md'}")
     if args.readme:
         print("README updated" if update_readme(summary, args.readme) else "README has no RESULTS markers: not updated")
+    if args.judge_qa:
+        print("judge Q&A updated" if update_judge_qa(summary, args.judge_qa) else "judge Q&A has no NUMBERS markers: not updated")
     return 0
 
 
