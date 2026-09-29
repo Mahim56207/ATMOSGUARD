@@ -40,7 +40,7 @@ also true of the repository as it stands.
   tested and rejected.
 - **Fresh-2 false alarms are 9.3 %, not 2.5 %.** Four Australian AWS whose 2016-2019 records had 16 reports a day with alternating 1 h and 2 h gaps (hourly all day from 2020) have no learned noise
   limit, so a fixed floor tuned on coarser data alarms on them (33 %, 26 %, 21 % and 8 % of clean samples). Every other station in every set had its limits learned. Refit on the current cadence is the
-  fix (a post-hoc diagnostic, `refit_diagnostic.py`, not sealed evidence); the pipeline says so in an informational notice on each reading.
+  fix (`python refit.py`; a post-hoc diagnostic on the same stations, `refit_diagnostic.py`, gives 2.6 % false alarms, not sealed evidence); the pipeline says so in an informational notice on each reading.
 - **Detection is lower on unseen stations than on DEV,** and most detections of spikes, level shifts, noise bursts and wrong clocks are `SUSPECT`, not `FAULT`.
   Simpler detectors beat the full pipeline on some fault types (see `results/REPORT.md`).
 - **The cold-start study covers six stations,** each borrowing from its nearest neighbour among the other five. A new station in a climate none of them share may

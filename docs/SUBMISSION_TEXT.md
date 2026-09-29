@@ -75,7 +75,7 @@ with what is standard, adapted and ours: `docs/NOVELTY_AND_PRIOR_ART.md` and the
 Detection is measured on **injected** faults (no labelled real faults were reachable). The data are airport and Australian automatic-weather-station records, not IMD AWS records (not public), hourly or
 3-hourly, never 1-15 minutes. With the pipeline as frozen for each set, real extreme-weather windows with a `FAULT`: 3 of 98 (eight unseen stations), 3 of 139 (twelve fresh) and 4 of 134 (twelve fresh-2);
 of the four remedies tested by rules registered first, two are adopted (ceiling-aware frozen rule; expected-change-aware step rule) and two rejected (learned step cap; sustained offset), and one window remains.
-On fresh-2, four Australian AWS whose training records had irregular cadence get 8-33 % false alarms because no noise limit could be learned (a refit at the current cadence is the fix); overall fresh-2
+On fresh-2, four Australian AWS whose training records had irregular cadence get 8-33 % false alarms because no noise limit could be learned (a refit at the current cadence is the fix: 2.6 % after refitting, post hoc); overall fresh-2
 false alarms are 9.3 %. A single station with no reference cannot see small drift or a constant offset from the start; an optional peer layer sees them with three or more neighbours within 250 km (measured on
 two Australian clusters, injected faults). The firmware runs on the laptop against a simulator and its output is accepted by the real API; it has not run on the chip.
 

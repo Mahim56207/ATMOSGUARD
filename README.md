@@ -67,7 +67,7 @@ no labelled real faults exist, so detection is measured on injected faults; NOAA
 - **A station whose training record is irregular can flood with false alarms.** On fresh-2, false alarms on clean data are 3.2 % on the five Indian airports and 13.6 % on the seven Australian AWS, and
   almost all of the excess sits at four AWS (Mount Crawford 33 %, Cape Wessel 26 %, Lady Elliot Island 21 %, Willis Island 8 %) whose 2016-2019 records had 16 reports a day with alternating 1 h and 2 h
   gaps and were hourly all day from 2020: no noise limit could be learned, and the fixed floor alarms on 0.1-resolution data. The pipeline now says so on every reading (an informational `limits` notice)
-  and a refit on the current cadence is the remedy ([`refit_diagnostic.py`](refit_diagnostic.py), post-hoc, not sealed evidence; numbers in `results/REPORT.md` and the protocol's Amendment 3 outcome).
+  and a refit on the current cadence is the remedy (`python refit.py your.csv --station ID --from DATE`): fitted on the hourly years only, the seven Australian AWS drop from 13.6 % to 2.6 % false alarms ([`refit_diagnostic.py`](refit_diagnostic.py), post-hoc, not sealed evidence, different judged years).
 - **Noise bursts are the weakest injected-fault class**, and a wrong clock takes on the order of a day to notice. A stuck sensor
   takes hours by design (it has to stay stuck longer than real weather can). On the unseen stations (all three sets) detection is lower than on DEV
   for spikes, level shifts, noise bursts and wrong clocks (table above). A remedy aimed at level shifts (a sustained one-channel offset) was tested on fresh-2 and rejected: +1 point against the +5 registered.
@@ -102,7 +102,7 @@ The dashboard has a **Live monitor**, a **Network** view (every station, most ur
 level shift, drift, noise, dropout), and watch the verdict, the reason and the health score react, or **bring your own CSV** and watch it judged (a new station learns from the first half of the file). **No server?**
 Open [`docs/demo/index.html`](docs/demo/index.html): a self-contained replay of six real events with the pipeline's actual verdicts.
 
-`make api`, `make dashboard`, `make replay`, `make test` do the same in one word each. Also: `python -m pytest -q` (400+ tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -
+`make api`, `make dashboard`, `make replay`, `make test` do the same in one word each. Also: `python -m pytest -q` (470 tests) - `docker compose up --build` - `python simnode.py --station BBI --minutes 120` (fake node) -
 full reproduction commands in [`docs/REPRODUCE.md`](docs/REPRODUCE.md).
 
 ## How it works
@@ -156,7 +156,7 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 `evaluate_coldstart.py` new-station study - `evaluate_csv.py` the same evaluation on your CSV - `loadtest.py` scale test - `data_tools/` NOAA download, split, event rules -
 `make_report.py` (technical report from the results), `make_onepager.py`, `make_diagrams.py` and `capture_dashboard.py` (handout and slide assets), `compare_runs.py` (did a rerun reproduce?) - `firmware/node/` ESP32 sketch and the portable L0 header - `train.py` per-station models - `make_summary.py`,
 `make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real`, `data/fresh/real` and `data/fresh2/real` (each sealed until its single run), `evaluate_peers.py` and `atmos/peers.py` (the optional neighbour layer), `data/demo` -
-`models/` trained station artifacts - `tests/` 400+ tests.
+`models/` trained station artifacts - `tests/` 470 tests.
 
 ## Standard practice (not our invention)
 Physics checks, persistence (frozen-value) checks including station-learned thresholds (HadISD), CUSUM, Theil-Sen and
