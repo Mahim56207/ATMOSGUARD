@@ -235,3 +235,34 @@ subtables, which answer separately whether the pipeline holds on fine-resolution
 **What this is not.** It is a set of real records with injected faults again, not labelled real faults. The Australian records are SYNOP reports of automatic weather
 stations, not IMD data (which no reachable host serves), at hourly cadence: a 1 to 15 minute cadence at 0.1 resolution is still untested. It is not a repeat of the earlier
 holdouts, and `full` on these stations is one more out-of-sample number for the shipped pipeline.
+
+## Amendment 3: outcome (written after `fresh2_run1` finished; nothing was changed to make it come out this way)
+`results/fresh2_run1.*` was produced by the single run behind the guard (lock `data/fresh2/.fresh2_used`, protocol commit `1a501f1`, 12 stations, 41 minutes on 4 workers). The
+decision rules registered above were applied by `make_summary.py` (`amendment3_rows`) to the pooled numbers, and every number is in `results/REPORT.md`:
+
+| | windows with a FAULT (full / this, of 134) | FAULT share (full / this) | worst change in paired detection | level-shift change | change in clean false alarms | SUSPECT share in real weather | adopt |
+|---|---|---|---|---|---|---|---|
+| remedy 3, expected-change-aware step rule | 4 / 1 | 0.03 % / 0.01 % | none | +0.0 pp | -0.02 pp | -0.10 pp | **yes** |
+| remedy 4, sustained one-channel offset | 4 / 3 | 0.03 % / 0.02 % | -0.2 pp (spike) | +1.0 pp | +0.48 pp | +1.35 pp | **no** (rule d: +1.0 pp against the +5 required) |
+| both | 4 / 1 | 0.03 % / 0.01 % | -0.2 pp (spike) | +1.0 pp | +0.46 pp | +1.25 pp | **no** (needs both) |
+
+**Decision.** Remedy 3 is adopted: `health.step.expected_aware` is `true` in `config/settings.yaml`. Remedy 4 is rejected and `health.offset.enabled` stays `false`. The six committed
+station models need no retraining (remedy 3 fits nothing). The evaluation's `full`, `registered`, ablations and baselines for DEV, both holdouts and FRESH keep every remedy forced
+off (`evaluate_real.pin_registered`), so `dev_run4`, `holdout_run1/2` and `fresh_run1` reproduce with the shipped default; FRESH2's `full` is the pipeline as shipped before this amendment.
+
+**What the four FAULT windows of the shipped pipeline were** (`python window_forensics.py --phase FRESH2 --station GLS`, with remedy 3 off; read only after the results were fixed): Giles
+(central desert), a low-pressure window in August 2020: humidity -44.3 % in 60 minutes against a 40 % cap; a sharp-change window in September 2022: temperature +10.2 C in 120 minutes
+against a 10 C cap. Thredbo (Alps), a low-pressure window in October 2023: humidity -48.9 % in 120 minutes; a sharp-change window in March 2024: humidity -42.5 % in 180 minutes. All four are a
+fixed step cap meeting a real, fast, one-channel change that the station's own daily cycle partly explains (a dry air mass arriving, an afternoon warming). Remedy 3 removes three; the fourth,
+Thredbo in October 2023 (humidity -48.9 % in 120 minutes), remains: the daily cycle explains too little of that drop.
+
+**What FRESH2 also showed, which the registered rules did not cover.** It is a result and stays in the record:
+- **False alarms on clean data are 9.3 % pooled (3.2 % on the five Indian airports, 13.6 % on the seven Australian AWS).** They are concentrated: Mount Crawford 32.7 %, Cape Wessel 25.5 %,
+  Lady Elliot Island 21.1 %, Willis Island 8.3 %, and 0.9-2.1 % at the other three AWS (Giles, Cape Otway, Thredbo). The four bad stations share one cause: in 2016-2019 they reported 16 hours a
+  day with alternating 1 h and 2 h gaps, and hourly all day from 2020, so **no noise limit could be learned** (`noise_std` is unset for every channel; no earlier station lacked one), the fixed
+  floor of 0.5 C / 0.5 hPa / 3 % was used, and it alarms on 0.1-resolution hourly data. It is a mixed-cadence training record, not a defect specific to Australia; `docs/USE_YOUR_DATA.md` item 2
+  had warned about mixed cadence. Nothing was changed in response, to the pipeline or its limits. Two things were added that change no verdict: an informational `limits` notice on every reading
+  whose station has an unlearned noise limit or a cadence that differs from the one the limits were learned at (`health.check_limits_fit`), and a post-hoc diagnostic (`refit_diagnostic.py`,
+  `results/fresh2_refit_diagnostic.*`, labelled as not sealed evidence) of what refitting at the current cadence does on the same stations.
+- Detection of injected faults on these stations (`full`): frozen 100 %, spike 89 %, level shift 91 %, noise burst 83 %, dropout 93 %, clock 90 %. The Indian and Australian subsets are in `results/REPORT.md`.
+- Real extreme weather: FAULT on 0.0 % of 14,732 samples (4 of 134 windows, the four above); WEATHER 4.1 %, SUSPECT 14.1 % (SUSPECT is higher on the AWS, 17.6 %, in step with their higher false-alarm rate).
