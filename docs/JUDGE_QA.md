@@ -9,8 +9,9 @@ support.** Numbers below are from `results/REPORT.md`; say which split you are q
 - **DEV (tuned here):** clean data: 1.9% (1.8-2.0) of 98340 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 3503 samples (0 of 30 windows); WEATHER on 10.8%, SUSPECT on 9.0%. Injected faults raised the alarm: frozen 100%; spike 98%; level shift 97%; noise burst 78%; dropout 99%; clock 3 h out 97%.
 - **holdout, same stations, later years:** clean data: 2.5% (2.4-2.6) of 147078 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 4374 samples (0 of 38 windows); WEATHER on 11.8%, SUSPECT on 8.2%. Injected faults raised the alarm: frozen 100%; spike 96%; level shift 98%; noise burst 79%; dropout 100%; clock 3 h out 97%.
 - **holdout, eight unseen stations:** clean data: 2.9% (2.8-3.0) of 237411 samples got FAULT or SUSPECT; 0.0% (0.0-0.1) got FAULT. Real extreme weather: FAULT on 0.3% (0.2-0.4) of 9074 samples (3 of 98 windows); WEATHER on 15.7%, SUSPECT on 8.6%. Injected faults raised the alarm: frozen 100%; spike 90%; level shift 89%; noise burst 67%; dropout 98%; clock 3 h out 84%.
-- **Speed (simulated stations, one machine, in-process):** median 0.239 ms and 99th percentile 1.281 ms per reading with 200 stations, 2996.1 readings/s.
-- **Speed through the real HTTP server (FastAPI + SQLite, 50 stations, 8 clients):** median 28.99 ms, 95th percentile 36.06 ms, 256.4 requests/s, 0 errors.
+- **Speed (simulated stations, one machine, one core, in-process, every layer on):** median 7.682 ms and 99th percentile 13.824 ms per reading with 100 stations, 123.9 readings/s.
+- **The same with the Isolation Forest layer off** (a config flag; the ablation shows it adds almost nothing): median 0.526 ms, 1430.1 readings/s.
+- **Speed through the real HTTP server (FastAPI + SQLite, 50 stations, 8 clients):** median 133.12 ms, 95th percentile 164.74 ms, 58.5 requests/s, 0 errors.
 <!-- NUMBERS:END -->
 
 ## The three questions the build guide says you will certainly get
@@ -88,9 +89,14 @@ when `shap` is installed (`GET /explain`). SHAP is optional because the forest e
 **Does it run on the ESP32?** The L0 logic is plain C++ that is compiled and checked against the Python on thousands of inputs, and the
 sketch type-checks against stand-ins for the Arduino libraries. It has not been compiled with the real toolchain or run on hardware in this
 repository, and no energy figure is measured.
-**How does it scale?** State is per station and nothing is shared; in the scale test the median time per reading stays flat from 1 to 200
-simulated stations on one machine, and the real HTTP server sustained a few hundred requests per second. Simulated stations on one machine
-are a design check, not a production load test; capacity grows by adding worker processes.
+**How does it scale?** State is per station and nothing is shared. In the scale test the median time per reading stays flat from 1 to 100
+simulated stations: about 7.5 ms with every layer on (about 125 readings/s on one core, which is arithmetic for roughly 7,000 stations
+reporting once a minute) and about 0.5 ms with the Isolation Forest layer switched off (`layers.mlmodel: false`). The forest is most of
+the per-reading time and the ablation shows it adds almost nothing to the verdicts, so a large deployment should switch it off. Through
+the real HTTP server (one process, one lock) we measured about 58 requests/s with 8 concurrent clients; capacity grows by adding worker
+processes, each owning a set of stations. Simulated stations on one machine are a design check, not a production load test. (An earlier
+version of our scale test fed readings under the wrong station id, so the pipeline ran without its per-station models and reported
+0.2 ms; that bug is fixed and has a regression test.)
 **Docker?** The files exist and are checked statically; run `docker compose up --build` once before the demo.
 
 ## Things we dropped (say them before a judge does)

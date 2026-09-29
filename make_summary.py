@@ -251,7 +251,7 @@ def station_rows(rows: list[dict], phase: str) -> list[dict]:
     return out
 
 
-def build_summary(results: dict[str, dict], scale: Optional[dict]) -> dict:
+def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optional[dict] = None) -> dict:
     phases = {}
     for label, res in results.items():
         for ph in dict.fromkeys(r["phase"] for r in res["stations"]):
@@ -264,9 +264,14 @@ def build_summary(results: dict[str, dict], scale: Optional[dict]) -> dict:
     out = {"note": "Real NOAA ISD airport records (METAR and SYNOP), 2016-2024. RH is derived from dew point. Injected faults are "
                    "injected. NOAA agreement is not ground truth. See docs/WHAT_WE_DO_NOT_CLAIM.md.",
            "phases": phases}
+    if cold:
+        out["coldstart"] = {"note": "Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table "
+                                    "from the nearest other station. Injected faults: frozen, spike, level shift.",
+                            "rows": coldstart_table(cold), "timing": cold.get("timing", {})}
     if scale:
         rows = scale["pipeline_by_station_count"]
-        out["scale"] = {"note": scale["note"], "pipeline": rows, "http": scale.get("http")}
+        out["scale"] = {"note": scale["note"], "pipeline": rows, "http": scale.get("http"),
+                        "pipeline_no_forest": scale.get("pipeline_without_isolation_forest", [])}
     return out
 
 
@@ -297,11 +302,20 @@ def to_markdown(summary: dict) -> str:
                 table(t["by_kind"])
         L += [f"### {ph['by_station']['title']}", "", ph["by_station"]["caption"], ""]
         table(ph["by_station"]["rows"])
+    if "coldstart" in summary:
+        L += ["## A new station on day one (cold start)", "", summary["coldstart"]["note"], ""]
+        table(summary["coldstart"]["rows"])
     if "scale" in summary:
         L += ["## Scale (simulated stations, one machine)", "", summary["scale"]["note"], ""]
         table([{"stations": r["stations"], "readings/s": r["readings_per_second"], "median ms": r["median_ms"],
                 "p95 ms": r["p95_ms"], "p99 ms": r["p99_ms"], "MB/station": r["memory_per_station_mb"],
                 "KB stored/station": r["storage_per_station"]["total_kb"]} for r in summary["scale"]["pipeline"]])
+        nf = summary["scale"].get("pipeline_no_forest")
+        if nf:
+            L += ["The same test with the Isolation Forest layer switched off (`layers.mlmodel: false`); the ablation shows it adds "
+                  "almost nothing to the verdicts:", ""]
+            table([{"stations": r["stations"], "readings/s": r["readings_per_second"], "median ms": r["median_ms"],
+                    "p95 ms": r["p95_ms"], "p99 ms": r["p99_ms"]} for r in nf])
         h = summary["scale"].get("http")
         if h:
             L += [f"Real HTTP server (FastAPI + SQLite), {h['stations']} stations, {h['clients']} concurrent clients: "
@@ -344,6 +358,41 @@ def update_readme(summary: dict, path: Path) -> bool:
     return update_between(path, README_START, README_END, readme_block(summary))
 
 
+COLD_START, COLD_END = "<!-- COLDSTART:START -->", "<!-- COLDSTART:END -->"
+
+
+def coldstart_table(cold: dict, days=(0, 30, 90, 365, 1460)) -> list[dict]:
+    """A new station with D days of its own history, with and without a starter borrowed from the nearest other station."""
+    by = {(r["days"], r["mode"]): r for r in cold["summary"]}
+    rows = []
+    for d in days:
+        s, o = by.get((d, "starter")), by.get((d, "own_only"))
+        if not s or not o:
+            continue
+        rows.append({"days of own history": d,
+                     "with a starter: clean false alarms": f"{s['clean_alarm_pct']}%",
+                     "with a starter: FAULT on real extreme weather": f"{s['event_fault_pct']}%",
+                     "with a starter: injected faults detected": f"{s['detect_pct']}%",
+                     "own data only: clean false alarms": f"{o['clean_alarm_pct']}%",
+                     "own data only: FAULT on real extreme weather": f"{o['event_fault_pct']}%",
+                     "own data only: injected faults detected": f"{o['detect_pct']}%"})
+    return rows
+
+
+def coldstart_block(cold: dict) -> str:
+    L = markdown_table(coldstart_table(cold))
+    t = cold.get("timing", {})
+    L.append("Leave-one-station-out on the six DEV stations, judged on each station's DEV years (2020-2021), which it never trained on. "
+             "The starter is a frozen normality table and frozen limits from the nearest other station, blended out as the station's own "
+             "history grows; no live data of another station is used. Injected faults here are frozen, spike and level shift only. "
+             "Details: [`results/REPORT.md`](results/REPORT.md)." + (f" ({t['jobs']} jobs, {t['wall_minutes']} minutes on {t['workers']} workers.)" if t else ""))
+    return "\n".join(L)
+
+
+def update_coldstart(cold: dict, path: Path) -> bool:
+    return update_between(path, COLD_START, COLD_END, coldstart_block(cold))
+
+
 JUDGE_START, JUDGE_END = "<!-- NUMBERS:START -->", "<!-- NUMBERS:END -->"
 
 
@@ -361,8 +410,12 @@ def judge_block(summary: dict) -> str:
     sc = summary.get("scale")
     if sc:
         big = sc["pipeline"][-1]
-        L.append(f"- **Speed (simulated stations, one machine, in-process):** median {big['median_ms']} ms and 99th percentile "
-                 f"{big['p99_ms']} ms per reading with {big['stations']} stations, {big['readings_per_second']} readings/s.")
+        L.append(f"- **Speed (simulated stations, one machine, one core, in-process, every layer on):** median {big['median_ms']} ms and "
+                 f"99th percentile {big['p99_ms']} ms per reading with {big['stations']} stations, {big['readings_per_second']} readings/s.")
+        nf = sc.get("pipeline_no_forest")
+        if nf:
+            L.append(f"- **The same with the Isolation Forest layer off** (a config flag; the ablation shows it adds almost nothing): "
+                     f"median {nf[-1]['median_ms']} ms, {nf[-1]['readings_per_second']} readings/s.")
         h = sc.get("http")
         if h:
             L.append(f"- **Speed through the real HTTP server (FastAPI + SQLite, {h['stations']} stations, {h['clients']} clients):** "
@@ -379,19 +432,23 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Build results/summary.json and results/REPORT.md.")
     ap.add_argument("results", nargs="+", type=Path, help="JSON files written by evaluate_real.py --out")
     ap.add_argument("--scale", type=Path, default=None, help="JSON written by loadtest.py")
+    ap.add_argument("--coldstart", type=Path, default=None, help="JSON written by evaluate_coldstart.py")
     ap.add_argument("--out-dir", type=Path, default=er.RESULTS_DIR)
     ap.add_argument("--readme", type=Path, default=None, help="refresh the block between the RESULTS markers in this README")
     ap.add_argument("--numbers", type=Path, nargs="*", default=[], help="refresh the block between the NUMBERS markers in these files")
     args = ap.parse_args(argv)
     results = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in args.results}
     scale = json.loads(args.scale.read_text(encoding="utf-8")) if args.scale and args.scale.exists() else None
-    summary = build_summary(results, scale)
+    cold = json.loads(args.coldstart.read_text(encoding="utf-8")) if args.coldstart and args.coldstart.exists() else None
+    summary = build_summary(results, scale, cold)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     (args.out_dir / "REPORT.md").write_text(to_markdown(summary), encoding="utf-8")
     print(f"wrote {args.out_dir / 'summary.json'} and {args.out_dir / 'REPORT.md'}")
     if args.readme:
         print("README updated" if update_readme(summary, args.readme) else "README has no RESULTS markers: not updated")
+    if args.readme and cold:
+        print("README cold-start block updated" if update_coldstart(cold, args.readme) else "README has no COLDSTART markers: not updated")
     for f in args.numbers:
         print(f"{f}: numbers updated" if update_judge_qa(summary, f) else f"{f}: no NUMBERS markers, not updated")
     return 0

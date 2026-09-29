@@ -520,15 +520,34 @@ Each station judged on its own record.
 | BHJ | 180 | 4.9% | 0.1% | 0.2% | 1/12 | 17.2% | 70% |
 | COK | 180 | 2.4% | 0.0% | 0.0% | 0/9 | 9.4% | 78% |
 
+## A new station on day one (cold start)
+
+Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table from the nearest other station. Injected faults: frozen, spike, level shift.
+
+| days of own history | with a starter: clean false alarms | with a starter: FAULT on real extreme weather | with a starter: injected faults detected | own data only: clean false alarms | own data only: FAULT on real extreme weather | own data only: injected faults detected |
+|---|---|---|---|---|---|---|
+| 0 | 6.09% | 0.0% | 86.4% | 62.72% | 28.6% | 79.6% |
+| 30 | 5.79% | 0.0% | 85.8% | 16.53% | 4.97% | 84.0% |
+| 90 | 7.34% | 0.0% | 95.7% | 12.83% | 0.03% | 92.0% |
+| 365 | 4.17% | 0.0% | 97.5% | 5.3% | 0.0% | 96.9% |
+| 1460 | 1.88% | 0.0% | 96.3% | 1.88% | 0.0% | 96.3% |
+
 ## Scale (simulated stations, one machine)
 
 Simulated stations on one machine (a design check, not a deployment proof). cpu_count=4, python=3.11.15.
 
 | stations | readings/s | median ms | p95 ms | p99 ms | MB/station | KB stored/station |
 |---|---|---|---|---|---|---|
-| 1 | 3704.7 | 0.194 | 0.643 | 0.718 | 5.14 | 1583.7 |
-| 10 | 3459.2 | 0.217 | 0.709 | 0.807 | 2.07 | 1583.7 |
-| 50 | 2986.9 | 0.236 | 0.806 | 1.287 | 1.87 | 1583.7 |
-| 200 | 2996.1 | 0.239 | 0.792 | 1.281 | 1.8 | 1583.7 |
+| 1 | 130.9 | 7.383 | 9.891 | 11.591 | 5.99 | 1584.4 |
+| 10 | 124.8 | 7.626 | 10.956 | 13.092 | 2.07 | 1584.4 |
+| 50 | 124.8 | 7.638 | 10.952 | 13.594 | 1.9 | 1584.4 |
+| 100 | 123.9 | 7.682 | 10.978 | 13.824 | 1.26 | 1584.4 |
 
-Real HTTP server (FastAPI + SQLite), 50 stations, 8 concurrent clients: 256.4 requests/s, median 28.99 ms, p95 36.06 ms, p99 40.3 ms, errors 0.
+The same test with the Isolation Forest layer switched off (`layers.mlmodel: false`); the ablation shows it adds almost nothing to the verdicts:
+
+| stations | readings/s | median ms | p95 ms | p99 ms |
+|---|---|---|---|---|
+| 1 | 1395.4 | 0.521 | 1.948 | 3.678 |
+| 50 | 1430.1 | 0.526 | 1.947 | 2.346 |
+
+Real HTTP server (FastAPI + SQLite), 50 stations, 8 concurrent clients: 58.5 requests/s, median 133.12 ms, p95 164.74 ms, p99 189.15 ms, errors 0.

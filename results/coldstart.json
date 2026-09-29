@@ -1,0 +1,2888 @@
+{
+ "summary": [
+  {
+   "days": 0,
+   "mode": "starter",
+   "clean_alarm_pct": 6.09,
+   "clean_fault_pct": 0.03,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 18.01,
+   "detect_pct": 86.4,
+   "stations": 6
+  },
+  {
+   "days": 0,
+   "mode": "own_only",
+   "clean_alarm_pct": 62.72,
+   "clean_fault_pct": 34.22,
+   "event_fault_pct": 28.6,
+   "event_weather_pct": 0.0,
+   "detect_pct": 79.6,
+   "stations": 6
+  },
+  {
+   "days": 7,
+   "mode": "starter",
+   "clean_alarm_pct": 6.09,
+   "clean_fault_pct": 0.03,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 18.01,
+   "detect_pct": 86.4,
+   "stations": 6
+  },
+  {
+   "days": 7,
+   "mode": "own_only",
+   "clean_alarm_pct": 62.72,
+   "clean_fault_pct": 34.22,
+   "event_fault_pct": 28.6,
+   "event_weather_pct": 0.0,
+   "detect_pct": 79.6,
+   "stations": 6
+  },
+  {
+   "days": 30,
+   "mode": "starter",
+   "clean_alarm_pct": 5.79,
+   "clean_fault_pct": 0.03,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 18.04,
+   "detect_pct": 85.8,
+   "stations": 6
+  },
+  {
+   "days": 30,
+   "mode": "own_only",
+   "clean_alarm_pct": 16.53,
+   "clean_fault_pct": 4.97,
+   "event_fault_pct": 4.97,
+   "event_weather_pct": 0.23,
+   "detect_pct": 84.0,
+   "stations": 6
+  },
+  {
+   "days": 90,
+   "mode": "starter",
+   "clean_alarm_pct": 7.34,
+   "clean_fault_pct": 0.04,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 21.5,
+   "detect_pct": 95.7,
+   "stations": 6
+  },
+  {
+   "days": 90,
+   "mode": "own_only",
+   "clean_alarm_pct": 12.83,
+   "clean_fault_pct": 0.2,
+   "event_fault_pct": 0.03,
+   "event_weather_pct": 9.91,
+   "detect_pct": 92.0,
+   "stations": 6
+  },
+  {
+   "days": 180,
+   "mode": "starter",
+   "clean_alarm_pct": 4.92,
+   "clean_fault_pct": 0.04,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 16.07,
+   "detect_pct": 96.3,
+   "stations": 6
+  },
+  {
+   "days": 180,
+   "mode": "own_only",
+   "clean_alarm_pct": 4.29,
+   "clean_fault_pct": 0.14,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 15.93,
+   "detect_pct": 90.1,
+   "stations": 6
+  },
+  {
+   "days": 365,
+   "mode": "starter",
+   "clean_alarm_pct": 4.17,
+   "clean_fault_pct": 0.01,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 15.02,
+   "detect_pct": 97.5,
+   "stations": 6
+  },
+  {
+   "days": 365,
+   "mode": "own_only",
+   "clean_alarm_pct": 5.3,
+   "clean_fault_pct": 0.01,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 20.24,
+   "detect_pct": 96.9,
+   "stations": 6
+  },
+  {
+   "days": 1460,
+   "mode": "starter",
+   "clean_alarm_pct": 1.88,
+   "clean_fault_pct": 0.0,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 10.73,
+   "detect_pct": 96.3,
+   "stations": 6
+  },
+  {
+   "days": 1460,
+   "mode": "own_only",
+   "clean_alarm_pct": 1.88,
+   "clean_fault_pct": 0.0,
+   "event_fault_pct": 0.0,
+   "event_weather_pct": 10.73,
+   "detect_pct": 96.3,
+   "stations": 6
+  }
+ ],
+ "stations": [
+  {
+   "station": "BBI",
+   "borrowed_from": [
+    "CCU"
+   ],
+   "rows": [
+    {
+     "station": "BBI",
+     "days": 0,
+     "mode": "starter",
+     "own_days": 0,
+     "clean": {
+      "n": 15797,
+      "alarm": 361,
+      "fault": 28,
+      "weather": 241
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 34,
+      "WEATHER": 58
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       8,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 0,
+     "mode": "own_only",
+     "own_days": 0,
+     "clean": {
+      "n": 15797,
+      "alarm": 10361,
+      "fault": 5440,
+      "weather": 0
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 254,
+      "SUSPECT": 256,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       6,
+       10
+      ],
+      "step": [
+       7,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 7,
+     "mode": "starter",
+     "own_days": 7,
+     "clean": {
+      "n": 15797,
+      "alarm": 361,
+      "fault": 28,
+      "weather": 241
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 34,
+      "WEATHER": 58
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       8,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 7,
+     "mode": "own_only",
+     "own_days": 7,
+     "clean": {
+      "n": 15797,
+      "alarm": 10361,
+      "fault": 5440,
+      "weather": 0
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 254,
+      "SUSPECT": 256,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       6,
+       10
+      ],
+      "step": [
+       7,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 30,
+     "mode": "starter",
+     "own_days": 30,
+     "clean": {
+      "n": 15797,
+      "alarm": 273,
+      "fault": 32,
+      "weather": 156
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 37,
+      "WEATHER": 59
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       7,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 30,
+     "mode": "own_only",
+     "own_days": 30,
+     "clean": {
+      "n": 15797,
+      "alarm": 1481,
+      "fault": 284,
+      "weather": 114
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 10,
+      "SUSPECT": 69,
+      "WEATHER": 5
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       8,
+       10
+      ],
+      "step": [
+       3,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 90,
+     "mode": "starter",
+     "own_days": 90,
+     "clean": {
+      "n": 15797,
+      "alarm": 501,
+      "fault": 38,
+      "weather": 561
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 55,
+      "WEATHER": 86
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       10,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 90,
+     "mode": "own_only",
+     "own_days": 90,
+     "clean": {
+      "n": 15797,
+      "alarm": 837,
+      "fault": 105,
+      "weather": 760
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 1,
+      "SUSPECT": 61,
+      "WEATHER": 56
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       6,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 180,
+     "mode": "starter",
+     "own_days": 165,
+     "clean": {
+      "n": 15797,
+      "alarm": 466,
+      "fault": 38,
+      "weather": 483
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 48,
+      "WEATHER": 92
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       10,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 180,
+     "mode": "own_only",
+     "own_days": 165,
+     "clean": {
+      "n": 15797,
+      "alarm": 796,
+      "fault": 62,
+      "weather": 947
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 80,
+      "WEATHER": 124
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       5,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 365,
+     "mode": "starter",
+     "own_days": 350,
+     "clean": {
+      "n": 15797,
+      "alarm": 650,
+      "fault": 14,
+      "weather": 770
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 77,
+      "WEATHER": 108
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       10,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 365,
+     "mode": "own_only",
+     "own_days": 350,
+     "clean": {
+      "n": 15797,
+      "alarm": 924,
+      "fault": 14,
+      "weather": 1275
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 107,
+      "WEATHER": 152
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       9,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 1460,
+     "mode": "starter",
+     "own_days": 1396,
+     "clean": {
+      "n": 15797,
+      "alarm": 278,
+      "fault": 0,
+      "weather": 319
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 59,
+      "WEATHER": 85
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       10,
+       10
+      ]
+     }
+    },
+    {
+     "station": "BBI",
+     "days": 1460,
+     "mode": "own_only",
+     "own_days": 1396,
+     "clean": {
+      "n": 15797,
+      "alarm": 278,
+      "fault": 0,
+      "weather": 319
+     },
+     "events": {
+      "n": 807,
+      "FAULT": 0,
+      "SUSPECT": 59,
+      "WEATHER": 85
+     },
+     "detection": {
+      "frozen": [
+       10,
+       10
+      ],
+      "spike": [
+       10,
+       10
+      ],
+      "step": [
+       10,
+       10
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "station": "CCU",
+   "borrowed_from": [
+    "BBI"
+   ],
+   "rows": [
+    {
+     "station": "CCU",
+     "days": 0,
+     "mode": "starter",
+     "own_days": 0,
+     "clean": {
+      "n": 16656,
+      "alarm": 996,
+      "fault": 0,
+      "weather": 719
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 74,
+      "WEATHER": 132
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       6,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 0,
+     "mode": "own_only",
+     "own_days": 0,
+     "clean": {
+      "n": 16656,
+      "alarm": 10609,
+      "fault": 5943,
+      "weather": 0
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 155,
+      "SUSPECT": 201,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       4,
+       8
+      ],
+      "step": [
+       7,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 7,
+     "mode": "starter",
+     "own_days": 7,
+     "clean": {
+      "n": 16656,
+      "alarm": 996,
+      "fault": 0,
+      "weather": 719
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 74,
+      "WEATHER": 132
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       6,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 7,
+     "mode": "own_only",
+     "own_days": 7,
+     "clean": {
+      "n": 16656,
+      "alarm": 10609,
+      "fault": 5943,
+      "weather": 0
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 155,
+      "SUSPECT": 201,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       4,
+       8
+      ],
+      "step": [
+       7,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 30,
+     "mode": "starter",
+     "own_days": 30,
+     "clean": {
+      "n": 16656,
+      "alarm": 980,
+      "fault": 0,
+      "weather": 668
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 74,
+      "WEATHER": 132
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       6,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 30,
+     "mode": "own_only",
+     "own_days": 30,
+     "clean": {
+      "n": 16656,
+      "alarm": 1676,
+      "fault": 112,
+      "weather": 105
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 1,
+      "SUSPECT": 47,
+      "WEATHER": 1
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       7,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 90,
+     "mode": "starter",
+     "own_days": 90,
+     "clean": {
+      "n": 16656,
+      "alarm": 980,
+      "fault": 0,
+      "weather": 1009
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 85,
+      "WEATHER": 141
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       8,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 90,
+     "mode": "own_only",
+     "own_days": 90,
+     "clean": {
+      "n": 16656,
+      "alarm": 910,
+      "fault": 8,
+      "weather": 597
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 41,
+      "WEATHER": 64
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       7,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 180,
+     "mode": "starter",
+     "own_days": 167,
+     "clean": {
+      "n": 16656,
+      "alarm": 765,
+      "fault": 0,
+      "weather": 747
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 81,
+      "WEATHER": 83
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       8,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 180,
+     "mode": "own_only",
+     "own_days": 167,
+     "clean": {
+      "n": 16656,
+      "alarm": 604,
+      "fault": 3,
+      "weather": 650
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 77,
+      "WEATHER": 111
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       8,
+       8
+      ],
+      "step": [
+       6,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 365,
+     "mode": "starter",
+     "own_days": 347,
+     "clean": {
+      "n": 16656,
+      "alarm": 594,
+      "fault": 0,
+      "weather": 684
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 85,
+      "WEATHER": 84
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       7,
+       8
+      ],
+      "step": [
+       8,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 365,
+     "mode": "own_only",
+     "own_days": 347,
+     "clean": {
+      "n": 16656,
+      "alarm": 607,
+      "fault": 0,
+      "weather": 823
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 79,
+      "WEATHER": 111
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       7,
+       8
+      ],
+      "step": [
+       8,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 1460,
+     "mode": "starter",
+     "own_days": 1403,
+     "clean": {
+      "n": 16656,
+      "alarm": 322,
+      "fault": 0,
+      "weather": 282
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 63,
+      "WEATHER": 75
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       7,
+       8
+      ],
+      "step": [
+       8,
+       8
+      ]
+     }
+    },
+    {
+     "station": "CCU",
+     "days": 1460,
+     "mode": "own_only",
+     "own_days": 1403,
+     "clean": {
+      "n": 16656,
+      "alarm": 322,
+      "fault": 0,
+      "weather": 282
+     },
+     "events": {
+      "n": 550,
+      "FAULT": 0,
+      "SUSPECT": 63,
+      "WEATHER": 75
+     },
+     "detection": {
+      "frozen": [
+       8,
+       8
+      ],
+      "spike": [
+       7,
+       8
+      ],
+      "step": [
+       8,
+       8
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "station": "DEL",
+   "borrowed_from": [
+    "JAI"
+   ],
+   "rows": [
+    {
+     "station": "DEL",
+     "days": 0,
+     "mode": "starter",
+     "own_days": 0,
+     "clean": {
+      "n": 16424,
+      "alarm": 753,
+      "fault": 0,
+      "weather": 1232
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 80,
+      "WEATHER": 53
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       3,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 0,
+     "mode": "own_only",
+     "own_days": 0,
+     "clean": {
+      "n": 16424,
+      "alarm": 10101,
+      "fault": 5442,
+      "weather": 0
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 105,
+      "SUSPECT": 168,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       4,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 7,
+     "mode": "starter",
+     "own_days": 7,
+     "clean": {
+      "n": 16424,
+      "alarm": 753,
+      "fault": 0,
+      "weather": 1232
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 80,
+      "WEATHER": 53
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       3,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 7,
+     "mode": "own_only",
+     "own_days": 7,
+     "clean": {
+      "n": 16424,
+      "alarm": 10101,
+      "fault": 5442,
+      "weather": 0
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 105,
+      "SUSPECT": 168,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       4,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 30,
+     "mode": "starter",
+     "own_days": 25,
+     "clean": {
+      "n": 16424,
+      "alarm": 742,
+      "fault": 0,
+      "weather": 1135
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 81,
+      "WEATHER": 53
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       3,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 30,
+     "mode": "own_only",
+     "own_days": 25,
+     "clean": {
+      "n": 16424,
+      "alarm": 787,
+      "fault": 35,
+      "weather": 40
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 19,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       4,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 90,
+     "mode": "starter",
+     "own_days": 82,
+     "clean": {
+      "n": 16424,
+      "alarm": 1164,
+      "fault": 0,
+      "weather": 1460
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 99,
+      "WEATHER": 109
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 90,
+     "mode": "own_only",
+     "own_days": 82,
+     "clean": {
+      "n": 16424,
+      "alarm": 1272,
+      "fault": 32,
+      "weather": 661
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 105,
+      "WEATHER": 106
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 180,
+     "mode": "starter",
+     "own_days": 157,
+     "clean": {
+      "n": 16424,
+      "alarm": 696,
+      "fault": 0,
+      "weather": 1034
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 56,
+      "WEATHER": 107
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 180,
+     "mode": "own_only",
+     "own_days": 157,
+     "clean": {
+      "n": 16424,
+      "alarm": 768,
+      "fault": 33,
+      "weather": 631
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 54,
+      "WEATHER": 121
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 365,
+     "mode": "starter",
+     "own_days": 342,
+     "clean": {
+      "n": 16424,
+      "alarm": 618,
+      "fault": 0,
+      "weather": 1161
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 58,
+      "WEATHER": 104
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 365,
+     "mode": "own_only",
+     "own_days": 342,
+     "clean": {
+      "n": 16424,
+      "alarm": 750,
+      "fault": 0,
+      "weather": 1257
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 52,
+      "WEATHER": 121
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 1460,
+     "mode": "starter",
+     "own_days": 1387,
+     "clean": {
+      "n": 16424,
+      "alarm": 258,
+      "fault": 0,
+      "weather": 334
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 42,
+      "WEATHER": 55
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "DEL",
+     "days": 1460,
+     "mode": "own_only",
+     "own_days": 1387,
+     "clean": {
+      "n": 16424,
+      "alarm": 258,
+      "fault": 0,
+      "weather": 334
+     },
+     "events": {
+      "n": 478,
+      "FAULT": 0,
+      "SUSPECT": 42,
+      "WEATHER": 55
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "station": "JAI",
+   "borrowed_from": [
+    "DEL"
+   ],
+   "rows": [
+    {
+     "station": "JAI",
+     "days": 0,
+     "mode": "starter",
+     "own_days": 0,
+     "clean": {
+      "n": 15891,
+      "alarm": 759,
+      "fault": 0,
+      "weather": 543
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 34,
+      "WEATHER": 65
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       5,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 0,
+     "mode": "own_only",
+     "own_days": 0,
+     "clean": {
+      "n": 15891,
+      "alarm": 9269,
+      "fault": 4365,
+      "weather": 0
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 162,
+      "SUSPECT": 250,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       4,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 7,
+     "mode": "starter",
+     "own_days": 7,
+     "clean": {
+      "n": 15891,
+      "alarm": 759,
+      "fault": 0,
+      "weather": 543
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 34,
+      "WEATHER": 65
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       5,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 7,
+     "mode": "own_only",
+     "own_days": 7,
+     "clean": {
+      "n": 15891,
+      "alarm": 9269,
+      "fault": 4365,
+      "weather": 0
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 162,
+      "SUSPECT": 250,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       4,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 30,
+     "mode": "starter",
+     "own_days": 30,
+     "clean": {
+      "n": 15891,
+      "alarm": 717,
+      "fault": 0,
+      "weather": 495
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 34,
+      "WEATHER": 65
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       5,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 30,
+     "mode": "own_only",
+     "own_days": 30,
+     "clean": {
+      "n": 15891,
+      "alarm": 9271,
+      "fault": 4365,
+      "weather": 0
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 162,
+      "SUSPECT": 250,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       4,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 90,
+     "mode": "starter",
+     "own_days": 88,
+     "clean": {
+      "n": 15891,
+      "alarm": 769,
+      "fault": 0,
+      "weather": 872
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 66,
+      "WEATHER": 68
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       11,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 90,
+     "mode": "own_only",
+     "own_days": 88,
+     "clean": {
+      "n": 15891,
+      "alarm": 6957,
+      "fault": 43,
+      "weather": 158
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 349,
+      "WEATHER": 54
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       7,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 180,
+     "mode": "starter",
+     "own_days": 172,
+     "clean": {
+      "n": 15891,
+      "alarm": 794,
+      "fault": 0,
+      "weather": 812
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 79,
+      "WEATHER": 67
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       11,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 180,
+     "mode": "own_only",
+     "own_days": 172,
+     "clean": {
+      "n": 15891,
+      "alarm": 688,
+      "fault": 39,
+      "weather": 540
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 87,
+      "WEATHER": 74
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       11,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 365,
+     "mode": "starter",
+     "own_days": 354,
+     "clean": {
+      "n": 15891,
+      "alarm": 606,
+      "fault": 0,
+      "weather": 706
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 86,
+      "WEATHER": 69
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       11,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 365,
+     "mode": "own_only",
+     "own_days": 354,
+     "clean": {
+      "n": 15891,
+      "alarm": 811,
+      "fault": 0,
+      "weather": 1235
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 125,
+      "WEATHER": 116
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       11,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 1460,
+     "mode": "starter",
+     "own_days": 1408,
+     "clean": {
+      "n": 15891,
+      "alarm": 309,
+      "fault": 0,
+      "weather": 507
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 63,
+      "WEATHER": 25
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       10,
+       12
+      ]
+     }
+    },
+    {
+     "station": "JAI",
+     "days": 1460,
+     "mode": "own_only",
+     "own_days": 1408,
+     "clean": {
+      "n": 15891,
+      "alarm": 309,
+      "fault": 0,
+      "weather": 507
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 63,
+      "WEATHER": 25
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       10,
+       12
+      ],
+      "step": [
+       10,
+       12
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "station": "MAA",
+   "borrowed_from": [
+    "TRV"
+   ],
+   "rows": [
+    {
+     "station": "MAA",
+     "days": 0,
+     "mode": "starter",
+     "own_days": 0,
+     "clean": {
+      "n": 16642,
+      "alarm": 1770,
+      "fault": 0,
+      "weather": 5619
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 72,
+      "WEATHER": 307
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       11,
+       12
+      ],
+      "step": [
+       9,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 0,
+     "mode": "own_only",
+     "own_days": 0,
+     "clean": {
+      "n": 16642,
+      "alarm": 10194,
+      "fault": 5501,
+      "weather": 0
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 266,
+      "SUSPECT": 175,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       6,
+       12
+      ],
+      "step": [
+       9,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 7,
+     "mode": "starter",
+     "own_days": 7,
+     "clean": {
+      "n": 16642,
+      "alarm": 1770,
+      "fault": 0,
+      "weather": 5619
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 72,
+      "WEATHER": 307
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       11,
+       12
+      ],
+      "step": [
+       9,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 7,
+     "mode": "own_only",
+     "own_days": 7,
+     "clean": {
+      "n": 16642,
+      "alarm": 10194,
+      "fault": 5501,
+      "weather": 0
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 266,
+      "SUSPECT": 175,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       6,
+       12
+      ],
+      "step": [
+       9,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 30,
+     "mode": "starter",
+     "own_days": 30,
+     "clean": {
+      "n": 16642,
+      "alarm": 1697,
+      "fault": 0,
+      "weather": 5392
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 72,
+      "WEATHER": 307
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       11,
+       12
+      ],
+      "step": [
+       9,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 30,
+     "mode": "own_only",
+     "own_days": 30,
+     "clean": {
+      "n": 16642,
+      "alarm": 841,
+      "fault": 11,
+      "weather": 129
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 40,
+      "WEATHER": 2
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       8,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 90,
+     "mode": "starter",
+     "own_days": 90,
+     "clean": {
+      "n": 16642,
+      "alarm": 1494,
+      "fault": 0,
+      "weather": 5088
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 74,
+      "WEATHER": 332
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       10,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 90,
+     "mode": "own_only",
+     "own_days": 90,
+     "clean": {
+      "n": 16642,
+      "alarm": 1061,
+      "fault": 2,
+      "weather": 558
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 83,
+      "WEATHER": 56
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       11,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 180,
+     "mode": "starter",
+     "own_days": 175,
+     "clean": {
+      "n": 16642,
+      "alarm": 1271,
+      "fault": 0,
+      "weather": 3549
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 94,
+      "WEATHER": 194
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       10,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 180,
+     "mode": "own_only",
+     "own_days": 175,
+     "clean": {
+      "n": 16642,
+      "alarm": 762,
+      "fault": 0,
+      "weather": 531
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 57,
+      "WEATHER": 101
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       8,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 365,
+     "mode": "starter",
+     "own_days": 342,
+     "clean": {
+      "n": 16642,
+      "alarm": 918,
+      "fault": 0,
+      "weather": 758
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 96,
+      "WEATHER": 141
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 365,
+     "mode": "own_only",
+     "own_days": 342,
+     "clean": {
+      "n": 16642,
+      "alarm": 1132,
+      "fault": 0,
+      "weather": 866
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 88,
+      "WEATHER": 182
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 1460,
+     "mode": "starter",
+     "own_days": 1395,
+     "clean": {
+      "n": 16642,
+      "alarm": 422,
+      "fault": 0,
+      "weather": 346
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 78,
+      "WEATHER": 119
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    },
+    {
+     "station": "MAA",
+     "days": 1460,
+     "mode": "own_only",
+     "own_days": 1395,
+     "clean": {
+      "n": 16642,
+      "alarm": 422,
+      "fault": 0,
+      "weather": 346
+     },
+     "events": {
+      "n": 739,
+      "FAULT": 0,
+      "SUSPECT": 78,
+      "WEATHER": 119
+     },
+     "detection": {
+      "frozen": [
+       12,
+       12
+      ],
+      "spike": [
+       12,
+       12
+      ],
+      "step": [
+       12,
+       12
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "station": "TRV",
+   "borrowed_from": [
+    "MAA"
+   ],
+   "rows": [
+    {
+     "station": "TRV",
+     "days": 0,
+     "mode": "starter",
+     "own_days": 0,
+     "clean": {
+      "n": 16930,
+      "alarm": 1353,
+      "fault": 0,
+      "weather": 2217
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 17,
+      "WEATHER": 16
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 0,
+     "mode": "own_only",
+     "own_days": 0,
+     "clean": {
+      "n": 16930,
+      "alarm": 11141,
+      "fault": 6963,
+      "weather": 0
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 60,
+      "SUSPECT": 45,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 7,
+     "mode": "starter",
+     "own_days": 7,
+     "clean": {
+      "n": 16930,
+      "alarm": 1353,
+      "fault": 0,
+      "weather": 2217
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 17,
+      "WEATHER": 16
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 7,
+     "mode": "own_only",
+     "own_days": 7,
+     "clean": {
+      "n": 16930,
+      "alarm": 11141,
+      "fault": 6963,
+      "weather": 0
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 60,
+      "SUSPECT": 45,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 30,
+     "mode": "starter",
+     "own_days": 30,
+     "clean": {
+      "n": 16930,
+      "alarm": 1287,
+      "fault": 0,
+      "weather": 2053
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 17,
+      "WEATHER": 16
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 30,
+     "mode": "own_only",
+     "own_days": 30,
+     "clean": {
+      "n": 16930,
+      "alarm": 2198,
+      "fault": 77,
+      "weather": 248
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 1,
+      "SUSPECT": 17,
+      "WEATHER": 0
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       4,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 90,
+     "mode": "starter",
+     "own_days": 75,
+     "clean": {
+      "n": 16930,
+      "alarm": 2309,
+      "fault": 0,
+      "weather": 3618
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 18,
+      "WEATHER": 17
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 90,
+     "mode": "own_only",
+     "own_days": 75,
+     "clean": {
+      "n": 16930,
+      "alarm": 1583,
+      "fault": 5,
+      "weather": 645
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 24,
+      "WEATHER": 11
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 180,
+     "mode": "starter",
+     "own_days": 155,
+     "clean": {
+      "n": 16930,
+      "alarm": 849,
+      "fault": 0,
+      "weather": 1068
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 15,
+      "WEATHER": 20
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       5,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 180,
+     "mode": "own_only",
+     "own_days": 155,
+     "clean": {
+      "n": 16930,
+      "alarm": 602,
+      "fault": 0,
+      "weather": 518
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 20,
+      "WEATHER": 27
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 365,
+     "mode": "starter",
+     "own_days": 335,
+     "clean": {
+      "n": 16930,
+      "alarm": 710,
+      "fault": 0,
+      "weather": 736
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 15,
+      "WEATHER": 20
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 365,
+     "mode": "own_only",
+     "own_days": 335,
+     "clean": {
+      "n": 16930,
+      "alarm": 992,
+      "fault": 0,
+      "weather": 1151
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 20,
+      "WEATHER": 27
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 1460,
+     "mode": "starter",
+     "own_days": 1400,
+     "clean": {
+      "n": 16930,
+      "alarm": 264,
+      "fault": 0,
+      "weather": 328
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 9,
+      "WEATHER": 17
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    },
+    {
+     "station": "TRV",
+     "days": 1460,
+     "mode": "own_only",
+     "own_days": 1400,
+     "clean": {
+      "n": 16930,
+      "alarm": 264,
+      "fault": 0,
+      "weather": 328
+     },
+     "events": {
+      "n": 190,
+      "FAULT": 0,
+      "SUSPECT": 9,
+      "WEATHER": 17
+     },
+     "detection": {
+      "frozen": [
+       6,
+       6
+      ],
+      "spike": [
+       6,
+       6
+      ],
+      "step": [
+       5,
+       6
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "timing": {
+  "jobs": 42,
+  "workers": 4,
+  "wall_minutes": 8.7,
+  "job_seconds_total": 2026.1
+ }
+}

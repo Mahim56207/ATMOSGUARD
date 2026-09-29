@@ -2358,75 +2358,135 @@
    }
   }
  },
+ "coldstart": {
+  "note": "Leave-one-station-out on the six DEV stations, judged on their DEV years. A starter is a frozen table from the nearest other station. Injected faults: frozen, spike, level shift.",
+  "rows": [
+   {
+    "days of own history": 0,
+    "with a starter: clean false alarms": "6.09%",
+    "with a starter: FAULT on real extreme weather": "0.0%",
+    "with a starter: injected faults detected": "86.4%",
+    "own data only: clean false alarms": "62.72%",
+    "own data only: FAULT on real extreme weather": "28.6%",
+    "own data only: injected faults detected": "79.6%"
+   },
+   {
+    "days of own history": 30,
+    "with a starter: clean false alarms": "5.79%",
+    "with a starter: FAULT on real extreme weather": "0.0%",
+    "with a starter: injected faults detected": "85.8%",
+    "own data only: clean false alarms": "16.53%",
+    "own data only: FAULT on real extreme weather": "4.97%",
+    "own data only: injected faults detected": "84.0%"
+   },
+   {
+    "days of own history": 90,
+    "with a starter: clean false alarms": "7.34%",
+    "with a starter: FAULT on real extreme weather": "0.0%",
+    "with a starter: injected faults detected": "95.7%",
+    "own data only: clean false alarms": "12.83%",
+    "own data only: FAULT on real extreme weather": "0.03%",
+    "own data only: injected faults detected": "92.0%"
+   },
+   {
+    "days of own history": 365,
+    "with a starter: clean false alarms": "4.17%",
+    "with a starter: FAULT on real extreme weather": "0.0%",
+    "with a starter: injected faults detected": "97.5%",
+    "own data only: clean false alarms": "5.3%",
+    "own data only: FAULT on real extreme weather": "0.0%",
+    "own data only: injected faults detected": "96.9%"
+   },
+   {
+    "days of own history": 1460,
+    "with a starter: clean false alarms": "1.88%",
+    "with a starter: FAULT on real extreme weather": "0.0%",
+    "with a starter: injected faults detected": "96.3%",
+    "own data only: clean false alarms": "1.88%",
+    "own data only: FAULT on real extreme weather": "0.0%",
+    "own data only: injected faults detected": "96.3%"
+   }
+  ],
+  "timing": {
+   "jobs": 42,
+   "workers": 4,
+   "wall_minutes": 8.7,
+   "job_seconds_total": 2026.1
+  }
+ },
  "scale": {
   "note": "Simulated stations on one machine (a design check, not a deployment proof). cpu_count=4, python=3.11.15.",
   "pipeline": [
    {
     "stations": 1,
     "readings": 288,
-    "readings_per_second": 3704.7,
-    "median_ms": 0.194,
-    "p95_ms": 0.643,
-    "p99_ms": 0.718,
-    "rss_mb_after_fit": 220.8,
-    "rss_mb_after_run": 221.0,
-    "memory_per_station_mb": 5.14,
+    "readings_per_second": 130.9,
+    "median_ms": 7.383,
+    "p95_ms": 9.891,
+    "p99_ms": 11.591,
+    "rss_mb_after_fit": 221.7,
+    "rss_mb_after_run": 222.0,
+    "memory_per_station_mb": 5.99,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
+     "mahalanobis_kb": 0.7,
      "limits_json_kb": 0.6,
-     "total_kb": 1583.7
+     "total_kb": 1584.4
     }
    },
    {
     "stations": 10,
     "readings": 2880,
-    "readings_per_second": 3459.2,
-    "median_ms": 0.217,
-    "p95_ms": 0.709,
-    "p99_ms": 0.807,
-    "rss_mb_after_fit": 241.7,
-    "rss_mb_after_run": 241.7,
+    "readings_per_second": 124.8,
+    "median_ms": 7.626,
+    "p95_ms": 10.956,
+    "p99_ms": 13.092,
+    "rss_mb_after_fit": 242.8,
+    "rss_mb_after_run": 242.8,
     "memory_per_station_mb": 2.07,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
+     "mahalanobis_kb": 0.7,
      "limits_json_kb": 0.6,
-     "total_kb": 1583.7
+     "total_kb": 1584.4
     }
    },
    {
     "stations": 50,
     "readings": 14400,
-    "readings_per_second": 2986.9,
-    "median_ms": 0.236,
-    "p95_ms": 0.806,
-    "p99_ms": 1.287,
-    "rss_mb_after_fit": 328.8,
-    "rss_mb_after_run": 335.2,
-    "memory_per_station_mb": 1.87,
+    "readings_per_second": 124.8,
+    "median_ms": 7.638,
+    "p95_ms": 10.952,
+    "p99_ms": 13.594,
+    "rss_mb_after_fit": 330.0,
+    "rss_mb_after_run": 337.7,
+    "memory_per_station_mb": 1.9,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
+     "mahalanobis_kb": 0.7,
      "limits_json_kb": 0.6,
-     "total_kb": 1583.7
+     "total_kb": 1584.4
     }
    },
    {
-    "stations": 200,
-    "readings": 57600,
-    "readings_per_second": 2996.1,
-    "median_ms": 0.239,
-    "p95_ms": 0.792,
-    "p99_ms": 1.281,
-    "rss_mb_after_fit": 657.0,
-    "rss_mb_after_run": 690.2,
-    "memory_per_station_mb": 1.8,
+    "stations": 100,
+    "readings": 28800,
+    "readings_per_second": 123.9,
+    "median_ms": 7.682,
+    "p95_ms": 10.978,
+    "p99_ms": 13.824,
+    "rss_mb_after_fit": 439.6,
+    "rss_mb_after_run": 457.3,
+    "memory_per_station_mb": 1.26,
     "storage_per_station": {
      "normality_json_kb": 6.0,
      "isolation_forest_kb": 1577.1,
+     "mahalanobis_kb": 0.7,
      "limits_json_kb": 0.6,
-     "total_kb": 1583.7
+     "total_kb": 1584.4
     }
    }
   ],
@@ -2435,10 +2495,48 @@
    "clients": 8,
    "requests": 3000,
    "errors": 0,
-   "requests_per_second": 256.4,
-   "median_ms": 28.99,
-   "p95_ms": 36.06,
-   "p99_ms": 40.3
-  }
+   "requests_per_second": 58.5,
+   "median_ms": 133.12,
+   "p95_ms": 164.74,
+   "p99_ms": 189.15
+  },
+  "pipeline_no_forest": [
+   {
+    "stations": 1,
+    "readings": 288,
+    "readings_per_second": 1395.4,
+    "median_ms": 0.521,
+    "p95_ms": 1.948,
+    "p99_ms": 3.678,
+    "rss_mb_after_fit": 439.5,
+    "rss_mb_after_run": 439.5,
+    "memory_per_station_mb": -1.05,
+    "storage_per_station": {
+     "normality_json_kb": 6.0,
+     "isolation_forest_kb": 1577.1,
+     "mahalanobis_kb": 0.7,
+     "limits_json_kb": 0.6,
+     "total_kb": 1584.4
+    }
+   },
+   {
+    "stations": 50,
+    "readings": 14400,
+    "readings_per_second": 1430.1,
+    "median_ms": 0.526,
+    "p95_ms": 1.947,
+    "p99_ms": 2.346,
+    "rss_mb_after_fit": 428.5,
+    "rss_mb_after_run": 428.5,
+    "memory_per_station_mb": -0.22,
+    "storage_per_station": {
+     "normality_json_kb": 6.0,
+     "isolation_forest_kb": 1577.1,
+     "mahalanobis_kb": 0.7,
+     "limits_json_kb": 0.6,
+     "total_kb": 1584.4
+    }
+   }
+  ]
  }
 }
