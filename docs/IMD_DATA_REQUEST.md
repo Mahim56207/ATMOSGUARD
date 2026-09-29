@@ -28,3 +28,33 @@ python evaluate_csv.py path/to/aws.csv --station MYAWS --train-fraction 0.6 --qu
 ## If nobody replies in time
 Say so plainly: "records of IMD AWS stations are not public and we did not obtain one; we tested on airport METAR and on Australian Bureau of Meteorology automatic weather stations
 (hourly SYNOP at 0.1 resolution), and `evaluate_csv.py` will run the same evaluation on an IMD file in one command."
+
+---
+
+## Ready to send (copy, fill the brackets, send)
+
+**Who to send it to, in order of what usually works:** (1) your faculty mentor or department head, asking them to forward it or introduce you to someone at IMD; (2) the IMD data-supply channel listed on IMD's own website (check
+the current address there; data supply is normally handled by the National Data Centre in Pune and the regional meteorological centres); (3) any IMD or state-government AWS contact your college or the SIH nodal centre can introduce. Do not
+guess email addresses.
+
+**Subject:** Request for a small sample of AWS data (temperature, pressure, humidity) to test a student sensor-health system, Smart India Hackathon PS 26073
+
+**Email:**
+
+> Respected Sir/Madam,
+>
+> We are [team name], students of [college], participating in the Smart India Hackathon (problem statement 26073: anomaly detection and sensor health for an Automatic Weather Station using temperature, pressure and humidity only).
+> Our open-source system, AtmosGuard (github.com/Mahim56207/ATMOSGUARD), tells a failing sensor from real extreme weather using one station's own readings. It has been evaluated on real airport and automatic-station records
+> from public archives, but not on IMD AWS data, because that data is not public.
+>
+> We would be grateful for a small sample: **the raw records of one or two AWS stations for at least three years** (UTC timestamp, temperature, pressure, relative humidity; any cadence from 1 to 60 minutes), ideally with **any maintenance log or
+> quality-control flags** for the same period. We will use the data only to evaluate the system, publish only aggregate results (false-alarm rate, behaviour in real cyclones and heat waves, detection of injected faults), keep the files private,
+> and share the results with you. If a full record is not possible, even a few months from a coastal station that experienced a cyclone would help.
+>
+> Our evaluation code runs on any such file with one command, so we can return results within a day. Thank you for your time.
+>
+> [names, college, phone, email]
+
+**Short version (WhatsApp / message to a mentor):** "Sir, could you help us get a small sample of real IMD AWS data (T, P, RH, 1-3 years, one or two stations, maintenance log if possible)? We built a sensor-fault detector for SIH PS 26073 and want to test it on real IMD records. Code: github.com/Mahim56207/ATMOSGUARD. We will keep it private and share the results."
+
+**If they say yes:** save the file as CSV with columns `timestamp,temperature_c,pressure_hpa,humidity_pct` (UTC) and run `python evaluate_csv.py file.csv --station NAME`; add `--quick` for a faster one-year pass.

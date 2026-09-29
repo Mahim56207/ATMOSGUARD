@@ -22,13 +22,15 @@ from make_summary import markdown_table
 
 REPO = Path(__file__).resolve().parent
 DOCS = REPO / "docs"
-PHASE_ORDER = ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH", "FRESH2", "FRESH2_INDIA", "FRESH2_AWS")
+PHASE_ORDER = ("DEV", "HOLDOUT_TIME", "HOLDOUT_SPACE", "FRESH", "FRESH2", "FRESH2_INDIA", "FRESH2_AWS", "FRESH3", "FRESH3_US", "FRESH3_AUS")
 PHASE_SHORT = {"DEV": "DEV (tuned here)", "HOLDOUT_TIME": "holdout in time (same six stations, 2022-2024)",
                "HOLDOUT_SPACE": "holdout in space (eight unseen stations)",
                "FRESH": "fresh stations (twelve more, sealed before the remedies were tested)",
                "FRESH2": "fresh-2 stations (a third set of twelve: five Indian airports, seven Australian automatic weather stations)",
                "FRESH2_INDIA": "fresh-2, the five Indian airport stations",
-               "FRESH2_AWS": "fresh-2, the seven Australian automatic weather stations"}
+               "FRESH2_AWS": "fresh-2, the seven Australian automatic weather stations",
+               "FRESH3": "fresh-3 stations (a fourth set of twelve: seven US 20-minute stations, five Australian AWS)",
+               "FRESH3_US": "fresh-3, the seven US 20-minute stations", "FRESH3_AUS": "fresh-3, the five Australian AWS"}
 
 REFERENCES = """\
 1. Smith, A., Lott, N., Vose, R. (2011). The Integrated Surface Database: recent developments and partnering with the National Climatic Data Center. *Bulletin of the American Meteorological Society* 92, 704-708.
@@ -107,7 +109,7 @@ def unseen_windows(summary: dict) -> str:
     """'3 of 98 on the eight holdout stations, 3 of 139 on the twelve fresh ones', from the tables."""
     parts = []
     for ph, label in (("HOLDOUT_SPACE", "on the eight holdout stations"), ("FRESH", "on the twelve fresh ones"),
-                      ("FRESH2", "on the twelve fresh-2 ones")):
+                      ("FRESH2", "on the twelve fresh-2 ones"), ("FRESH3", "on the twelve fresh-3 ones")):
         if ph in summary["phases"]:
             with_fault, windows = summary["phases"][ph]["extreme_weather"]["rows"][0]["windows with a FAULT"].split("/")
             parts.append(f"{with_fault} of {windows} {label}")
@@ -143,7 +145,7 @@ def results_section(summary: dict) -> str:
             continue
         p = summary["phases"][k]
         L += [head(p["title"]), "", f"*{p['subtitle']}* Stations: {', '.join(p['stations'])}.", ""]
-        for key in ("headline", "detection", "detection_ci", "detection_named", "remedies", "amendment3", "clean", "extreme_weather", "noaa", "drift", "by_station"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "remedies", "amendment3", "amendment4", "clean", "extreme_weather", "noaa", "drift", "by_station"):
             if key not in p:
                 continue
             t = p[key]
@@ -198,7 +200,7 @@ def build(summary: dict) -> str:
         "AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no "
         "neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own "
         "verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an "
-        "evidence standard: 26 real Indian airport stations (NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
+        "evidence standard: 50 real stations (31 Indian airports, 12 Australian automatic stations and 7 US automated 20-minute stations; NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
         "in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on "
         "the same data, and the failures kept on record. After the holdout showed three real-weather failure windows, we registered a decision rule and "
         "tested the proposed remedies on twelve further stations nobody had looked at: one remedy was adopted and one rejected. Headline results:", "",
@@ -222,6 +224,10 @@ def build(summary: dict) -> str:
         section(protocol, "Amendment 3 (written before the FRESH2 stations were evaluated)"), "",
         "### 2.10 Amendment 3: outcome (from `config/protocol.md`)", "",
         section(protocol, "Amendment 3: outcome (written after `fresh2_run1` finished; nothing was changed to make it come out this way)"), "",
+        "### 2.11 Amendment 4: a fourth set, including sub-hourly records (from `config/protocol.md`)", "",
+        section(protocol, "Amendment 4 (written before the FRESH3 stations were evaluated)"), "",
+        "### 2.12 Amendment 4: outcome (from `config/protocol.md`)", "",
+        section(protocol, "Amendment 4: outcome (written after `fresh3_run1` finished; nothing was changed to make it come out this way)"), "",
         read(DOCS / "TECHNICAL_REPORT_methods.md").rstrip(), "",
         results_section(summary), "",
         "### The optional peer layer: constant offsets and slow drift, seen with neighbours", "",

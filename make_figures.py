@@ -238,14 +238,14 @@ def fig_amendment3(aggs: dict) -> None:
 
 def fig_peers() -> None:
     """Constant offsets seen with neighbours and from the station alone, two disjoint clusters of Australian AWS (injected faults)."""
-    files = {"NSW": RES / "peers_nsw.json", "VIC": RES / "peers_vic.json"}
+    files = {"NSW": RES / "peers_nsw.json", "VIC": RES / "peers_vic.json", "INDIA": RES / "peers_india.json"}
     if not all(p.exists() for p in files.values()):
         return
     data = {k: json.loads(p.read_text(encoding="utf-8"))["summary"]["detection"] for k, p in files.items()}
     chans = (("temperature_c", "temperature offset (C)"), ("pressure_hpa", "pressure offset (hPa)"), ("humidity_pct", "humidity offset (%)"))
     fig, axes = plt.subplots(1, 3, figsize=(13, 4.2), sharey=True)
     for ax, (ch, title) in zip(axes, chans):
-        for cl, ls in (("NSW", "-"), ("VIC", ":")):
+        for cl, ls in (("NSW", "-"), ("VIC", ":"), ("INDIA", "--")):
             for mode, color, lab in (("peer", C["full"], "with neighbours"), ("own", C["base"], "the station alone")):
                 pts = sorted((d["size"], 100 * d["rate"]) for d in data[cl] if d["channel"] == ch and d["kind"] == "offset" and d["mode"] == mode)
                 ax.plot(range(len(pts)), [v for _, v in pts], ls, marker="o", color=color, lw=2.2 if mode == "peer" else 1.6, label=f"{lab}, {cl}")
@@ -258,7 +258,7 @@ def fig_peers() -> None:
         ax.grid(axis="y", color=GRID, linewidth=0.6)
     axes[0].set_ylabel("offsets found within 21 days (%)", color=MUTED)
     axes[0].legend(frameon=False, fontsize=8, loc="upper left")
-    fig.suptitle("The optional peer layer: a constant offset that one station cannot see, with and without three or more neighbours (injected, 60-day faults)", x=0.01, ha="left",
+    fig.suptitle("The optional peer layer: a constant offset one station cannot see, with and without three or more neighbours (injected, 60-day faults; INDIA = 31 airports, 600 km)", x=0.01, ha="left",
                  fontsize=11.5, fontweight="bold", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     fig.savefig(OUT / "fig_peers.png", dpi=150)

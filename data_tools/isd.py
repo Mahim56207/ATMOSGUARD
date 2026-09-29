@@ -135,12 +135,12 @@ def _flag_rank(codes: pd.Series) -> pd.Series:
     return np.where(c.isin(_QC_ERRONEOUS), 2, np.where(c.isin(_QC_SUSPECT), 1, 0))
 
 
-def to_series(reports: pd.DataFrame, source: str, cadence_minutes: int = 60) -> pd.DataFrame:
+def to_series(reports: pd.DataFrame, source: str, cadence_minutes: int = 60, any_minute: bool = False) -> pd.DataFrame:
     """Reports -> a regular-ish series in AtmosGuard's CSV layout.
 
     source 'metar': routine METAR only (FM-15), pressure = altimeter setting (QNH).
     source 'synop': SYNOP only (FM-12), pressure = sea-level pressure.
-    Only reports on the cadence grid (minute 0 for hourly, minutes 0 and 30 for half-hourly) are kept; SPECI and
+    Only reports on the cadence grid (minute 0 for hourly, minutes 0 and 30 for half-hourly; `any_minute` keeps every routine report) are kept; SPECI and
     off-grid reports are dropped. A time with no report simply has no row: real gaps stay gaps.
     """
     rtype = {"metar": "FM-15", "synop": "FM-12"}[source]
@@ -148,6 +148,17 @@ def to_series(reports: pd.DataFrame, source: str, cadence_minutes: int = 60) -> 
     r = reports[reports["rtype"] == rtype].copy()
     step = cadence_minutes
     on_grid = (r["ts"].dt.minute % step == 0) if step < 60 else (r["ts"].dt.minute == 0)
+    if any_minute:                     # automated stations that report at a fixed offset (a US AWOS at :15, :35, :55): keep every routine report
+        on_grid = pd.Series(True, index=r.index)
+        r = r.sort_values("ts")           # some years carry a second copy of each report one minute later: keep the first of any reports less than 5 minutes apart
+        keep, last = [], None
+        for t in r["ts"]:
+            ok = last is None or (t - last).total_seconds() >= 300
+            keep.append(ok)
+            if ok:
+                last = t
+        r = r[pd.Series(keep, index=r.index)]
+        on_grid = pd.Series(True, index=r.index)
     r = r[on_grid & r["t"].notna() & r["td"].notna() & r[pcol].notna()]
     r = r.drop_duplicates("ts", keep="first").sort_values("ts")
     flag = np.maximum.reduce([_flag_rank(r["qc_t"]), _flag_rank(r["qc_td"]), _flag_rank(r[qcol])])
@@ -167,7 +178,7 @@ def build_station(station: dict, years: list[int], raw_dir: Path = RAW_DIR, cade
         p = raw_path(station["file"], y, raw_dir)
         if not p.exists():
             continue
-        frames.append(to_series(parse_raw(p), station["source"], cadence_minutes))
+        frames.append(to_series(parse_raw(p), station["source"], cadence_minutes, bool(station.get("any_minute", False))))
     if not frames:
         return pd.DataFrame(columns=["timestamp", "temperature_c", "pressure_hpa", "humidity_pct", "noaa_flag"])
     return pd.concat(frames, ignore_index=True)

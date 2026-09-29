@@ -194,5 +194,23 @@ def fit_limits(readings: Sequence[Reading], settings: dict, cadence_minutes: Opt
     return out
 
 
+def complete_limits(base: StationLimits, readings: Sequence[Reading], settings: dict, cadence_minutes: Optional[float] = None) -> StationLimits:
+    """Fill the limits `base` could not learn (fields left None, typically the noise limit when the training record had an irregular cadence) from `readings`,
+    a stretch at the cadence the station reports at now. Limits that were learned are kept as they are. The cadence recorded with the limits becomes the
+    stretch's. Everything in the stretch is treated as clean, so a fault inside it is learned as normal (the same trust as atmos/autofit.py)."""
+    fresh = fit_limits(readings, settings, cadence_minutes)
+    out = StationLimits(base.station_id, fresh.cadence_minutes if any(
+        getattr(c, "noise_std", None) is None for c in base.channels.values()) else base.cadence_minutes, {})
+    for ch, b in base.channels.items():
+        f = fresh.channels.get(ch)
+        merged = ChannelLimits(**asdict(b))
+        if f is not None:
+            for name in ("resolution", "frozen_minutes", "noise_std", "typical_step", "step_cap"):
+                if getattr(merged, name) is None and getattr(f, name) is not None:
+                    setattr(merged, name, getattr(f, name))
+        out.channels[ch] = merged
+    return out
+
+
 def limits_active(settings: dict) -> bool:
     return layer_enabled(settings, "limits")

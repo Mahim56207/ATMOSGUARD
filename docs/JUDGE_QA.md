@@ -12,6 +12,8 @@ support.** Numbers below are from `results/REPORT.md`; say which split you are q
 - **fresh, twelve more unseen stations:** clean data: 2.5% (2.5-2.6) of 364440 samples got FAULT or SUSPECT; 0.1% (0.1-0.1) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.2) of 11782 samples (3 of 139 windows); WEATHER on 10.3%, SUSPECT on 6.8%. Injected faults raised the alarm: frozen 99%; spike 91%; level shift 80%; noise burst 57%; dropout 98%; clock 3 h out 85%.
 - **fresh-2, twelve more (five Indian airports, seven Australian AWS at 0.1 resolution; `full` = the pipeline as shipped before Amendment 3):** clean data: 9.3% (9.2-9.3) of 453323 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 14732 samples (4 of 134 windows); WEATHER on 4.1%, SUSPECT on 14.1%. Injected faults raised the alarm: frozen 100%; spike 89%; level shift 91%; noise burst 83%; dropout 93%; clock 3 h out 90%.
 - **fresh-2, the seven Australian AWS alone:** clean data: 13.6% (13.5-13.7) of 263732 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.0% (0.0-0.1) of 10738 samples (4 of 92 windows); WEATHER on 3.0%, SUSPECT on 17.6%. Injected faults raised the alarm: frozen 100%; spike 87%; level shift 89%; noise burst 84%; dropout 91%; clock 3 h out 86%.
+- **fresh-3, twelve more (seven US stations reporting every 20 minutes at 0.1 C, five Australian AWS):** clean data: 9.7% (9.6-9.8) of 1026508 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.1) of 45332 samples (5 of 160 windows); WEATHER on 3.0%, SUSPECT on 12.8%. Injected faults raised the alarm: frozen 100%; spike 84%; level shift 95%; noise burst 100%; dropout 88%; clock 3 h out 96%.
+- **fresh-3, the seven US 20-minute stations alone:** clean data: 2.7% (2.7-2.7) of 858141 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT. Real extreme weather: FAULT on 0.1% (0.1-0.1) of 38294 samples (3 of 103 windows); WEATHER on 3.4%, SUSPECT on 5.3%. Injected faults raised the alarm: frozen 100%; spike 97%; level shift 99%; noise burst 100%; dropout 99%; clock 3 h out 94%.
 - **Speed (simulated stations, one machine, one core, in-process, every layer on):** median 0.986 ms and 99th percentile 3.109 ms per reading with 100 stations, 819.0 readings/s.
 - **What that means:** one core keeps up with about 49,140 stations reporting once a minute (readings per second x 60: arithmetic from the figure above, not a load test); more cores or worker processes scale it further.
 - **The same with the Isolation Forest layer off** (a config flag; the ablation shows it adds almost nothing to the verdicts): median 0.526 ms, 1353.0 readings/s.
@@ -42,7 +44,7 @@ frozen barometer; that was a real bug real data found and we fixed it.
 
 ## Novelty
 **Is this just Isolation Forest plus rules, like the other teams?** The techniques are standard and we say so
-(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (26 real stations, a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, run once with the
+(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (50 real stations (31 Indian airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes), a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, run once with the
 protocol committed first, baselines and an ablation on the same data, false alarms on real cyclones) and honest engineering results
 (learned limits, the graded frozen flag, the isolated-trend drift rule, the quiet-channel fix). In the ablation the Isolation Forest earns
 almost nothing; the Mahalanobis layer does the work, and we kept the forest because the problem statement lists it.
@@ -73,6 +75,10 @@ first (Amendment 3): judge only the part of a change that the station's own dail
 (five Indian airports and seven Australian automatic weather stations). By the rule it is adopted: windows with a `FAULT` 4 to 1 of 134, nothing else moves. A second Amendment 3 remedy
 (a sustained one-channel offset) missed its target (+1 point of level-shift detection against +5 required, clean false alarms +0.48 points) and is rejected.
 
+**Did you test anything faster than hourly?** Yes, in the fourth sealed set: seven US automated stations that report every 20 minutes at 0.1 C. With the pipeline as shipped and no station-specific tuning: 2.7 % false alarms on clean data, 94-100 % of injected faults detected by type, real extreme weather with a FAULT in 3 of 103 windows (all freezing-rain plateaus at 0 C). It is 20 minutes, not the 1-15 minutes of a typical AWS, and we say so.
+
+**You said a refit fixes the false alarms. Did you ship that?** No. We tested a warm-up (fill the limits the training years could not learn from the first regular 60 days) on five more irregular stations nobody had looked at. It took false alarms from 45.4 % to 1.8 %, but noise-burst detection fell 6 points against the 2 our rule allows, so by the rule we wrote before the run it is rejected. It is available to an operator (`refit.py --complete`) with the trade-off stated; the pipeline prints a notice when a station's limits do not fit. The 45 % figure was the fixed floor firing on everything, so the earlier noise-burst "detection" there meant little.
+
 **Your false-alarm rate on the Australian stations is 13.6 %. Why?** It is, and we did not hide it. Four of the seven stations reported 16 times a day with alternating one- and two-hour gaps in the
 training years and hourly all day afterwards, so no noise limit could be learned and a fixed floor tuned on coarser data alarmed on their 0.1-resolution readings (33 %, 26 %, 21 % and 8 % of clean samples;
 the other three are 0.9-2.1 %, the five Indian airports 3.2 %). Every earlier station had its limits learned. The pipeline now says so on each reading and the remedy is a refit at the current cadence
@@ -93,8 +99,8 @@ rates in the tables. (Calibrating it, with a reliability diagram and isotonic re
 **Can it detect slow drift?** Large drift, yes; small drift, no. A single station with no reference sees drifts of several times the
 service limit within weeks, and the monitor reports the smallest slope it can see at that station. False drift claims on clean real data
 are about 1 % of station-days. **A constant offset from day one?** No single-station method can, and we say so. With three or more neighbours within 250 km an optional peer layer can
-(`docs/PEER_LAYER.md`): on two disjoint clusters of Australian AWS it found a 2 hPa offset in 91-96 % of trials within 21 days where the station alone found 0-4 %, and a 2 C offset in 86-88 % against 1-9 %. It misses
-half-unit offsets, is weak on humidity and was measured on injected faults.
+(`docs/PEER_LAYER.md`): on two disjoint clusters of Australian AWS it found a 2 hPa offset in 91-96 % of trials within 21 days where the station alone found 0-4 %, and a 2 C offset in 86-88 % against 1-9 %. On 31 Indian airport stations at a 600 km radius (that is the spacing India has; only 4 of 31 have three neighbours within 250 km) a 2 hPa offset is found in 91 % of trials against 21 % alone, humidity gains nothing, and false alarms are 2-4 % of days. It misses
+half-unit offsets and was measured on injected faults.
 
 ## Design choices
 **Why single-station only?** The places India needs this most (Ladakh, the Thar, the Andamans) have no neighbour within hundreds of km.

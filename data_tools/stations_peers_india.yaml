@@ -1,0 +1,36 @@
+# Thirty-one Indian stations (the six DEV stations, the eight holdout stations, the twelve fresh stations and the five Indian airports of fresh-2), used only for the peer-layer study
+# on Indian station spacing (evaluate_peers.py --cluster india --radius-km 600). Airport METAR, whole degrees, hourly (some 3-hourly SYNOP). Built by data_tools/make_peers.py from the
+# station files already in the repository; nothing new is downloaded and nothing is tuned: this only reads the anomalies of stations whose own single runs are finished.
+years: {first: 2016, last: 2024}
+stations:
+  BBI: {name: 'Bhubaneswar (Biju Patnaik Intl, VEBS)', lat: 20.244, lon: 85.818, cadence_minutes: 60}
+  VTZ: {name: Visakhapatnam (VOVZ), lat: 17.717, lon: 83.217, cadence_minutes: 60}
+  MAA: {name: Chennai Intl (VOMM), lat: 12.994, lon: 80.181, cadence_minutes: 60}
+  CCU: {name: 'Kolkata (Netaji Subhash Chandra Bose Intl, VECC)', lat: 22.655, lon: 88.447, cadence_minutes: 60}
+  BOM: {name: 'Mumbai (Chhatrapati Shivaji Maharaj Intl, VABB)', lat: 19.089, lon: 72.868, cadence_minutes: 60}
+  DEL: {name: 'Delhi (Indira Gandhi Intl, VIDP)', lat: 28.567, lon: 77.103, cadence_minutes: 60}
+  JAI: {name: Jaipur (VIJP), lat: 26.824, lon: 75.812, cadence_minutes: 60}
+  AMD: {name: 'Ahmedabad (Sardar Vallabhbhai Patel Intl, VAAH)', lat: 23.077, lon: 72.635, cadence_minutes: 60}
+  NAG: {name: 'Nagpur (Dr Babasaheb Ambedkar Intl, VANP)', lat: 21.092, lon: 79.047, cadence_minutes: 60}
+  TRV: {name: Thiruvananthapuram Intl (VOTV), lat: 8.482, lon: 76.92, cadence_minutes: 60}
+  GAU: {name: 'Guwahati (Lokpriya Gopinath Bordoloi Intl, VEGT)', lat: 26.106, lon: 91.586, cadence_minutes: 60}
+  IXZ: {name: Port Blair (VEPB), lat: 11.667, lon: 92.717, cadence_minutes: 180}
+  BHJ: {name: Bhuj (VABJ), lat: 23.288, lon: 69.67, cadence_minutes: 180}
+  COK: {name: Cochin Intl (VOCC), lat: 9.946, lon: 76.272, cadence_minutes: 180}
+  LKO: {name: 'Lucknow (Chaudhary Charan Singh Intl, VILK)', lat: 26.761, lon: 80.889, cadence_minutes: 60}
+  PAT: {name: 'Patna (Jay Prakash Narayan Intl, VEPT)', lat: 25.591, lon: 85.088, cadence_minutes: 60}
+  IDR: {name: 'Indore (Devi Ahilya Bai Holkar, VAID)', lat: 22.722, lon: 75.801, cadence_minutes: 60}
+  IXR: {name: 'Ranchi (Birsa Munda, VERC)', lat: 23.314, lon: 85.322, cadence_minutes: 60}
+  CJB: {name: Coimbatore (VOCB), lat: 11.031, lon: 77.044, cadence_minutes: 60}
+  IXE: {name: Mangalore (VOML), lat: 12.961, lon: 74.89, cadence_minutes: 60}
+  TRZ: {name: Tiruchirappalli (VOTR), lat: 10.765, lon: 78.71, cadence_minutes: 60}
+  ATQ: {name: Amritsar (VIAR), lat: 31.71, lon: 74.797, cadence_minutes: 60}
+  PNQ: {name: Pune, lat: 18.533, lon: 73.85, cadence_minutes: 180}
+  GOI: {name: Goa (Panjim), lat: 15.483, lon: 73.817, cadence_minutes: 180}
+  RPR: {name: Raipur, lat: 21.233, lon: 81.65, cadence_minutes: 180}
+  JDH: {name: Jodhpur (VIJO), lat: 26.251, lon: 73.049, cadence_minutes: 180}
+  HYD: {name: Hyderabad International Airport, lat: 17.233, lon: 78.417, cadence_minutes: 60}
+  BLR: {name: Bangaluru International Airport, lat: 13.2, lon: 77.7, cadence_minutes: 60}
+  CCJ: {name: Calicut, lat: 11.137, lon: 75.955, cadence_minutes: 60}
+  IXM: {name: Madurai, lat: 9.835, lon: 78.093, cadence_minutes: 60}
+  VGA: {name: Vijayawada, lat: 16.53, lon: 80.797, cadence_minutes: 60}
