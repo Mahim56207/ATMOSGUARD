@@ -136,7 +136,9 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | Data provenance and limits | [`docs/DATA.md`](docs/DATA.md) |
 | Run the evaluation on your own (real AWS) record | [`docs/USE_YOUR_DATA.md`](docs/USE_YOUR_DATA.md) |
 | What the holdout found, and what we did not do about it | [`docs/HOLDOUT_POSTMORTEM.md`](docs/HOLDOUT_POSTMORTEM.md) |
-| Hardware node, BOM, energy (estimate, not measurement) | [`docs/HARDWARE.md`](docs/HARDWARE.md) |
+| Hardware node, BOM, energy (estimate, not measurement); the one-hour checklist for the board | [`docs/HARDWARE.md`](docs/HARDWARE.md), [`docs/HARDWARE_TEST_LOG.md`](docs/HARDWARE_TEST_LOG.md) |
+| Optional peer layer: constant offsets and slow drift seen with neighbours (two Australian AWS clusters) | [`docs/PEER_LAYER.md`](docs/PEER_LAYER.md) |
+| A message to request a real IMD AWS record, and what to run when it arrives | [`docs/IMD_DATA_REQUEST.md`](docs/IMD_DATA_REQUEST.md) |
 | Demo script and contingencies | [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md) |
 | Likely judge questions and honest answers | [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) |
 | Submission playbook (criteria -> artifacts, what is left for the team) | [`docs/SIH_SUBMISSION_PLAYBOOK.md`](docs/SIH_SUBMISSION_PLAYBOOK.md) |
@@ -148,13 +150,13 @@ More: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 `atmos/` the pipeline - `api.py` FastAPI - `dashboard.py` Streamlit - `evaluate_real.py` the real-data evaluation -
 `evaluate_coldstart.py` new-station study - `evaluate_csv.py` the same evaluation on your CSV - `loadtest.py` scale test - `data_tools/` NOAA download, split, event rules -
 `make_report.py` (technical report from the results), `make_onepager.py`, `make_diagrams.py` and `capture_dashboard.py` (handout and slide assets), `compare_runs.py` (did a rerun reproduce?) - `firmware/node/` ESP32 sketch and the portable L0 header - `train.py` per-station models - `make_summary.py`,
-`make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real` and `data/fresh/real` (each sealed until its single run), `data/demo` -
+`make_figures.py`, `make_offline_demo.py` - `data/real/dev`, `data/holdout/real`, `data/fresh/real` and `data/fresh2/real` (each sealed until its single run), `evaluate_peers.py` and `atmos/peers.py` (the optional neighbour layer), `data/demo` -
 `models/` trained station artifacts - `tests/` 400+ tests.
 
 ## Standard practice (not our invention)
 Physics checks, persistence (frozen-value) checks including station-learned thresholds (HadISD), CUSUM, Theil-Sen and
 Mann-Kendall trend tests, Isolation Forest, Mahalanobis distance, SHAP, weather-versus-fault discrimination (ECMWF, Oklahoma
-Mesonet), health scores and maintenance tickets.
+Mesonet), health scores and maintenance tickets, and the neighbour comparison of the optional peer layer (spatial regression and buddy checks: Hubbard et al. 2005, Durre et al. 2010, MADIS).
 
 ## What is ours
 - The evidence standard: 26 real stations, a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, false alarms on real cyclones reported separately,

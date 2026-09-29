@@ -10,7 +10,7 @@ pip install -r requirements.txt
 uvicorn api:app --port 8000 &                             # loads the six trained stations from models/
 streamlit run dashboard.py                                # http://localhost:8501
 ```
-or `docker compose up --build` (run it once beforehand: it has not been built where this repository was made).
+or `docker compose up --build` (built and run once on 29 Sep 2026 in the environment that produced this repository: both services came up, the API's health check went green, and a replay of Cyclone Vardah through the containerised API filled `/fleet` and `/alerts`; run it once on your own machine before the demo all the same).
 Check: the dashboard sidebar lists stations after the first replay; `GET http://localhost:8000/status` shows six stations
 under `models_loaded`.
 

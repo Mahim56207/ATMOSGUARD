@@ -1,0 +1,16 @@
+# A dense cluster of twelve Australian Bureau of Meteorology automatic weather stations in central-west New South Wales (all within about 250 km
+# of Dubbo), used only for the peer-layer study (evaluate_peers.py). None is in any sealed set. Hourly SYNOP at 0.1 C and 0.1 hPa. Source: NOAA ISD.
+years: {first: 2016, last: 2024}
+stations:
+  DBO: {file: '95719099999', name: Dubbo, lat: -32.217, lon: 148.567, elevation_m: 285.0, source: synop, cadence_minutes: 60}
+  PKS: {file: '95717099999', name: Parkes, lat: -33.133, lon: 148.233, elevation_m: 324.0, source: synop, cadence_minutes: 60}
+  CWR: {file: '95721099999', name: Cowra, lat: -33.85, lon: 148.65, elevation_m: 297.0, source: synop, cadence_minutes: 60}
+  ORG: {file: '95726099999', name: Orange, lat: -33.383, lon: 149.133, elevation_m: 948.0, source: synop, cadence_minutes: 60}
+  BTH: {file: '94729099999', name: Bathurst, lat: -33.417, lon: 149.65, elevation_m: 745.0, source: synop, cadence_minutes: 60}
+  MDG: {file: '94727099999', name: Mudgee, lat: -32.567, lon: 149.617, elevation_m: 472.0, source: synop, cadence_minutes: 60}
+  FBS: {file: '94715099999', name: Forbes, lat: -33.367, lon: 147.917, elevation_m: 231.0, source: synop, cadence_minutes: 60}
+  YNG: {file: '94712099999', name: Young, lat: -34.25, lon: 148.25, elevation_m: 381.0, source: synop, cadence_minutes: 60}
+  CDB: {file: '95708099999', name: Condobolin, lat: -33.067, lon: 147.217, elevation_m: 194.0, source: synop, cadence_minutes: 60}
+  WWY: {file: '95709099999', name: West Wyalong, lat: -33.933, lon: 147.2, elevation_m: 258.0, source: synop, cadence_minutes: 60}
+  TMR: {file: '95722099999', name: Temora, lat: -34.433, lon: 147.517, elevation_m: 281.0, source: synop, cadence_minutes: 60}
+  CNB: {file: '95718099999', name: Coonamble, lat: -30.983, lon: 148.383, elevation_m: 182.0, source: synop, cadence_minutes: 60}

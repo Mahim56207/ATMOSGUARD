@@ -25,3 +25,4 @@ models/*
 # Node secrets (WiFi password etc.)
 firmware/node/secrets.h
 data/uploads/
+data/peers/*

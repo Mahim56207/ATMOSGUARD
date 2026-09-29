@@ -109,7 +109,7 @@ The Isolation Forest used to be almost the whole per-reading cost; it is now sco
 35,994 real rows from the six committed models), so verdicts did not change. The real HTTP server is one process with one lock; its numbers are above too. Simulated stations
 on one machine are a design check, not a production load test. (An earlier version of our scale test fed readings under the wrong station id, so the pipeline ran without
 its per-station models and reported 0.2 ms; that bug is fixed and has a regression test.)
-**Docker?** The files exist and are checked statically; run `docker compose up --build` once before the demo.
+**Docker?** `docker compose up --build` was run once (image built, API healthy, dashboard up, a real cyclone replayed through the containerised API), which also found and fixed a real crash: the API failed when its state folder did not exist. Run it once on the demo machine before the day.
 
 ## Things we dropped (say them before a judge does)
 The pressure-tide barometer test (an offset leaves the tide untouched and a gain change scales the tide and weather equally); "35 degC

@@ -49,8 +49,17 @@ dropout), and the verdict, the reason and the health score react.
 - Verified (in `tests/test_edge_parity.py`): the L0 core, compiled with `g++`, agrees with the Python implementation on 4 000
   dew-point cases and 200 random minutes (including NaN bursts, out-of-range values, dead sensors, frozen runs); the sketch
   type-checks against stand-ins for the Arduino libraries (and the check fails when the sketch is broken on purpose).
-- **Not verified:** compilation with the real ESP32 toolchain, running on hardware, Wi-Fi/NTP behaviour, sensor self-heating
-  (a BME280 reads slightly warm next to its own electronics; forced mode reduces it), and any energy figure.
+- Verified (in `tests/test_firmware_sim.py`): **`node.ino` itself runs on the laptop**, unmodified, against a simulator of the Arduino-ESP32 pieces it uses
+  (`firmware/tests/sim`: a virtual clock, a scripted BME280, Wi-Fi that can drop, an HTTP client that records each POST). Over virtual minutes the test
+  checks one reading per minute at the right timestamps; an exactly repeated temperature is flagged `frozen` after the configured minutes; an impossible
+  pressure never leaves the device as a value (it is `null` with `range:pressure_hpa`); a dead or missing sensor sends `null`, not zeros, and a missing
+  BME280 is reported on serial; a 4-minute network outage loses nothing and delivers in order; a 40-minute outage overflows the 30-slot queue, drops the oldest
+  minutes and says so; nothing is sent until the clock is synced. Every body the sketch produces is then given to the real FastAPI app: it is accepted, and a
+  minute with a missing pressure is a `FAULT`.
+- **Not verified:** compilation with the real ESP32 toolchain, running on the chip, the I2C bus and radio, Wi-Fi/NTP behaviour in a real room, sensor self-heating
+  (a BME280 reads slightly warm next to its own electronics; forced mode reduces it), and any energy figure. Those need the board:
+  [`HARDWARE_TEST_LOG.md`](HARDWARE_TEST_LOG.md) is the checklist and the table to fill in when you flash it. The toolchain could not be fetched in the
+  environment this repository was built in (the download hosts are blocked by its network policy), so this is a limit of that environment, not a known defect.
 
 ## Energy: an estimate, not a measurement
 The current sketch keeps Wi-Fi connected and samples at 1 Hz, so it is **not** power-optimised. Typical datasheet values
