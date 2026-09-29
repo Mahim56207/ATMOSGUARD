@@ -1,0 +1,108 @@
+### FRESH (twelve stations nobody had looked at, 2020-2024)
+stations: LKO, PAT, IDR, IXR, CJB, IXE, TRZ, ATQ, PNQ, GOI, RPR, JDH
+
+1a) Detection of injected faults, by type: the fault raised the alarm  (paired: the same sample was NOT an alarm on the un-faulted series)
+   config                           frozen       spike        step       noise     dropout clock_shift
+   full                              99.1%       91.1%       80.3%       57.3%       98.4%       85.1%
+   remedy_frozen                     99.1%       91.1%       80.3%       57.3%       98.4%       85.1%
+   remedy_step                       99.1%       88.2%       79.5%       56.2%       99.3%       81.0%
+   remedies                          99.1%       88.2%       79.5%       56.2%       99.3%       81.0%
+   no_physics                        99.1%       89.5%       76.8%       53.9%       98.4%       85.1%
+   no_health                         46.8%       74.1%       72.2%       40.1%        0.3%       67.9%
+   no_normality                      98.8%       92.6%       71.8%       56.0%       98.6%       81.1%
+   no_mlmodel                        99.1%       91.0%       80.1%       57.2%       98.4%       85.0%
+   no_mahalanobis                    98.8%       78.0%       66.4%       45.8%       98.4%       84.9%
+   no_timing                         99.1%       91.1%       80.2%       57.2%       98.4%       69.0%
+   no_limits                         74.6%       35.0%       57.3%       62.2%       43.8%       72.0%
+   baseline_range                     0.0%       11.9%       13.3%        9.3%        0.0%        0.0%
+   baseline_rules                    99.8%       71.8%       77.6%       62.5%        0.0%       93.7%
+   baseline_climatology              26.7%       42.4%       38.5%        9.0%        0.0%       63.5%
+   baseline_isolation_forest          1.3%       10.3%       12.9%       11.4%        0.0%       51.1%
+   baseline_mahalanobis              39.3%       99.2%       82.1%       50.9%        0.0%       44.7%
+   (faults injected)                   918         918         918         918         918         794
+   full: median delay to the fault-raised alarm (min)         420           0           0         420           0        1140
+
+1b) The same, by the REGISTERED criterion in config/protocol.md: any alarm from the first faulty sample to the last plus 60 min.
+    Background false alarms also land inside long fault windows, so 1b flatters long faults (frozen 48 h, clock shift 4 days) and every system.
+   config                           frozen       spike        step       noise     dropout clock_shift
+   full                              99.3%       93.1%       83.9%       65.0%      100.0%       86.6%
+   remedy_frozen                     99.3%       93.1%       83.9%       65.0%      100.0%       86.6%
+   remedy_step                       99.3%       90.0%       82.2%       61.4%      100.0%       82.5%
+   remedies                          99.3%       90.0%       82.2%       61.4%      100.0%       82.5%
+   no_physics                        99.3%       91.7%       81.3%       61.7%      100.0%       86.6%
+   no_health                         49.6%       74.4%       74.2%       43.8%        0.8%       68.0%
+   no_normality                      99.0%       93.9%       75.8%       62.3%      100.0%       81.5%
+   no_mlmodel                        99.3%       93.0%       83.7%       64.9%      100.0%       86.5%
+   no_mahalanobis                    99.1%       80.4%       71.4%       53.8%      100.0%       86.4%
+   no_timing                         99.3%       93.1%       83.8%       64.9%      100.0%       70.9%
+   no_limits                        100.0%       97.4%       99.9%       99.3%      100.0%       99.7%
+   baseline_range                     0.0%       11.9%       13.3%        9.3%        0.0%        0.0%
+   baseline_rules                   100.0%       81.7%       93.7%       86.2%       19.2%       94.1%
+   baseline_climatology              32.4%       43.2%       40.8%       13.2%        1.6%       63.7%
+   baseline_isolation_forest          5.6%       10.7%       17.9%       18.1%        0.0%       51.3%
+   baseline_mahalanobis              44.2%       99.2%       82.7%       53.5%        0.0%       44.8%
+
+2) False alarms on clean real data  (no faults injected, extreme-weather windows and NOAA-flagged values removed)
+   config                       any alarm  FAULT only   WEATHER   samples
+   full                              2.5%        0.1%      2.8%    364440
+   remedy_frozen                     2.5%        0.0%      2.8%    364440
+   remedy_step                       2.4%        0.1%      2.8%    364440
+   remedies                          2.4%        0.0%      2.8%    364440
+   no_physics                        2.5%        0.1%      2.8%    364440
+   no_health                         0.7%        0.0%      1.4%    364440
+   no_normality                      1.4%        0.1%      0.8%    364440
+   no_mlmodel                        2.5%        0.1%      2.6%    364440
+   no_mahalanobis                    2.4%        0.1%      2.6%    364440
+   no_timing                         2.3%        0.1%      2.7%    364440
+   no_limits                        63.8%       25.6%      0.8%    364440
+   baseline_range                    0.0%        0.0%         -    364440
+   baseline_rules                    8.4%        8.4%         -    364440
+   baseline_climatology              0.9%        0.0%         -    364440
+   baseline_isolation_forest         0.4%        0.0%         -    364440
+   baseline_mahalanobis              0.5%        0.0%         -    364440
+
+3) Real extreme weather  (no faults injected). A FAULT here is a failure: real weather called a broken sensor.
+   config                         FAULT   SUSPECT   WEATHER    VALID    windows with a FAULT
+   full                            0.1%      6.8%     10.3%    82.9%                   3/139
+   remedy_frozen                   0.0%      6.8%     10.3%    82.9%                   2/139
+   remedy_step                     0.1%      6.4%     10.4%    83.1%                   2/139
+   remedies                        0.0%      6.4%     10.5%    83.1%                   1/139
+   no_physics                      0.1%      6.8%     10.3%    82.9%                   3/139
+   no_health                       0.0%      2.3%      5.7%    92.0%                   0/139
+   no_normality                    0.1%      3.8%      2.9%    93.2%                   4/139
+   no_mlmodel                      0.1%      6.7%      9.7%    83.5%                   3/139
+   no_mahalanobis                  0.1%      6.4%      9.6%    83.9%                   3/139
+   no_timing                       0.1%      6.7%     10.2%    83.0%                   3/139
+   no_limits                      20.1%     45.0%      2.8%    32.1%                  90/139
+   baseline_range                  0.0%      0.0%         -   100.0%                   0/139
+   baseline_rules                 10.3%      0.0%         -    89.7%                 134/139
+   baseline_climatology            0.0%      4.4%         -    95.6%                   0/139
+   baseline_isolation_forest       0.0%      2.0%         -    98.0%                   0/139
+   baseline_mahalanobis            0.0%      1.9%         -    98.1%                   0/139
+
+   full pipeline, by kind of extreme weather:
+   kind      samples    FAULT   SUSPECT   WEATHER   windows with FAULT
+   cold         1898     0.0%      6.0%      5.2%                 0/19
+   heat         1266     0.0%      7.0%     14.3%                 0/16
+   low          4389     0.2%      9.8%     15.9%                 1/44
+   sharp        4229     0.1%      3.9%      5.6%                 2/60
+
+4) Agreement with NOAA's own quality flags on the raw record  (another automated system, NOT ground truth)
+   NOAA-flagged values: 974  (erroneous: 0)
+   AtmosGuard alarmed on 54.9% of them, and on n/a of the erroneous ones
+   escalated at all (FAULT, SUSPECT or WEATHER) on 71.1% of the flagged values, and on 5.7% of the values NOAA did not flag
+   AtmosGuard alarmed on 2.7% of the 375993 values NOAA did not flag
+
+5) Slow drift, judged by the health score  (daily-mean Theil-Sen, autocorrelation-aware test)
+   A ramp over 45 days is added to one channel of a clean real chunk; severity = offset at the end of the ramp in
+   multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). Detected = significant with the right sign.
+   severity                 temperature                  pressure                  humidity
+             detected  day  offset/limitdetected  day  offset/limitdetected  day  offset/limit
+   none            13.5% (false claims)       9.5% (false claims)      16.2% (false claims)
+   1x limit        13.5%    60     4.1x       4.1%    22     4.1x       9.5%   145     5.2x
+   2x limit        16.2%    58     4.6x       6.8%    26     3.1x      17.6%    73     4.4x
+   4x limit        25.7%    55     5.6x      20.3%    43     4.4x      31.1%    52     5.3x
+   8x limit        54.1%    47     7.7x      59.5%    49     5.8x      73.0%    52     7.6x
+   on clean data with NO drift injected: significant drift claimed on 0.9% of 18493 station-days (per channel: 0.3%); a maintenance ticket was open on 1.0% of them
+
+6) Speed (full pipeline, one reading): median 7.70 ms, worst station 95th percentile 13.19 ms
