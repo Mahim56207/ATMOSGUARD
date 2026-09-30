@@ -18,7 +18,7 @@ from typing import Optional
 from . import isd, make_dataset
 
 REPO = isd.REPO
-SETS = {"fresh": ("stations_fresh.yaml", "fresh"), "fresh2": ("stations_fresh2.yaml", "fresh2"), "fresh3": ("stations_fresh3.yaml", "fresh3"), "fresh4": ("stations_fresh4.yaml", "fresh4")}    # catalog file, folder under data/
+SETS = {"fresh": ("stations_fresh.yaml", "fresh"), "fresh2": ("stations_fresh2.yaml", "fresh2"), "fresh3": ("stations_fresh3.yaml", "fresh3"), "fresh4": ("stations_fresh4.yaml", "fresh4"), "fresh5": ("stations_fresh5.yaml", "fresh5")}    # catalog file, folder under data/
 CATALOG = Path(__file__).resolve().parent / SETS["fresh"][0]
 OUT_DIR = REPO / "data" / "fresh" / "real"
 EVENTS = REPO / "data" / "fresh" / "events.json"
