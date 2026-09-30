@@ -9,6 +9,11 @@ python evaluate_csv.py path/to/aws.csv --station MYAWS
 python evaluate_csv.py path/to/aws.csv --station MYAWS --train-fraction 0.6 --quick      # faster, one year judged
 ```
 
+## If your file is in another layout
+Run it through the adapter first: `python -m data_tools.adapt_csv raw_file.csv --out data/uploads/aws.csv --tz IST` (also `.xlsx`; `--inspect` previews). It recognises the usual column names, converts kelvin, Fahrenheit, Pa, kPa, inHg and fractional humidity, handles
+day-first and month-first dates, separate date and time columns, Excel serial dates and missing-value codes such as -999, splits a multi-station file, converts local time to UTC, and prints every assumption. If the data cannot leave the building, see
+[`IMD_RUN_IT_YOURSELF.md`](IMD_RUN_IT_YOURSELF.md): `evaluate_csv.py --aggregates-out` writes counts and rates only.
+
 ## What the file must look like
 | Column | Rule |
 |---|---|

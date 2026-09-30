@@ -18,6 +18,7 @@ station, not a holdout: nothing about it is sealed.
 from __future__ import annotations
 
 import argparse
+import json
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -33,12 +34,22 @@ def prepare(path: Path, station: str) -> pd.DataFrame:
     df = pd.read_csv(path, parse_dates=["timestamp"])
     missing = {"timestamp", "temperature_c", "pressure_hpa", "humidity_pct"} - set(df.columns)
     if missing:
-        raise SystemExit(f"CSV is missing columns: {', '.join(sorted(missing))}")
+        raise SystemExit(f"CSV is missing columns: {', '.join(sorted(missing))}. A file in another layout (an IMD download, a logger export, an Excel sheet) "
+                         "can be converted first: python -m data_tools.adapt_csv your_file --out data/uploads/aws.csv (it prints every assumption it makes).")
     df = df.sort_values("timestamp").drop_duplicates("timestamp").reset_index(drop=True)
     df["station_id"] = station
     if "noaa_flag" not in df.columns:
         df["noaa_flag"] = 0
     return df[["station_id", "timestamp", "temperature_c", "pressure_hpa", "humidity_pct", "noaa_flag"]]
+
+
+def aggregates_only(result: dict) -> dict:
+    """The result of `evaluate_station` without anything that comes from a single reading: no example values, no timestamps. Counts, rates and learned limits only,
+    so it can be sent back to whoever lent the data without the data."""
+    out = json.loads(json.dumps(result, default=float))
+    out.get("noaa", {}).pop("examples", None)
+    out.pop("warm", None)
+    return out
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -48,6 +59,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--train-fraction", type=float, default=0.6, help="share of the record (in time) used to fit the models")
     ap.add_argument("--quick", action="store_true", help="one year of evaluation and one fault round")
     ap.add_argument("--parts", default="detect,events,noaa,drift", help="comma list: detect, events, noaa, drift, latency")
+    ap.add_argument("--aggregates-out", type=Path, help="write the result as JSON with counts and rates only (no example values, no timestamps): safe to send back without the data")
     args = ap.parse_args(argv)
 
     df = prepare(args.csv, args.station)
@@ -70,6 +82,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         result = er.evaluate_station(plan, settings, args.quick, events, frozenset(args.parts.split(",")))
     print()
     print(er.format_phase(er.aggregate([result], "DEV"), f"YOUR DATA: {args.station}"))
+    if args.aggregates_out:
+        args.aggregates_out.parent.mkdir(parents=True, exist_ok=True)
+        args.aggregates_out.write_text(json.dumps(aggregates_only(result), indent=1), encoding="utf-8")
+        print(f"\nAggregates only (counts, rates, learned limits; no readings) written to {args.aggregates_out}")
     return 0
 
 
