@@ -63,6 +63,18 @@ def _at_humidity_ceiling(history: Sequence[Reading], ch: str, window_minutes: fl
     return bool(rh) and all(v is not None and v >= ceiling for v in rh)
 
 
+def _at_freezing_plateau(history: Sequence[Reading], ch: str, window_minutes: float, cfg: dict) -> bool:
+    """Remedy 7 (Amendment 5). True when a frozen temperature or humidity is explained by freezing precipitation: over the whole window the temperature
+    stayed within `band_c` of 0 C while the air was humid (`humidity_min_pct`). Latent heat holds the air at the freezing point for hours in freezing
+    rain and wet snow. A frozen barometer is never explained by this."""
+    if ch == "pressure_hpa":
+        return False
+    fz = cfg["freezing"]
+    rows = _window(history, window_minutes)
+    return bool(rows) and all(r.temperature_c is not None and abs(r.temperature_c) <= fz["band_c"]
+                              and r.humidity_pct is not None and r.humidity_pct >= fz["humidity_min_pct"] for r in rows)
+
+
 def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_minutes: float,
                  limits: Optional[StationLimits] = None) -> CheckResult:
     """Frozen = no change at all over the window. The window is the configured one, stretched to the longest run
@@ -92,9 +104,13 @@ def check_frozen(history: Sequence[Reading], ch: str, settings: dict, cadence_mi
         saturated = hard and cfg.get("ceiling_aware") and _at_humidity_ceiling(history, ch, window_min, cfg)
         if saturated:
             hard = False
+        plateau = hard and cfg.get("freezing_aware") and _at_freezing_plateau(history, ch, window_min, cfg)
+        if plateau:
+            hard = False
         return CheckResult(check=name, flagged=True, severity="hard" if hard else "soft",
                            reason=f"{ch} has not changed for {max(run, window_min):g} min (stuck at {values[-1]})."
-                                  + ("" if hard and not saturated else
+                                  + (" The temperature has sat at the freezing point in humid air for the whole window, which freezing rain and wet snow do "
+                                     "for hours, so this is a warning, not proof." if plateau else "" if hard and not saturated else
                                      " Humidity is at its ceiling, and sustained heavy rain holds humidity (and, with it, the "
                                      "temperature) still for a day or more, so this is a warning, not proof." if saturated else
                                      " That is longer than usual for this station, but a long calm "

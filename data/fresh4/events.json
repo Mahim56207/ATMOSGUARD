@@ -1,0 +1,2657 @@
+{
+ "rules": {
+  "low_deficit_hpa": 10.0,
+  "heat_quantile": 0.997,
+  "cold_quantile": 0.003,
+  "max_per_kind": 5,
+  "max_low": 8,
+  "sharp_per_year": 1,
+  "separation_days": {
+   "low": 5,
+   "heat": 7,
+   "cold": 7,
+   "sharp": 3
+  },
+  "pad_days": {
+   "low": 3,
+   "heat": 3,
+   "cold": 3,
+   "sharp": 2
+  },
+  "local_utc_offset_hours": 5.5
+ },
+ "dev_stations": [],
+ "sealed_stations": [
+  "GSH",
+  "BFF",
+  "AMW",
+  "MTP",
+  "HLG",
+  "JMS",
+  "EKO",
+  "OWD",
+  "BTV",
+  "BRD",
+  "BMI",
+  "MIE"
+ ],
+ "split_date": "2020-01-01",
+ "events": {
+  "GSH": [
+   {
+    "kind": "sharp",
+    "center": "2016-04-17T14:53:00",
+    "start": "2016-04-15T14:53:00",
+    "end": "2016-04-19T14:53:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-06-12T12:00:00",
+    "start": "2016-06-09T12:00:00",
+    "end": "2016-06-15T12:00:00",
+    "score": 33.9,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-07-24T12:00:00",
+    "start": "2016-07-21T12:00:00",
+    "end": "2016-07-27T12:00:00",
+    "score": 33.9,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-08-12T12:00:00",
+    "start": "2016-08-09T12:00:00",
+    "end": "2016-08-15T12:00:00",
+    "score": 34.4,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-29T03:53:00",
+    "start": "2016-11-26T03:53:00",
+    "end": "2016-12-02T03:53:00",
+    "score": 31.2,
+    "note": "pressure -31.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2016-12-19T12:00:00",
+    "start": "2016-12-16T12:00:00",
+    "end": "2016-12-22T12:00:00",
+    "score": 24.4,
+    "note": "daily min -24 C"
+   },
+   {
+    "kind": "low",
+    "center": "2017-04-04T04:53:00",
+    "start": "2017-04-01T04:53:00",
+    "end": "2017-04-07T04:53:00",
+    "score": 27.4,
+    "note": "pressure -27.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-07-30T13:53:00",
+    "start": "2017-07-28T13:53:00",
+    "end": "2017-08-01T13:53:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2017-11-18T17:53:00",
+    "start": "2017-11-15T17:53:00",
+    "end": "2017-11-21T17:53:00",
+    "score": 26.95,
+    "note": "pressure -27.0 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-02T12:00:00",
+    "start": "2017-12-30T12:00:00",
+    "end": "2018-01-05T12:00:00",
+    "score": 26.1,
+    "note": "daily min -26 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-04-30T14:53:00",
+    "start": "2018-04-28T14:53:00",
+    "end": "2018-05-02T14:53:00",
+    "score": 13.4,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-05-29T12:00:00",
+    "start": "2018-05-26T12:00:00",
+    "end": "2018-06-01T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-21T12:00:00",
+    "start": "2019-01-18T12:00:00",
+    "end": "2019-01-24T12:00:00",
+    "score": 23.9,
+    "note": "daily min -24 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-30T12:00:00",
+    "start": "2019-01-27T12:00:00",
+    "end": "2019-02-02T12:00:00",
+    "score": 28.3,
+    "note": "daily min -28 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-02-08T00:53:00",
+    "start": "2019-02-06T00:53:00",
+    "end": "2019-02-10T00:53:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-03-20T12:53:00",
+    "start": "2020-03-18T12:53:00",
+    "end": "2020-03-22T12:53:00",
+    "score": 12.7,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-11-15T12:53:00",
+    "start": "2020-11-12T12:53:00",
+    "end": "2020-11-18T12:53:00",
+    "score": 27.8,
+    "note": "pressure -27.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-03-21T15:53:00",
+    "start": "2021-03-19T15:53:00",
+    "end": "2021-03-23T15:53:00",
+    "score": 14.4,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2022-03-31T08:53:00",
+    "start": "2022-03-28T08:53:00",
+    "end": "2022-04-03T08:53:00",
+    "score": 31.2,
+    "note": "pressure -31.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-06-22T12:00:00",
+    "start": "2022-06-19T12:00:00",
+    "end": "2022-06-25T12:00:00",
+    "score": 34.4,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-10-29T15:53:00",
+    "start": "2022-10-27T15:53:00",
+    "end": "2022-10-31T15:53:00",
+    "score": 14.4,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-27T19:53:00",
+    "start": "2023-02-24T19:53:00",
+    "end": "2023-03-02T19:53:00",
+    "score": 31.5,
+    "note": "pressure -31.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-04-14T14:53:00",
+    "start": "2023-04-12T14:53:00",
+    "end": "2023-04-16T14:53:00",
+    "score": 14.5,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-09T21:53:00",
+    "start": "2024-01-06T21:53:00",
+    "end": "2024-01-12T21:53:00",
+    "score": 40.7,
+    "note": "pressure -40.7 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2024-01-15T12:00:00",
+    "start": "2024-01-12T12:00:00",
+    "end": "2024-01-18T12:00:00",
+    "score": 22.8,
+    "note": "daily min -23 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-10-19T15:53:00",
+    "start": "2024-10-17T15:53:00",
+    "end": "2024-10-21T15:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-12-29T19:53:00",
+    "start": "2024-12-26T19:53:00",
+    "end": "2025-01-01T19:53:00",
+    "score": 29.1,
+    "note": "pressure -29.1 hPa vs 30-day median"
+   }
+  ],
+  "BFF": [
+   {
+    "kind": "sharp",
+    "center": "2016-02-18T16:53:00",
+    "start": "2016-02-16T16:53:00",
+    "end": "2016-02-20T16:53:00",
+    "score": 21.1,
+    "note": "21 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-27T20:53:00",
+    "start": "2016-11-24T20:53:00",
+    "end": "2016-11-30T20:53:00",
+    "score": 29.8,
+    "note": "pressure -29.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2016-12-18T12:00:00",
+    "start": "2016-12-15T12:00:00",
+    "end": "2016-12-21T12:00:00",
+    "score": 30.6,
+    "note": "daily min -31 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2017-01-06T12:00:00",
+    "start": "2017-01-03T12:00:00",
+    "end": "2017-01-09T12:00:00",
+    "score": 30.0,
+    "note": "daily min -30 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-01-08T16:53:00",
+    "start": "2017-01-06T16:53:00",
+    "end": "2017-01-10T16:53:00",
+    "score": 20.6,
+    "note": "21 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2017-07-20T12:00:00",
+    "start": "2017-07-17T12:00:00",
+    "end": "2017-07-23T12:00:00",
+    "score": 40.0,
+    "note": "daily max 40 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-06-29T12:00:00",
+    "start": "2018-06-26T12:00:00",
+    "end": "2018-07-02T12:00:00",
+    "score": 40.0,
+    "note": "daily max 40 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-11-16T17:53:00",
+    "start": "2018-11-14T17:53:00",
+    "end": "2018-11-18T17:53:00",
+    "score": 18.3,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2019-03-13T16:53:00",
+    "start": "2019-03-10T16:53:00",
+    "end": "2019-03-16T16:53:00",
+    "score": 27.5,
+    "note": "pressure -27.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-10-08T16:53:00",
+    "start": "2019-10-06T16:53:00",
+    "end": "2019-10-10T16:53:00",
+    "score": 21.1,
+    "note": "21 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-07-08T12:00:00",
+    "start": "2020-07-05T12:00:00",
+    "end": "2020-07-11T12:00:00",
+    "score": 40.0,
+    "note": "daily max 40 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-09-24T16:53:00",
+    "start": "2020-09-22T16:53:00",
+    "end": "2020-09-26T16:53:00",
+    "score": 23.9,
+    "note": "24 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-11-08T09:53:00",
+    "start": "2020-11-05T09:53:00",
+    "end": "2020-11-11T09:53:00",
+    "score": 25.7,
+    "note": "pressure -25.7 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-04-02T15:53:00",
+    "start": "2021-03-31T15:53:00",
+    "end": "2021-04-04T15:53:00",
+    "score": 19.4,
+    "note": "19 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2021-12-15T15:53:00",
+    "start": "2021-12-12T15:53:00",
+    "end": "2021-12-18T15:53:00",
+    "score": 25.4,
+    "note": "pressure -25.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2022-04-12T10:53:00",
+    "start": "2022-04-09T10:53:00",
+    "end": "2022-04-15T10:53:00",
+    "score": 26.4,
+    "note": "pressure -26.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-07-19T12:00:00",
+    "start": "2022-07-16T12:00:00",
+    "end": "2022-07-22T12:00:00",
+    "score": 42.2,
+    "note": "daily max 42 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-08-06T12:00:00",
+    "start": "2022-08-03T12:00:00",
+    "end": "2022-08-09T12:00:00",
+    "score": 40.6,
+    "note": "daily max 41 C"
+   },
+   {
+    "kind": "low",
+    "center": "2022-10-23T13:53:00",
+    "start": "2022-10-20T13:53:00",
+    "end": "2022-10-26T13:53:00",
+    "score": 31.2,
+    "note": "pressure -31.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-11-23T17:53:00",
+    "start": "2022-11-21T17:53:00",
+    "end": "2022-11-25T17:53:00",
+    "score": 18.4,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2023-01-31T12:00:00",
+    "start": "2023-01-28T12:00:00",
+    "end": "2023-02-03T12:00:00",
+    "score": 29.4,
+    "note": "daily min -29 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-14T09:53:00",
+    "start": "2023-02-11T09:53:00",
+    "end": "2023-02-17T09:53:00",
+    "score": 28.1,
+    "note": "pressure -28.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-21T21:53:00",
+    "start": "2023-02-18T21:53:00",
+    "end": "2023-02-24T21:53:00",
+    "score": 26.4,
+    "note": "pressure -26.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2023-02-23T12:00:00",
+    "start": "2023-02-20T12:00:00",
+    "end": "2023-02-26T12:00:00",
+    "score": 28.9,
+    "note": "daily min -29 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-04-11T15:53:00",
+    "start": "2023-04-09T15:53:00",
+    "end": "2023-04-13T15:53:00",
+    "score": 16.6,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2024-01-16T12:00:00",
+    "start": "2024-01-13T12:00:00",
+    "end": "2024-01-19T12:00:00",
+    "score": 31.7,
+    "note": "daily min -32 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-10-02T15:53:00",
+    "start": "2024-09-30T15:53:00",
+    "end": "2024-10-04T15:53:00",
+    "score": 19.5,
+    "note": "20 C change in 3 h"
+   }
+  ],
+  "AMW": [
+   {
+    "kind": "sharp",
+    "center": "2016-05-06T14:53:00",
+    "start": "2016-05-04T14:53:00",
+    "end": "2016-05-08T14:53:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-28T19:53:00",
+    "start": "2016-11-25T19:53:00",
+    "end": "2016-12-01T19:53:00",
+    "score": 38.6,
+    "note": "pressure -38.6 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2017-01-10T14:53:00",
+    "start": "2017-01-07T14:53:00",
+    "end": "2017-01-13T14:53:00",
+    "score": 28.5,
+    "note": "pressure -28.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2017-07-21T12:00:00",
+    "start": "2017-07-18T12:00:00",
+    "end": "2017-07-24T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-12-01T16:53:00",
+    "start": "2017-11-29T16:53:00",
+    "end": "2017-12-03T16:53:00",
+    "score": 14.4,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-01T12:00:00",
+    "start": "2017-12-29T12:00:00",
+    "end": "2018-01-04T12:00:00",
+    "score": 30.0,
+    "note": "daily min -30 C"
+   },
+   {
+    "kind": "low",
+    "center": "2018-01-22T18:53:00",
+    "start": "2018-01-19T18:53:00",
+    "end": "2018-01-25T18:53:00",
+    "score": 32.5,
+    "note": "pressure -32.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-04-27T14:53:00",
+    "start": "2018-04-25T14:53:00",
+    "end": "2018-04-29T14:53:00",
+    "score": 13.4,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-05-29T12:00:00",
+    "start": "2018-05-26T12:00:00",
+    "end": "2018-06-01T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-31T12:00:00",
+    "start": "2019-01-28T12:00:00",
+    "end": "2019-02-03T12:00:00",
+    "score": 30.6,
+    "note": "daily min -31 C"
+   },
+   {
+    "kind": "low",
+    "center": "2019-03-14T11:53:00",
+    "start": "2019-03-11T11:53:00",
+    "end": "2019-03-17T11:53:00",
+    "score": 36.3,
+    "note": "pressure -36.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-04-20T14:53:00",
+    "start": "2019-04-18T14:53:00",
+    "end": "2019-04-22T14:53:00",
+    "score": 14.5,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-11-03T16:53:00",
+    "start": "2020-11-01T16:53:00",
+    "end": "2020-11-05T16:53:00",
+    "score": 17.2,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-12-23T14:53:00",
+    "start": "2020-12-20T14:53:00",
+    "end": "2020-12-26T14:53:00",
+    "score": 28.1,
+    "note": "pressure -28.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2021-02-16T12:00:00",
+    "start": "2021-02-13T12:00:00",
+    "end": "2021-02-19T12:00:00",
+    "score": 27.2,
+    "note": "daily min -27 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-04-04T15:53:00",
+    "start": "2021-04-02T15:53:00",
+    "end": "2021-04-06T15:53:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-06-18T12:00:00",
+    "start": "2021-06-15T12:00:00",
+    "end": "2021-06-21T12:00:00",
+    "score": 38.3,
+    "note": "daily max 38 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-01-21T12:00:00",
+    "start": "2022-01-18T12:00:00",
+    "end": "2022-01-24T12:00:00",
+    "score": 28.9,
+    "note": "daily min -29 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-08-07T12:00:00",
+    "start": "2022-08-04T12:00:00",
+    "end": "2022-08-10T12:00:00",
+    "score": 36.1,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-10-21T15:53:00",
+    "start": "2022-10-19T15:53:00",
+    "end": "2022-10-23T15:53:00",
+    "score": 16.7,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-14T20:53:00",
+    "start": "2023-02-11T20:53:00",
+    "end": "2023-02-17T20:53:00",
+    "score": 31.0,
+    "note": "pressure -31.0 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-27T10:53:00",
+    "start": "2023-02-24T10:53:00",
+    "end": "2023-03-02T10:53:00",
+    "score": 35.9,
+    "note": "pressure -35.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-05-04T14:53:00",
+    "start": "2023-05-02T14:53:00",
+    "end": "2023-05-06T14:53:00",
+    "score": 17.8,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2023-08-23T12:00:00",
+    "start": "2023-08-20T12:00:00",
+    "end": "2023-08-26T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2024-01-14T12:00:00",
+    "start": "2024-01-11T12:00:00",
+    "end": "2024-01-17T12:00:00",
+    "score": 27.2,
+    "note": "daily min -27 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-02-29T15:53:00",
+    "start": "2024-02-27T15:53:00",
+    "end": "2024-03-02T15:53:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-11-19T04:53:00",
+    "start": "2024-11-16T04:53:00",
+    "end": "2024-11-22T04:53:00",
+    "score": 30.2,
+    "note": "pressure -30.2 hPa vs 30-day median"
+   }
+  ],
+  "MTP": [
+   {
+    "kind": "sharp",
+    "center": "2016-01-28T14:54:00",
+    "start": "2016-01-26T14:54:00",
+    "end": "2016-01-30T14:54:00",
+    "score": 13.8,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2016-02-14T12:00:00",
+    "start": "2016-02-11T12:00:00",
+    "end": "2016-02-17T12:00:00",
+    "score": 18.9,
+    "note": "daily min -19 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-07-24T12:00:00",
+    "start": "2016-07-21T12:00:00",
+    "end": "2016-07-27T12:00:00",
+    "score": 32.2,
+    "note": "daily max 32 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-08-14T12:00:00",
+    "start": "2016-08-11T12:00:00",
+    "end": "2016-08-17T12:00:00",
+    "score": 32.8,
+    "note": "daily max 33 C"
+   },
+   {
+    "kind": "low",
+    "center": "2017-10-30T09:54:00",
+    "start": "2017-10-27T09:54:00",
+    "end": "2017-11-02T09:54:00",
+    "score": 35.9,
+    "note": "pressure -35.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-11-25T14:54:00",
+    "start": "2017-11-23T14:54:00",
+    "end": "2017-11-27T14:54:00",
+    "score": 10.6,
+    "note": "11 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2018-01-04T18:54:00",
+    "start": "2018-01-01T18:54:00",
+    "end": "2018-01-07T18:54:00",
+    "score": 38.6,
+    "note": "pressure -38.6 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-07T12:00:00",
+    "start": "2018-01-04T12:00:00",
+    "end": "2018-01-10T12:00:00",
+    "score": 13.9,
+    "note": "daily min -14 C"
+   },
+   {
+    "kind": "low",
+    "center": "2018-03-02T17:54:00",
+    "start": "2018-02-27T17:54:00",
+    "end": "2018-03-05T17:54:00",
+    "score": 42.3,
+    "note": "pressure -42.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-12-20T14:54:00",
+    "start": "2018-12-18T14:54:00",
+    "end": "2018-12-22T14:54:00",
+    "score": 10.0,
+    "note": "10 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-21T12:00:00",
+    "start": "2019-01-18T12:00:00",
+    "end": "2019-01-24T12:00:00",
+    "score": 15.0,
+    "note": "daily min -15 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2019-07-22T12:00:00",
+    "start": "2019-07-19T12:00:00",
+    "end": "2019-07-25T12:00:00",
+    "score": 33.9,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "low",
+    "center": "2019-10-17T05:54:00",
+    "start": "2019-10-14T05:54:00",
+    "end": "2019-10-20T05:54:00",
+    "score": 39.3,
+    "note": "pressure -39.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-10-20T13:54:00",
+    "start": "2019-10-18T13:54:00",
+    "end": "2019-10-22T13:54:00",
+    "score": 11.2,
+    "note": "11 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-02-07T17:54:00",
+    "start": "2020-02-04T17:54:00",
+    "end": "2020-02-10T17:54:00",
+    "score": 43.4,
+    "note": "pressure -43.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-07-28T12:00:00",
+    "start": "2020-07-25T12:00:00",
+    "end": "2020-07-31T12:00:00",
+    "score": 32.8,
+    "note": "daily max 33 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-11-15T14:54:00",
+    "start": "2020-11-13T14:54:00",
+    "end": "2020-11-17T14:54:00",
+    "score": 11.1,
+    "note": "11 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-03-22T13:54:00",
+    "start": "2021-03-20T13:54:00",
+    "end": "2021-03-24T13:54:00",
+    "score": 9.4,
+    "note": "9 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-01-31T12:00:00",
+    "start": "2022-01-28T12:00:00",
+    "end": "2022-02-03T12:00:00",
+    "score": 14.4,
+    "note": "daily min -14 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-05-31T20:54:00",
+    "start": "2022-05-29T20:54:00",
+    "end": "2022-06-02T20:54:00",
+    "score": 13.4,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2022-12-23T18:54:00",
+    "start": "2022-12-20T18:54:00",
+    "end": "2022-12-26T18:54:00",
+    "score": 37.6,
+    "note": "pressure -37.6 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2023-02-04T12:00:00",
+    "start": "2023-02-01T12:00:00",
+    "end": "2023-02-07T12:00:00",
+    "score": 17.8,
+    "note": "daily min -18 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-04-13T13:54:00",
+    "start": "2023-04-11T13:54:00",
+    "end": "2023-04-15T13:54:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2023-09-07T12:00:00",
+    "start": "2023-09-04T12:00:00",
+    "end": "2023-09-10T12:00:00",
+    "score": 32.8,
+    "note": "daily max 33 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-12-18T18:54:00",
+    "start": "2023-12-15T18:54:00",
+    "end": "2023-12-21T18:54:00",
+    "score": 37.9,
+    "note": "pressure -37.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-10T10:54:00",
+    "start": "2024-01-07T10:54:00",
+    "end": "2024-01-13T10:54:00",
+    "score": 39.0,
+    "note": "pressure -39.0 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-12-09T14:54:00",
+    "start": "2024-12-07T14:54:00",
+    "end": "2024-12-11T14:54:00",
+    "score": 12.2,
+    "note": "12 C change in 3 h"
+   }
+  ],
+  "HLG": [
+   {
+    "kind": "cold",
+    "center": "2016-02-14T12:00:00",
+    "start": "2016-02-11T12:00:00",
+    "end": "2016-02-17T12:00:00",
+    "score": 17.2,
+    "note": "daily min -17 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-07-24T12:00:00",
+    "start": "2016-07-21T12:00:00",
+    "end": "2016-07-27T12:00:00",
+    "score": 34.4,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2016-12-18T10:53:00",
+    "start": "2016-12-16T10:53:00",
+    "end": "2016-12-20T10:53:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2017-11-19T03:53:00",
+    "start": "2017-11-16T03:53:00",
+    "end": "2017-11-22T03:53:00",
+    "score": 32.5,
+    "note": "pressure -32.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-11-19T06:53:00",
+    "start": "2017-11-17T06:53:00",
+    "end": "2017-11-21T06:53:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-01T12:00:00",
+    "start": "2017-12-29T12:00:00",
+    "end": "2018-01-04T12:00:00",
+    "score": 19.4,
+    "note": "daily min -19 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-01-12T20:53:00",
+    "start": "2018-01-10T20:53:00",
+    "end": "2018-01-14T20:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-21T12:00:00",
+    "start": "2019-01-18T12:00:00",
+    "end": "2019-01-24T12:00:00",
+    "score": 18.3,
+    "note": "daily min -18 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-31T12:00:00",
+    "start": "2019-01-28T12:00:00",
+    "end": "2019-02-03T12:00:00",
+    "score": 20.6,
+    "note": "daily min -21 C"
+   },
+   {
+    "kind": "low",
+    "center": "2019-04-14T22:53:00",
+    "start": "2019-04-11T22:53:00",
+    "end": "2019-04-17T22:53:00",
+    "score": 28.4,
+    "note": "pressure -28.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-09-27T15:53:00",
+    "start": "2019-09-25T15:53:00",
+    "end": "2019-09-29T15:53:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-02-07T09:53:00",
+    "start": "2020-02-04T09:53:00",
+    "end": "2020-02-10T09:53:00",
+    "score": 29.8,
+    "note": "pressure -29.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-07-10T12:00:00",
+    "start": "2020-07-07T12:00:00",
+    "end": "2020-07-13T12:00:00",
+    "score": 34.4,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-07-20T12:00:00",
+    "start": "2020-07-17T12:00:00",
+    "end": "2020-07-23T12:00:00",
+    "score": 34.4,
+    "note": "daily max 34 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-11-08T15:53:00",
+    "start": "2020-11-06T15:53:00",
+    "end": "2020-11-10T15:53:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-10-02T15:53:00",
+    "start": "2021-09-30T15:53:00",
+    "end": "2021-10-04T15:53:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2022-01-17T08:53:00",
+    "start": "2022-01-14T08:53:00",
+    "end": "2022-01-20T08:53:00",
+    "score": 27.5,
+    "note": "pressure -27.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-02-18T05:53:00",
+    "start": "2022-02-16T05:53:00",
+    "end": "2022-02-20T05:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2022-11-27T18:53:00",
+    "start": "2022-11-24T18:53:00",
+    "end": "2022-11-30T18:53:00",
+    "score": 27.8,
+    "note": "pressure -27.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2022-12-23T07:53:00",
+    "start": "2022-12-20T07:53:00",
+    "end": "2022-12-26T07:53:00",
+    "score": 30.1,
+    "note": "pressure -30.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-12-23T12:00:00",
+    "start": "2022-12-20T12:00:00",
+    "end": "2022-12-26T12:00:00",
+    "score": 20.0,
+    "note": "daily min -20 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-27T22:53:00",
+    "start": "2023-02-24T22:53:00",
+    "end": "2023-03-02T22:53:00",
+    "score": 29.4,
+    "note": "pressure -29.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-05-12T14:53:00",
+    "start": "2023-05-10T14:53:00",
+    "end": "2023-05-14T14:53:00",
+    "score": 13.3,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-09T23:53:00",
+    "start": "2024-01-06T23:53:00",
+    "end": "2024-01-12T23:53:00",
+    "score": 38.3,
+    "note": "pressure -38.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2024-06-23T12:00:00",
+    "start": "2024-06-20T12:00:00",
+    "end": "2024-06-26T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2024-08-28T12:00:00",
+    "start": "2024-08-25T12:00:00",
+    "end": "2024-08-31T12:00:00",
+    "score": 36.1,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-10-19T15:53:00",
+    "start": "2024-10-17T15:53:00",
+    "end": "2024-10-21T15:53:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   }
+  ],
+  "JMS": [
+   {
+    "kind": "sharp",
+    "center": "2016-02-29T08:56:00",
+    "start": "2016-02-27T08:56:00",
+    "end": "2016-03-02T08:56:00",
+    "score": 15.5,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-28T18:56:00",
+    "start": "2016-11-25T18:56:00",
+    "end": "2016-12-01T18:56:00",
+    "score": 42.0,
+    "note": "pressure -42.0 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2016-12-26T06:56:00",
+    "start": "2016-12-23T06:56:00",
+    "end": "2016-12-29T06:56:00",
+    "score": 27.8,
+    "note": "pressure -27.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2017-03-06T18:56:00",
+    "start": "2017-03-03T18:56:00",
+    "end": "2017-03-09T18:56:00",
+    "score": 29.5,
+    "note": "pressure -29.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2017-07-05T12:00:00",
+    "start": "2017-07-02T12:00:00",
+    "end": "2017-07-08T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-10-17T16:56:00",
+    "start": "2017-10-15T16:56:00",
+    "end": "2017-10-19T16:56:00",
+    "score": 15.6,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2017-12-30T12:00:00",
+    "start": "2017-12-27T12:00:00",
+    "end": "2018-01-02T12:00:00",
+    "score": 31.7,
+    "note": "daily min -32 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-10-18T16:56:00",
+    "start": "2018-10-16T16:56:00",
+    "end": "2018-10-20T16:56:00",
+    "score": 17.8,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-30T12:00:00",
+    "start": "2019-01-27T12:00:00",
+    "end": "2019-02-02T12:00:00",
+    "score": 33.9,
+    "note": "daily min -34 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-02-08T12:00:00",
+    "start": "2019-02-05T12:00:00",
+    "end": "2019-02-11T12:00:00",
+    "score": 31.7,
+    "note": "daily min -32 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-07-08T23:56:00",
+    "start": "2019-07-06T23:56:00",
+    "end": "2019-07-10T23:56:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-01-01T19:56:00",
+    "start": "2019-12-29T19:56:00",
+    "end": "2020-01-04T19:56:00",
+    "score": 27.1,
+    "note": "pressure -27.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2020-01-16T12:00:00",
+    "start": "2020-01-13T12:00:00",
+    "end": "2020-01-19T12:00:00",
+    "score": 31.7,
+    "note": "daily min -32 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-09-22T15:56:00",
+    "start": "2020-09-20T15:56:00",
+    "end": "2020-09-24T15:56:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2021-02-14T12:00:00",
+    "start": "2021-02-11T12:00:00",
+    "end": "2021-02-17T12:00:00",
+    "score": 32.2,
+    "note": "daily min -32 C"
+   },
+   {
+    "kind": "low",
+    "center": "2021-03-29T17:56:00",
+    "start": "2021-03-26T17:56:00",
+    "end": "2021-04-01T17:56:00",
+    "score": 30.8,
+    "note": "pressure -30.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-04-03T15:56:00",
+    "start": "2021-04-01T15:56:00",
+    "end": "2021-04-05T15:56:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-06-05T12:00:00",
+    "start": "2021-06-02T12:00:00",
+    "end": "2021-06-08T12:00:00",
+    "score": 38.9,
+    "note": "daily max 39 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-07-24T12:00:00",
+    "start": "2021-07-21T12:00:00",
+    "end": "2021-07-27T12:00:00",
+    "score": 37.2,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "low",
+    "center": "2021-12-24T07:56:00",
+    "start": "2021-12-21T07:56:00",
+    "end": "2021-12-27T07:56:00",
+    "score": 26.7,
+    "note": "pressure -26.7 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-02-20T13:56:00",
+    "start": "2022-02-18T13:56:00",
+    "end": "2022-02-22T13:56:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-07-18T12:00:00",
+    "start": "2022-07-15T12:00:00",
+    "end": "2022-07-21T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "low",
+    "center": "2022-10-24T09:56:00",
+    "start": "2022-10-21T09:56:00",
+    "end": "2022-10-27T09:56:00",
+    "score": 31.5,
+    "note": "pressure -31.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2022-12-28T03:56:00",
+    "start": "2022-12-25T03:56:00",
+    "end": "2022-12-31T03:56:00",
+    "score": 27.5,
+    "note": "pressure -27.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2023-06-20T12:00:00",
+    "start": "2023-06-17T12:00:00",
+    "end": "2023-06-23T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-11-15T16:56:00",
+    "start": "2023-11-13T16:56:00",
+    "end": "2023-11-17T16:56:00",
+    "score": 14.5,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-04-24T14:56:00",
+    "start": "2024-04-22T14:56:00",
+    "end": "2024-04-26T14:56:00",
+    "score": 14.5,
+    "note": "14 C change in 3 h"
+   }
+  ],
+  "EKO": [
+   {
+    "kind": "cold",
+    "center": "2016-01-01T12:00:00",
+    "start": "2015-12-29T12:00:00",
+    "end": "2016-01-04T12:00:00",
+    "score": 27.2,
+    "note": "daily min -27 C"
+   },
+   {
+    "kind": "low",
+    "center": "2016-02-18T11:56:00",
+    "start": "2016-02-15T11:56:00",
+    "end": "2016-02-21T11:56:00",
+    "score": 29.1,
+    "note": "pressure -29.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2016-09-11T17:56:00",
+    "start": "2016-09-09T17:56:00",
+    "end": "2016-09-13T17:56:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-12-16T12:56:00",
+    "start": "2016-12-13T12:56:00",
+    "end": "2016-12-19T12:56:00",
+    "score": 24.3,
+    "note": "pressure -24.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2016-12-26T12:00:00",
+    "start": "2016-12-23T12:00:00",
+    "end": "2016-12-29T12:00:00",
+    "score": 23.3,
+    "note": "daily min -23 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2017-01-06T12:00:00",
+    "start": "2017-01-03T12:00:00",
+    "end": "2017-01-09T12:00:00",
+    "score": 26.7,
+    "note": "daily min -27 C"
+   },
+   {
+    "kind": "low",
+    "center": "2017-01-21T00:56:00",
+    "start": "2017-01-18T00:56:00",
+    "end": "2017-01-24T00:56:00",
+    "score": 26.1,
+    "note": "pressure -26.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-11-02T17:56:00",
+    "start": "2017-10-31T17:56:00",
+    "end": "2017-11-04T17:56:00",
+    "score": 16.2,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-08-11T12:00:00",
+    "start": "2018-08-08T12:00:00",
+    "end": "2018-08-14T12:00:00",
+    "score": 38.9,
+    "note": "daily max 39 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-11-10T18:56:00",
+    "start": "2018-11-08T18:56:00",
+    "end": "2018-11-12T18:56:00",
+    "score": 16.7,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2019-02-04T20:56:00",
+    "start": "2019-02-01T20:56:00",
+    "end": "2019-02-07T20:56:00",
+    "score": 25.8,
+    "note": "pressure -25.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-10-26T17:56:00",
+    "start": "2019-10-24T17:56:00",
+    "end": "2019-10-28T17:56:00",
+    "score": 15.5,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2019-11-27T11:56:00",
+    "start": "2019-11-24T11:56:00",
+    "end": "2019-11-30T11:56:00",
+    "score": 28.5,
+    "note": "pressure -28.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-07-31T12:00:00",
+    "start": "2020-07-28T12:00:00",
+    "end": "2020-08-03T12:00:00",
+    "score": 39.4,
+    "note": "daily max 39 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-09-24T17:56:00",
+    "start": "2020-09-22T17:56:00",
+    "end": "2020-09-26T17:56:00",
+    "score": 18.3,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-11-08T06:56:00",
+    "start": "2020-11-05T06:56:00",
+    "end": "2020-11-11T06:56:00",
+    "score": 28.8,
+    "note": "pressure -28.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-04-04T16:56:00",
+    "start": "2021-04-02T16:56:00",
+    "end": "2021-04-06T16:56:00",
+    "score": 15.6,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-07-11T12:00:00",
+    "start": "2021-07-08T12:00:00",
+    "end": "2021-07-14T12:00:00",
+    "score": 39.4,
+    "note": "daily max 39 C"
+   },
+   {
+    "kind": "low",
+    "center": "2021-12-26T07:56:00",
+    "start": "2021-12-23T07:56:00",
+    "end": "2021-12-29T07:56:00",
+    "score": 26.1,
+    "note": "pressure -26.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-09-07T12:00:00",
+    "start": "2022-09-04T12:00:00",
+    "end": "2022-09-10T12:00:00",
+    "score": 38.9,
+    "note": "daily max 39 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-10-21T17:56:00",
+    "start": "2022-10-19T17:56:00",
+    "end": "2022-10-23T17:56:00",
+    "score": 17.2,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-12-18T12:00:00",
+    "start": "2022-12-15T12:00:00",
+    "end": "2022-12-21T12:00:00",
+    "score": 24.4,
+    "note": "daily min -24 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2023-01-31T12:00:00",
+    "start": "2023-01-28T12:00:00",
+    "end": "2023-02-03T12:00:00",
+    "score": 25.0,
+    "note": "daily min -25 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-22T10:56:00",
+    "start": "2023-02-19T10:56:00",
+    "end": "2023-02-25T10:56:00",
+    "score": 31.1,
+    "note": "pressure -31.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-09-25T17:56:00",
+    "start": "2023-09-23T17:56:00",
+    "end": "2023-09-27T17:56:00",
+    "score": 16.7,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2024-07-11T12:00:00",
+    "start": "2024-07-08T12:00:00",
+    "end": "2024-07-14T12:00:00",
+    "score": 40.0,
+    "note": "daily max 40 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-11-11T17:56:00",
+    "start": "2024-11-09T17:56:00",
+    "end": "2024-11-13T17:56:00",
+    "score": 18.3,
+    "note": "18 C change in 3 h"
+   }
+  ],
+  "OWD": [
+   {
+    "kind": "cold",
+    "center": "2016-02-14T12:00:00",
+    "start": "2016-02-11T12:00:00",
+    "end": "2016-02-17T12:00:00",
+    "score": 23.3,
+    "note": "daily min -23 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2016-11-14T14:53:00",
+    "start": "2016-11-12T14:53:00",
+    "end": "2016-11-16T14:53:00",
+    "score": 18.9,
+    "note": "19 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2017-01-09T12:00:00",
+    "start": "2017-01-06T12:00:00",
+    "end": "2017-01-12T12:00:00",
+    "score": 20.6,
+    "note": "daily min -21 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-10-19T14:53:00",
+    "start": "2017-10-17T14:53:00",
+    "end": "2017-10-21T14:53:00",
+    "score": 15.6,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2017-10-30T08:53:00",
+    "start": "2017-10-27T08:53:00",
+    "end": "2017-11-02T08:53:00",
+    "score": 36.9,
+    "note": "pressure -36.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-02T12:00:00",
+    "start": "2017-12-30T12:00:00",
+    "end": "2018-01-05T12:00:00",
+    "score": 22.8,
+    "note": "daily min -23 C"
+   },
+   {
+    "kind": "low",
+    "center": "2018-01-04T20:53:00",
+    "start": "2018-01-01T20:53:00",
+    "end": "2018-01-07T20:53:00",
+    "score": 38.6,
+    "note": "pressure -38.6 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-05-02T12:53:00",
+    "start": "2018-04-30T12:53:00",
+    "end": "2018-05-04T12:53:00",
+    "score": 15.6,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-07-01T12:00:00",
+    "start": "2018-06-28T12:00:00",
+    "end": "2018-07-04T12:00:00",
+    "score": 36.1,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "low",
+    "center": "2019-03-22T19:53:00",
+    "start": "2019-03-19T19:53:00",
+    "end": "2019-03-25T19:53:00",
+    "score": 36.2,
+    "note": "pressure -36.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2019-07-21T12:00:00",
+    "start": "2019-07-18T12:00:00",
+    "end": "2019-07-24T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-10-06T13:53:00",
+    "start": "2019-10-04T13:53:00",
+    "end": "2019-10-08T13:53:00",
+    "score": 16.7,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2019-10-17T06:53:00",
+    "start": "2019-10-14T06:53:00",
+    "end": "2019-10-20T06:53:00",
+    "score": 44.3,
+    "note": "pressure -44.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2020-02-07T18:53:00",
+    "start": "2020-02-04T18:53:00",
+    "end": "2020-02-10T18:53:00",
+    "score": 46.8,
+    "note": "pressure -46.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-11-08T14:53:00",
+    "start": "2020-11-06T14:53:00",
+    "end": "2020-11-10T14:53:00",
+    "score": 17.8,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-06-30T12:00:00",
+    "start": "2021-06-27T12:00:00",
+    "end": "2021-07-03T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-11-09T14:53:00",
+    "start": "2021-11-07T14:53:00",
+    "end": "2021-11-11T14:53:00",
+    "score": 16.7,
+    "note": "17 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-01-31T12:00:00",
+    "start": "2022-01-28T12:00:00",
+    "end": "2022-02-03T12:00:00",
+    "score": 25.0,
+    "note": "daily min -25 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-01-31T15:53:00",
+    "start": "2022-01-29T15:53:00",
+    "end": "2022-02-02T15:53:00",
+    "score": 18.4,
+    "note": "18 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-07-25T12:00:00",
+    "start": "2022-07-22T12:00:00",
+    "end": "2022-07-28T12:00:00",
+    "score": 37.2,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-08-06T12:00:00",
+    "start": "2022-08-03T12:00:00",
+    "end": "2022-08-09T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "low",
+    "center": "2022-12-23T20:53:00",
+    "start": "2022-12-20T20:53:00",
+    "end": "2022-12-26T20:53:00",
+    "score": 40.3,
+    "note": "pressure -40.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2023-02-04T12:00:00",
+    "start": "2023-02-01T12:00:00",
+    "end": "2023-02-07T12:00:00",
+    "score": 22.2,
+    "note": "daily min -22 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-04-13T13:53:00",
+    "start": "2023-04-11T13:53:00",
+    "end": "2023-04-15T13:53:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2023-12-18T19:53:00",
+    "start": "2023-12-15T19:53:00",
+    "end": "2023-12-21T19:53:00",
+    "score": 37.6,
+    "note": "pressure -37.6 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-10T11:53:00",
+    "start": "2024-01-07T11:53:00",
+    "end": "2024-01-13T11:53:00",
+    "score": 41.3,
+    "note": "pressure -41.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-10-19T14:53:00",
+    "start": "2024-10-17T14:53:00",
+    "end": "2024-10-21T14:53:00",
+    "score": 17.8,
+    "note": "18 C change in 3 h"
+   }
+  ],
+  "BTV": [
+   {
+    "kind": "cold",
+    "center": "2016-02-14T12:00:00",
+    "start": "2016-02-11T12:00:00",
+    "end": "2016-02-17T12:00:00",
+    "score": 25.0,
+    "note": "daily min -25 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2016-02-29T07:54:00",
+    "start": "2016-02-27T07:54:00",
+    "end": "2016-03-02T07:54:00",
+    "score": 14.4,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2016-08-12T12:00:00",
+    "start": "2016-08-09T12:00:00",
+    "end": "2016-08-15T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-02-25T23:54:00",
+    "start": "2017-02-23T23:54:00",
+    "end": "2017-02-27T23:54:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2017-10-30T07:54:00",
+    "start": "2017-10-27T07:54:00",
+    "end": "2017-11-02T07:54:00",
+    "score": 42.4,
+    "note": "pressure -42.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2017-11-19T12:54:00",
+    "start": "2017-11-16T12:54:00",
+    "end": "2017-11-22T12:54:00",
+    "score": 36.3,
+    "note": "pressure -36.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-07T12:00:00",
+    "start": "2018-01-04T12:00:00",
+    "end": "2018-01-10T12:00:00",
+    "score": 28.3,
+    "note": "daily min -28 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-01-13T01:54:00",
+    "start": "2018-01-11T01:54:00",
+    "end": "2018-01-15T01:54:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-07-02T12:00:00",
+    "start": "2018-06-29T12:00:00",
+    "end": "2018-07-05T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-07-17T12:00:00",
+    "start": "2018-07-14T12:00:00",
+    "end": "2018-07-20T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-08-30T12:00:00",
+    "start": "2018-08-27T12:00:00",
+    "end": "2018-09-02T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-22T12:00:00",
+    "start": "2019-01-19T12:00:00",
+    "end": "2019-01-25T12:00:00",
+    "score": 25.6,
+    "note": "daily min -26 C"
+   },
+   {
+    "kind": "low",
+    "center": "2019-10-17T13:54:00",
+    "start": "2019-10-14T13:54:00",
+    "end": "2019-10-20T13:54:00",
+    "score": 36.9,
+    "note": "pressure -36.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-12-23T14:54:00",
+    "start": "2019-12-21T14:54:00",
+    "end": "2019-12-25T14:54:00",
+    "score": 12.3,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2020-02-07T17:54:00",
+    "start": "2020-02-04T17:54:00",
+    "end": "2020-02-10T17:54:00",
+    "score": 39.6,
+    "note": "pressure -39.6 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-06-06T22:54:00",
+    "start": "2020-06-04T22:54:00",
+    "end": "2020-06-08T22:54:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-03-22T14:54:00",
+    "start": "2021-03-20T14:54:00",
+    "end": "2021-03-24T14:54:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-06-08T12:00:00",
+    "start": "2021-06-05T12:00:00",
+    "end": "2021-06-11T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-01-22T12:00:00",
+    "start": "2022-01-19T12:00:00",
+    "end": "2022-01-25T12:00:00",
+    "score": 25.6,
+    "note": "daily min -26 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-01-27T15:54:00",
+    "start": "2022-01-25T15:54:00",
+    "end": "2022-01-29T15:54:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2022-12-23T18:54:00",
+    "start": "2022-12-20T18:54:00",
+    "end": "2022-12-26T18:54:00",
+    "score": 45.7,
+    "note": "pressure -45.7 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2023-02-04T12:00:00",
+    "start": "2023-02-01T12:00:00",
+    "end": "2023-02-07T12:00:00",
+    "score": 26.1,
+    "note": "daily min -26 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-05-01T09:54:00",
+    "start": "2023-04-28T09:54:00",
+    "end": "2023-05-04T09:54:00",
+    "score": 35.2,
+    "note": "pressure -35.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-05-16T21:54:00",
+    "start": "2023-05-14T21:54:00",
+    "end": "2023-05-18T21:54:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2023-12-18T16:54:00",
+    "start": "2023-12-15T16:54:00",
+    "end": "2023-12-21T16:54:00",
+    "score": 35.5,
+    "note": "pressure -35.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-10T10:54:00",
+    "start": "2024-01-07T10:54:00",
+    "end": "2024-01-13T10:54:00",
+    "score": 41.3,
+    "note": "pressure -41.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-02-21T14:54:00",
+    "start": "2024-02-19T14:54:00",
+    "end": "2024-02-23T14:54:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   }
+  ],
+  "BRD": [
+   {
+    "kind": "sharp",
+    "center": "2016-05-21T13:53:00",
+    "start": "2016-05-19T13:53:00",
+    "end": "2016-05-23T13:53:00",
+    "score": 14.5,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-28T19:53:00",
+    "start": "2016-11-25T19:53:00",
+    "end": "2016-12-01T19:53:00",
+    "score": 38.9,
+    "note": "pressure -38.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2017-01-06T12:00:00",
+    "start": "2017-01-03T12:00:00",
+    "end": "2017-01-09T12:00:00",
+    "score": 33.9,
+    "note": "daily min -34 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-03-28T15:53:00",
+    "start": "2017-03-26T15:53:00",
+    "end": "2017-03-30T15:53:00",
+    "score": 13.4,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2017-12-27T12:00:00",
+    "start": "2017-12-24T12:00:00",
+    "end": "2017-12-30T12:00:00",
+    "score": 33.3,
+    "note": "daily min -33 C"
+   },
+   {
+    "kind": "low",
+    "center": "2018-01-19T19:53:00",
+    "start": "2018-01-16T19:53:00",
+    "end": "2018-01-22T19:53:00",
+    "score": 28.3,
+    "note": "pressure -28.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-02-28T16:53:00",
+    "start": "2018-02-26T16:53:00",
+    "end": "2018-03-02T16:53:00",
+    "score": 15.6,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-27T12:00:00",
+    "start": "2019-01-24T12:00:00",
+    "end": "2019-01-30T12:00:00",
+    "score": 33.9,
+    "note": "daily min -34 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-02-19T16:53:00",
+    "start": "2019-02-17T16:53:00",
+    "end": "2019-02-21T16:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-06-09T12:00:00",
+    "start": "2020-06-06T12:00:00",
+    "end": "2020-06-12T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2020-06-17T12:00:00",
+    "start": "2020-06-14T12:00:00",
+    "end": "2020-06-20T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-11-04T16:53:00",
+    "start": "2020-11-02T16:53:00",
+    "end": "2020-11-06T16:53:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2021-02-13T12:00:00",
+    "start": "2021-02-10T12:00:00",
+    "end": "2021-02-16T12:00:00",
+    "score": 33.9,
+    "note": "daily min -34 C"
+   },
+   {
+    "kind": "low",
+    "center": "2021-02-22T20:53:00",
+    "start": "2021-02-19T20:53:00",
+    "end": "2021-02-25T20:53:00",
+    "score": 28.1,
+    "note": "pressure -28.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2021-03-29T22:53:00",
+    "start": "2021-03-26T22:53:00",
+    "end": "2021-04-01T22:53:00",
+    "score": 29.1,
+    "note": "pressure -29.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-06-05T12:00:00",
+    "start": "2021-06-02T12:00:00",
+    "end": "2021-06-08T12:00:00",
+    "score": 37.2,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-08-14T14:53:00",
+    "start": "2021-08-12T14:53:00",
+    "end": "2021-08-16T14:53:00",
+    "score": 15.5,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2021-12-16T05:53:00",
+    "start": "2021-12-13T05:53:00",
+    "end": "2021-12-19T05:53:00",
+    "score": 32.8,
+    "note": "pressure -32.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-01-02T12:00:00",
+    "start": "2021-12-30T12:00:00",
+    "end": "2022-01-05T12:00:00",
+    "score": 33.9,
+    "note": "daily min -34 C"
+   },
+   {
+    "kind": "low",
+    "center": "2022-02-10T23:53:00",
+    "start": "2022-02-07T23:53:00",
+    "end": "2022-02-13T23:53:00",
+    "score": 28.5,
+    "note": "pressure -28.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-06-21T12:00:00",
+    "start": "2022-06-18T12:00:00",
+    "end": "2022-06-24T12:00:00",
+    "score": 37.2,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-11-01T16:53:00",
+    "start": "2022-10-30T16:53:00",
+    "end": "2022-11-03T16:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-15T04:53:00",
+    "start": "2023-02-12T04:53:00",
+    "end": "2023-02-18T04:53:00",
+    "score": 28.1,
+    "note": "pressure -28.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-03-14T15:53:00",
+    "start": "2023-03-12T15:53:00",
+    "end": "2023-03-16T15:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2023-09-04T12:00:00",
+    "start": "2023-09-01T12:00:00",
+    "end": "2023-09-07T12:00:00",
+    "score": 38.9,
+    "note": "daily max 39 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-09-28T15:53:00",
+    "start": "2024-09-26T15:53:00",
+    "end": "2024-09-30T15:53:00",
+    "score": 15.0,
+    "note": "15 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-11-19T13:53:00",
+    "start": "2024-11-16T13:53:00",
+    "end": "2024-11-22T13:53:00",
+    "score": 30.1,
+    "note": "pressure -30.1 hPa vs 30-day median"
+   }
+  ],
+  "BMI": [
+   {
+    "kind": "sharp",
+    "center": "2016-04-17T14:56:00",
+    "start": "2016-04-15T14:56:00",
+    "end": "2016-04-19T14:56:00",
+    "score": 11.1,
+    "note": "11 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-28T23:56:00",
+    "start": "2016-11-25T23:56:00",
+    "end": "2016-12-01T23:56:00",
+    "score": 33.2,
+    "note": "pressure -33.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-03-24T15:56:00",
+    "start": "2017-03-22T15:56:00",
+    "end": "2017-03-26T15:56:00",
+    "score": 11.6,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2017-06-14T12:00:00",
+    "start": "2017-06-11T12:00:00",
+    "end": "2017-06-17T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-01T12:00:00",
+    "start": "2017-12-29T12:00:00",
+    "end": "2018-01-04T12:00:00",
+    "score": 26.7,
+    "note": "daily min -27 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-01-11T23:56:00",
+    "start": "2018-01-09T23:56:00",
+    "end": "2018-01-13T23:56:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2018-01-22T20:56:00",
+    "start": "2018-01-19T20:56:00",
+    "end": "2018-01-25T20:56:00",
+    "score": 30.2,
+    "note": "pressure -30.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-05-28T12:00:00",
+    "start": "2018-05-25T12:00:00",
+    "end": "2018-05-31T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "low",
+    "center": "2018-12-01T23:56:00",
+    "start": "2018-11-28T23:56:00",
+    "end": "2018-12-04T23:56:00",
+    "score": 27.5,
+    "note": "pressure -27.5 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-30T12:00:00",
+    "start": "2019-01-27T12:00:00",
+    "end": "2019-02-02T12:00:00",
+    "score": 29.4,
+    "note": "daily min -29 C"
+   },
+   {
+    "kind": "low",
+    "center": "2019-03-09T23:56:00",
+    "start": "2019-03-06T23:56:00",
+    "end": "2019-03-12T23:56:00",
+    "score": 28.8,
+    "note": "pressure -28.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-04-21T14:56:00",
+    "start": "2019-04-19T14:56:00",
+    "end": "2019-04-23T14:56:00",
+    "score": 12.2,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-04-08T23:56:00",
+    "start": "2020-04-06T23:56:00",
+    "end": "2020-04-10T23:56:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2021-02-07T12:00:00",
+    "start": "2021-02-04T12:00:00",
+    "end": "2021-02-10T12:00:00",
+    "score": 21.7,
+    "note": "daily min -22 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2021-06-13T12:00:00",
+    "start": "2021-06-10T12:00:00",
+    "end": "2021-06-16T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-12-11T11:56:00",
+    "start": "2021-12-09T11:56:00",
+    "end": "2021-12-13T11:56:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2022-03-31T01:56:00",
+    "start": "2022-03-28T01:56:00",
+    "end": "2022-04-03T01:56:00",
+    "score": 28.1,
+    "note": "pressure -28.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-06-15T12:00:00",
+    "start": "2022-06-12T12:00:00",
+    "end": "2022-06-18T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-07-06T12:00:00",
+    "start": "2022-07-03T12:00:00",
+    "end": "2022-07-09T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "low",
+    "center": "2022-11-27T13:56:00",
+    "start": "2022-11-24T13:56:00",
+    "end": "2022-11-30T13:56:00",
+    "score": 26.7,
+    "note": "pressure -26.7 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-12-03T09:56:00",
+    "start": "2022-12-01T09:56:00",
+    "end": "2022-12-05T09:56:00",
+    "score": 13.3,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-12-23T12:00:00",
+    "start": "2022-12-20T12:00:00",
+    "end": "2022-12-26T12:00:00",
+    "score": 23.9,
+    "note": "daily min -24 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-27T13:56:00",
+    "start": "2023-02-24T13:56:00",
+    "end": "2023-03-02T13:56:00",
+    "score": 32.9,
+    "note": "pressure -32.9 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-11-05T15:56:00",
+    "start": "2023-11-03T15:56:00",
+    "end": "2023-11-07T15:56:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-09T19:56:00",
+    "start": "2024-01-06T19:56:00",
+    "end": "2024-01-12T19:56:00",
+    "score": 39.0,
+    "note": "pressure -39.0 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2024-01-14T12:00:00",
+    "start": "2024-01-11T12:00:00",
+    "end": "2024-01-17T12:00:00",
+    "score": 25.6,
+    "note": "daily min -26 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-02-28T05:56:00",
+    "start": "2024-02-26T05:56:00",
+    "end": "2024-03-01T05:56:00",
+    "score": 14.4,
+    "note": "14 C change in 3 h"
+   }
+  ],
+  "MIE": [
+   {
+    "kind": "sharp",
+    "center": "2016-04-17T14:53:00",
+    "start": "2016-04-15T14:53:00",
+    "end": "2016-04-19T14:53:00",
+    "score": 13.9,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2016-11-29T01:53:00",
+    "start": "2016-11-26T01:53:00",
+    "end": "2016-12-02T01:53:00",
+    "score": 27.8,
+    "note": "pressure -27.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2017-04-18T14:53:00",
+    "start": "2017-04-16T14:53:00",
+    "end": "2017-04-20T14:53:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2017-11-18T17:53:00",
+    "start": "2017-11-15T17:53:00",
+    "end": "2017-11-21T17:53:00",
+    "score": 31.05,
+    "note": "pressure -31.0 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2018-01-02T12:00:00",
+    "start": "2017-12-30T12:00:00",
+    "end": "2018-01-05T12:00:00",
+    "score": 23.3,
+    "note": "daily min -23 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2018-01-12T07:53:00",
+    "start": "2018-01-10T07:53:00",
+    "end": "2018-01-14T07:53:00",
+    "score": 11.7,
+    "note": "12 C change in 3 h"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-05-29T12:00:00",
+    "start": "2018-05-26T12:00:00",
+    "end": "2018-06-01T12:00:00",
+    "score": 36.7,
+    "note": "daily max 37 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2018-06-18T12:00:00",
+    "start": "2018-06-15T12:00:00",
+    "end": "2018-06-21T12:00:00",
+    "score": 35.0,
+    "note": "daily max 35 C"
+   },
+   {
+    "kind": "cold",
+    "center": "2019-01-30T12:00:00",
+    "start": "2019-01-27T12:00:00",
+    "end": "2019-02-02T12:00:00",
+    "score": 23.9,
+    "note": "daily min -24 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2019-02-08T01:53:00",
+    "start": "2019-02-06T01:53:00",
+    "end": "2019-02-10T01:53:00",
+    "score": 13.4,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "sharp",
+    "center": "2020-12-10T15:53:00",
+    "start": "2020-12-08T15:53:00",
+    "end": "2020-12-12T15:53:00",
+    "score": 12.7,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2021-02-17T12:00:00",
+    "start": "2021-02-14T12:00:00",
+    "end": "2021-02-20T12:00:00",
+    "score": 20.0,
+    "note": "daily min -20 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2021-03-21T15:53:00",
+    "start": "2021-03-19T15:53:00",
+    "end": "2021-03-23T15:53:00",
+    "score": 12.8,
+    "note": "13 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2021-03-26T05:53:00",
+    "start": "2021-03-23T05:53:00",
+    "end": "2021-03-29T05:53:00",
+    "score": 27.8,
+    "note": "pressure -27.8 hPa vs 30-day median"
+   },
+   {
+    "kind": "low",
+    "center": "2022-03-31T07:53:00",
+    "start": "2022-03-28T07:53:00",
+    "end": "2022-04-03T07:53:00",
+    "score": 27.4,
+    "note": "pressure -27.4 hPa vs 30-day median"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-06-15T12:00:00",
+    "start": "2022-06-12T12:00:00",
+    "end": "2022-06-18T12:00:00",
+    "score": 36.1,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2022-07-06T12:00:00",
+    "start": "2022-07-03T12:00:00",
+    "end": "2022-07-09T12:00:00",
+    "score": 36.1,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "low",
+    "center": "2022-11-27T16:53:00",
+    "start": "2022-11-24T16:53:00",
+    "end": "2022-11-30T16:53:00",
+    "score": 28.1,
+    "note": "pressure -28.1 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2022-12-23T01:53:00",
+    "start": "2022-12-21T01:53:00",
+    "end": "2022-12-25T01:53:00",
+    "score": 16.2,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "cold",
+    "center": "2022-12-23T12:00:00",
+    "start": "2022-12-20T12:00:00",
+    "end": "2022-12-26T12:00:00",
+    "score": 22.2,
+    "note": "daily min -22 C"
+   },
+   {
+    "kind": "low",
+    "center": "2023-02-27T18:53:00",
+    "start": "2023-02-24T18:53:00",
+    "end": "2023-03-02T18:53:00",
+    "score": 33.2,
+    "note": "pressure -33.2 hPa vs 30-day median"
+   },
+   {
+    "kind": "sharp",
+    "center": "2023-11-14T15:53:00",
+    "start": "2023-11-12T15:53:00",
+    "end": "2023-11-16T15:53:00",
+    "score": 14.5,
+    "note": "14 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-01-09T19:53:00",
+    "start": "2024-01-06T19:53:00",
+    "end": "2024-01-12T19:53:00",
+    "score": 40.3,
+    "note": "pressure -40.3 hPa vs 30-day median"
+   },
+   {
+    "kind": "cold",
+    "center": "2024-01-15T12:00:00",
+    "start": "2024-01-12T12:00:00",
+    "end": "2024-01-18T12:00:00",
+    "score": 20.6,
+    "note": "daily min -21 C"
+   },
+   {
+    "kind": "heat",
+    "center": "2024-08-31T12:00:00",
+    "start": "2024-08-28T12:00:00",
+    "end": "2024-09-03T12:00:00",
+    "score": 35.6,
+    "note": "daily max 36 C"
+   },
+   {
+    "kind": "sharp",
+    "center": "2024-09-12T14:53:00",
+    "start": "2024-09-10T14:53:00",
+    "end": "2024-09-14T14:53:00",
+    "score": 16.1,
+    "note": "16 C change in 3 h"
+   },
+   {
+    "kind": "low",
+    "center": "2024-12-29T19:53:00",
+    "start": "2024-12-26T19:53:00",
+    "end": "2025-01-01T19:53:00",
+    "score": 32.2,
+    "note": "pressure -32.2 hPa vs 30-day median"
+   }
+  ]
+ }
+}

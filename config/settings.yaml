@@ -46,6 +46,8 @@ health:            # L1  (all windows in minutes; starting points)
                                  # humidity is at its ceiling, is a SOFT flag at most (sustained heavy rain produces exactly this).
                                  # ADOPTED by the rule registered in Amendment 2, on the twelve fresh stations (results/fresh_run1.*).
                                  # The evaluation's `full` configuration still forces it off so every reported number reproduces.
+    freezing_aware: false        # remedy 7 (Amendment 5): temperature or humidity still while the temperature sat within band_c of 0 C in humid air is SOFT at most
+    freezing: {band_c: 1.0, humidity_min_pct: 85.0}
     ceiling:
       humidity_pct: 99.5         # at or above this the channel counts as saturated
   step:            # allowed change between two samples = min(rate_per_min * minutes_apart, cap)

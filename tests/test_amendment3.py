@@ -243,3 +243,55 @@ def test_fresh3_configs_are_full_and_the_warm_up_variant_plus_baselines():
     lim, mahal = fit_limits(train, s, CAD), MahalanobisModel.fit(train, s, table)
     names = [n for n, _, _ in er.build_configs(s, table, model, lim, train, "S1", float(CAD), mahal, "FRESH3", lim)]
     assert names[:2] == ["full", "r6_warmup"] and "baseline_rules" in names and not any(n.startswith("no_") for n in names)
+
+
+# ---- Amendment 5: freezing-point plateau ----------------------------------------------------------------------------
+def _plateau(t=0.0, rh=92.0, hours=30):
+    return make_history(hours + 1, cadence=60, t=lambda i: t, p=lambda i: 1000.0 + 0.3 * i, rh=lambda i: rh)
+
+
+def _fz_settings(on):
+    s = load_settings()
+    s["health"]["frozen"]["freezing_aware"] = on
+    return s
+
+
+def test_freezing_plateau_is_hard_today_and_soft_with_the_remedy():
+    from atmos.health import check_frozen
+    from atmos.limits import ChannelLimits, StationLimits
+    lim = StationLimits("S1", 60.0, {c: ChannelLimits(frozen_minutes=300.0) for c in CH})
+    h = _plateau()
+    assert check_frozen(h, "temperature_c", _fz_settings(False), 60.0, lim).severity == "hard"
+    on = check_frozen(h, "temperature_c", _fz_settings(True), 60.0, lim)
+    assert on.flagged and on.severity == "soft" and "freezing point" in on.reason
+
+
+def test_the_remedy_needs_the_freezing_point_and_humid_air_and_never_softens_the_barometer():
+    from atmos.health import check_frozen
+    from atmos.limits import ChannelLimits, StationLimits
+    lim = StationLimits("S1", 60.0, {c: ChannelLimits(frozen_minutes=300.0) for c in CH})
+    s = _fz_settings(True)
+    assert check_frozen(_plateau(t=12.0), "temperature_c", s, 60.0, lim).severity == "hard"          # stuck at 12 C
+    assert check_frozen(_plateau(rh=40.0), "temperature_c", s, 60.0, lim).severity == "hard"         # dry air at 0 C
+    stuck_p = make_history(31, cadence=60, t=lambda i: 0.0, p=lambda i: 1000.0, rh=lambda i: 92.0)
+    assert check_frozen(stuck_p, "pressure_hpa", s, 60.0, lim).severity == "hard"
+
+
+def test_fresh4_configs_and_rule():
+    import evaluate_real as er
+    import make_summary as ms
+    from atmos.limits import fit_limits
+    from atmos.mlmodel import IsolationModel, MahalanobisModel
+    from atmos.normality import NormalityTable
+    from tests.test_limits import rounded_series
+    s = er.real_settings(load_settings())
+    train = rounded_series(seed=5)
+    table, model = NormalityTable.fit(train, s), IsolationModel.fit(train, s)
+    lim, mahal = fit_limits(train, s, CAD), MahalanobisModel.fit(train, s, table)
+    names = [n for n, _, _ in er.build_configs(s, table, model, lim, train, "S1", float(CAD), mahal, "FRESH4")]
+    assert names[:2] == ["full", "r7_freezing"] and "baseline_rules" in names
+    base = _agg()
+    base["configs"]["r7_freezing"] = _cfg(kind="remedy", windows_with_fault=1, fault_n=5)
+    assert ms.amendment5_rows(base)[0]["adopt"] == "yes"
+    base["configs"]["r7_freezing"] = _cfg(kind="remedy", windows_with_fault=3, fault_n=20)
+    assert ms.amendment5_rows(base)[0]["adopt"] == "no"
