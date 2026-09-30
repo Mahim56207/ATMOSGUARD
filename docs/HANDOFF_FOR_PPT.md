@@ -6,7 +6,7 @@ Written for the person who makes the final deck. The deck itself is deliberately
 
 ## 1. What AtmosGuard is, in three sentences
 A monitor for one automatic weather station that uses only temperature, pressure and humidity. It decides for every reading whether it is `VALID`, real `WEATHER` (escalated, never deleted),
-`SUSPECT` (review) or `FAULT` (broken sensor), with a plain-English reason and the raw value kept. Its evidence standard is the point: real data from 50 stations, sealed holdouts, rules registered before each test, baselines, and every failure kept on record.
+`SUSPECT` (review) or `FAULT` (broken sensor), with a plain-English reason and the raw value kept. Its evidence standard is the point: real data from 62 stations, sealed holdouts, rules registered before each test, baselines, and every failure kept on record.
 
 ## 2. What was built
 | Part | Where |
@@ -47,7 +47,7 @@ cold start on day one; detection against fault size; speed (about 1 ms per readi
 - **No IMD record and no 1-15 minute data tested (the fastest real record is 20 minutes):** "IMD AWS records are not public; we tested Indian airport METAR and Australian Bureau of Meteorology automatic stations at 0.1 resolution, hourly; `evaluate_csv.py` runs the same evaluation on an IMD file in one command".
 - **The ESP32 has not run on the chip** and no energy figure is measured: "the sketch runs against a simulator whose output the real API accepts; the checklist to flash it is `docs/HARDWARE_TEST_LOG.md`".
 - **Small drift and constant offsets are invisible from one station;** the peer layer helps only with three or more neighbours.
-- **One real extreme-weather window still gets a FAULT** (Thredbo, Oct 2023, humidity -48.9 % in two hours), and false alarms are 13.6 % (fresh-2) and 45 % (fresh-3) at stations whose training years were irregular unless refitted. Also: temperature pinned at 0 C for 9 hours in freezing rain gets a FAULT (two US stations, January 2024).
+- **One real extreme-weather window still gets a FAULT** (Thredbo, Oct 2023, humidity -48.9 % in two hours), and false alarms are 13.6 % (fresh-2) and 45 % (fresh-3) at stations whose training years were irregular unless refitted. Also: temperature pinned at 0 C for 9 hours in freezing rain gets a FAULT (two US stations, January 2024). A remedy for it was tested on a fifth sealed set (fresh-4, twelve northern US airports), where the pipeline raised no FAULT in 180 real windows, so the remedy changed nothing and is **not adopted**: it stays an open limit.
 - **The Docker build was done in an environment whose proxy needed its CA injected;** on a normal machine nothing extra is needed. It is not part of CI.
 Full list: `docs/WHAT_WE_DO_NOT_CLAIM.md`. Say these first; judges who find them themselves lose trust, judges who hear them gain it.
 

@@ -201,7 +201,7 @@ def build(summary: dict) -> str:
         "AtmosGuard judges every temperature, pressure and humidity reading of a single automatic weather station, with no "
         "neighbouring stations, as `VALID`, `WEATHER`, `SUSPECT` or `FAULT`, and says why. Real extreme weather is escalated as its own "
         "verdict and is never deleted as noise. We claim no new algorithm; the contribution is the integration for one station and an "
-        "evidence standard: 50 real stations (31 Indian airports, 12 Australian automatic stations and 7 US automated 20-minute stations; NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
+        "evidence standard: 62 real stations (31 Indian airports, 12 US northern airports, 12 Australian automatic stations and 7 US automated 20-minute stations; NOAA ISD, 2016-2024), a protocol committed before a holdout that is sealed "
         "in time and in space, false alarms on real cyclones reported separately from injected-fault scores, baselines and an ablation on "
         "the same data, and the failures kept on record. After the holdout showed three real-weather failure windows, we registered a decision rule and "
         "tested the proposed remedies on twelve further stations nobody had looked at: one remedy was adopted and one rejected. Headline results:", "",
@@ -229,6 +229,10 @@ def build(summary: dict) -> str:
         section(protocol, "Amendment 4 (written before the FRESH3 stations were evaluated)"), "",
         "### 2.12 Amendment 4: outcome (from `config/protocol.md`)", "",
         section(protocol, "Amendment 4: outcome (written after `fresh3_run1` finished; nothing was changed to make it come out this way)"), "",
+        "### 2.13 Amendment 5: a fifth set and a freezing-point remedy (from `config/protocol.md`)", "",
+        section(protocol, "Amendment 5 (written before the FRESH4 stations were evaluated)"), "",
+        "### 2.14 Amendment 5: outcome (from `config/protocol.md`)", "",
+        section(protocol, "Amendment 5: outcome (written after `fresh4_run1` finished; nothing was changed to make it come out this way)"), "",
         read(DOCS / "TECHNICAL_REPORT_methods.md").rstrip(), "",
         results_section(summary), "",
         "### The optional peer layer: constant offsets and slow drift, seen with neighbours", "",
