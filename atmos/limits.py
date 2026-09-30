@@ -165,6 +165,35 @@ def noise_estimates(readings: Sequence[Reading], ch: str, window_minutes: float,
     return out
 
 
+def noise_estimates_gap_aware(readings: Sequence[Reading], ch: str, min_samples: int, gap_limit_minutes: float,
+                              max_span_minutes: float) -> list[float]:
+    """Remedy 8 (Amendment 6). The same jitter estimate, for a record whose readings are NOT equally spaced.
+    A window is the newest `min_samples` readings, whatever their spacing, provided no gap inside it exceeds `gap_limit_minutes` and it spans at most
+    `max_span_minutes`. Each window's jitter is the RMS of the normalised second difference
+        [ (v2 - v1)/h2 - (v1 - v0)/h1 ] / sqrt(1/h1^2 + (1/h1 + 1/h2)^2 + 1/h2^2)
+    which has variance s^2 for independent noise of std s whatever the gaps h1, h2, and equals (v2 - 2 v1 + v0) / sqrt(6) when h1 = h2. So on an equally
+    spaced record it is the estimate `noise_estimates` gives; on a record that alternates 1 h and 2 h gaps it is still on the same scale."""
+    out: list[float] = []
+    n = len(readings)
+    times = [(r.timestamp - readings[0].timestamp).total_seconds() / 60.0 for r in readings] if n else []
+    vals = [getattr(r, ch) for r in readings]
+    for i in range(min_samples - 1, n):
+        j = i - min_samples + 1
+        w = vals[j:i + 1]
+        if any(v is None for v in w) or times[i] - times[j] > max_span_minutes:
+            continue
+        h = [times[k + 1] - times[k] for k in range(j, i)]
+        if min(h) <= 0 or max(h) > gap_limit_minutes:
+            continue
+        acc = []
+        for k in range(len(w) - 2):
+            a = (w[k + 2] - w[k + 1]) / h[k + 1] - (w[k + 1] - w[k]) / h[k]
+            den = math.sqrt(1.0 / h[k + 1] ** 2 + (1.0 / h[k] + 1.0 / h[k + 1]) ** 2 + 1.0 / h[k] ** 2)
+            acc.append((a / den) ** 2)
+        out.append(math.sqrt(sum(acc) / len(acc)))
+    return out
+
+
 def fit_limits(readings: Sequence[Reading], settings: dict, cadence_minutes: Optional[float] = None) -> StationLimits:
     """Learn the frozen-run and noise ceilings from clean readings of ONE station, oldest first."""
     stations = {r.station_id for r in readings}
@@ -188,6 +217,10 @@ def fit_limits(readings: Sequence[Reading], settings: dict, cadence_minutes: Opt
             lim.frozen_minutes = float(np.quantile(runs, cfg["frozen_quantile"])) * cfg["frozen_margin"]
         noise = noise_estimates(readings, ch, hcfg["noise"]["window_minutes"], hcfg["noise"]["min_samples"],
                                 cadence_minutes)
+        if len(noise) < cfg["min_noise_samples"] and cfg.get("gap_aware_noise", False):
+            # remedy 8: the record is not equally spaced (no run of equally spaced readings long enough), so learn from windows of any spacing
+            noise = noise_estimates_gap_aware(readings, ch, hcfg["noise"]["min_samples"], gap_limit,
+                                              cfg.get("gap_aware_max_span_minutes", 720.0))
         if len(noise) >= cfg["min_noise_samples"]:
             lim.noise_std = float(np.quantile(noise, cfg["noise_quantile"])) * cfg["noise_margin"]
         out.channels[ch] = lim

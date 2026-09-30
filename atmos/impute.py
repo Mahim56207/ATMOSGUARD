@@ -18,7 +18,7 @@ import math
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
-from .config import layer_enabled
+from .config import absent_channels, layer_enabled
 from .healthscore import HealthRecord, flagged_channels
 from .normality import NormalityTable
 from .schema import CHANNELS, ImputedValue, Imputation, Reading, Verdict, VerdictResult
@@ -76,9 +76,10 @@ def impute_reading(reading: Reading, verdict: VerdictResult, records: Sequence[H
     """Estimates for the channels of this reading that are missing or faulty. None if there are none."""
     if not layer_enabled(settings, "impute"):
         return None
-    need = {ch for ch in CHANNELS if getattr(reading, ch) is None}
+    absent = absent_channels(settings)
+    need = {ch for ch in CHANNELS if getattr(reading, ch) is None and ch not in absent}
     if verdict.verdict == Verdict.FAULT:
-        need |= set(flagged_channels(verdict.checks, reading, settings))
+        need |= set(flagged_channels(verdict.checks, reading, settings)) - set(absent)
     out = {}
     for ch in CHANNELS:
         if ch in need:

@@ -11,7 +11,7 @@ import math
 from datetime import datetime, timedelta
 from typing import Optional, Sequence
 
-from .config import layer_enabled
+from .config import absent_channels, layer_enabled
 from .limits import StationLimits, limits_active
 from .schema import CHANNELS, CheckResult, Reading
 
@@ -205,12 +205,15 @@ def check_noise(history: Sequence[Reading], ch: str, settings: dict, cadence_min
                        reason=f"{ch} jitter {noise:.3g} is within the limit of {limit:g}.")
 
 
-def check_dropout(history: Sequence[Reading]) -> CheckResult:
-    missing = [ch for ch in CHANNELS if getattr(history[-1], ch) is None]
+def check_dropout(history: Sequence[Reading], absent: Sequence[str] = ()) -> CheckResult:
+    """A channel in `absent` is one this station does not have (no barometer, say): it is never a dropout."""
+    present = [ch for ch in CHANNELS if ch not in absent]
+    missing = [ch for ch in present if getattr(history[-1], ch) is None]
     if missing:
         return CheckResult(check="dropout", flagged=True,
                            reason=f"No value received for: {', '.join(missing)}.")
-    return CheckResult(check="dropout", flagged=False, reason="All three channels have a value.")
+    return CheckResult(check="dropout", flagged=False,
+                       reason="All three channels have a value." if not absent else f"All {len(present)} channels this station has report a value.")
 
 
 def check_gap(history: Sequence[Reading], settings: dict, cadence_minutes: float) -> CheckResult:
@@ -233,7 +236,7 @@ def check_limits_fit(limits: Optional[StationLimits], settings: dict, cadence_mi
     if limits is None or not limits_active(settings):
         return CheckResult(check="limits", flagged=False, reason="No station-learned limits to check.")
     problems = []
-    unlearned = [ch for ch in CHANNELS if limits.noise_std(ch) is None]
+    unlearned = [ch for ch in CHANNELS if limits.noise_std(ch) is None and ch not in absent_channels(settings)]
     if unlearned:
         problems.append(f"the noise limit of {', '.join(unlearned)} was not learned (too few runs of equally spaced readings in the training data), so the fixed floor is "
                         "used, which can alarm on fine-resolution stations")
@@ -375,7 +378,7 @@ def check_health(history: Sequence[Reading], settings: dict, cadence_minutes: fl
     """Run all L1 checks on the newest reading. Returns [] when the health layer is off or no history."""
     if not layer_enabled(settings, "health") or not history:
         return []
-    results = [check_timestamp(history, settings, now), check_dropout(history),
+    results = [check_timestamp(history, settings, now), check_dropout(history, absent_channels(settings)),
                check_gap(history, settings, cadence_minutes), check_limits_fit(limits, settings, cadence_minutes)]
     for ch in CHANNELS:
         results += [

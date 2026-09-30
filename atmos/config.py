@@ -23,6 +23,12 @@ def load_stations(config_dir: Path | None = None) -> dict[str, dict]:
     return {s["id"]: s for s in data.get("stations") or []}
 
 
+def absent_channels(settings: dict) -> tuple[str, ...]:
+    """Channels this station does not have (settings `channels.absent`, empty by default), e.g. ("pressure_hpa",) for a station with no barometer.
+    An absent channel is not a dropout: nothing is expected on it, nothing is judged on it, and the models see a constant zero in its place."""
+    return tuple((settings.get("channels") or {}).get("absent") or ())
+
+
 def layer_enabled(settings: dict, layer: str) -> bool:
     """Every layer is toggleable by a config flag."""
     return bool(settings.get("layers", {}).get(layer, False))

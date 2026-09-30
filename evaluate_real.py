@@ -276,6 +276,7 @@ def pin_registered(settings: dict) -> dict:
     settings["health"]["step"]["expected_aware"] = False        # remedy 3 (Amendment 3)
     settings["health"]["offset"]["enabled"] = False             # remedy 4 (Amendment 3)
     settings["health"]["frozen"]["freezing_aware"] = False      # remedy 7 (Amendment 5)
+    settings["limits"]["gap_aware_noise"] = False               # remedy 8 (Amendment 6)
     return settings
 
 
