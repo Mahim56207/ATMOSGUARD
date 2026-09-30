@@ -331,3 +331,24 @@ that the FRESH2 false-alarm finding is a property of the irregular training reco
 - Alice Springs, sharp-change and low-pressure windows around 3-4 August 2020: at night the temperature goes from 5.9 C to 18.4 C in one hour (+12.5 C, then +15 C over two hours by the next reading) with pressure smooth and humidity falling from 31 % to 23 %.
   Either a real warm downslope wind or a sensor step; the data cannot say which. The pipeline called it a single-channel jump against the 10 C step cap. It is the same cause, a fixed step cap meeting a fast real (or ambiguous) change, that Amendment 3's
   remedy addresses; here the daily cycle explains none of it, because it happened in the middle of the night.
+
+## Amendment 5 (written before the FRESH4 stations were evaluated)
+FRESH3 showed a failure of a new kind: at Fitch H Beach and La Porte, in the January 2024 US cold outbreak, temperature sat at exactly 0 C (or -1 C) for 520-560 minutes in humid air (freezing rain and wet snow hold the air at
+the freezing point), and the frozen rule called it a stuck sensor (`FAULT`) in three real extreme-weather windows. This amendment tests a remedy on twelve stations nobody has looked at. `evaluate_real.py --fresh4` refuses to run
+unless this amendment is in the committed protocol (guard `evaluate.guard_fresh4`, lock `data/fresh4/.fresh4_used`); `replay.py` and `/datasets` refuse `data/fresh4/`.
+
+**The stations** (`data_tools/stations_fresh4.yaml`, files committed with this amendment): twelve northern US airport stations (Goshen IN, Scottsbluff NE, Ames IA, Montauk NY, Wheeling WV, Jamestown ND, Elko NV, Norwood MA, Burlington VT,
+Brainerd MN, Bloomington-Normal IL, Muncie IN), hourly routine METAR (reported at :53 or similar; `any_minute`, duplicates dropped as before), whole degrees. Rule fixed before any verdict: a seeded random sample (seed 11) of 40 US stations
+north of 40 N with K-prefixed ICAO codes and data in 2016 and 2024, not used in any earlier set, kept if at least 60 % of expected hourly reports carry temperature, dew point and pressure in both the training and the test years and the median gap is
+50-70 minutes; stations with a duplicate report stream (coverage above 120 %) were dropped; the first twelve in list order were taken.
+
+**The remedy (`health.frozen.freezing_aware`, remedy 7).** A frozen temperature or humidity is a `SOFT` flag at most when, over the whole window, the temperature stayed within 1.0 C of 0 C while humidity was at least 85 %. A frozen barometer is never
+softened. Same pattern as remedy 1 (saturation). Off by default and forced off in every earlier configuration.
+
+**Configurations** (phase `FRESH4`): `full` (the pipeline as shipped), `r7_freezing`, and the five baselines.
+
+**Decision rule, registered now.** Adopted only if, pooled over the twelve stations: (a) real extreme-weather windows with a `FAULT` are fewer than with `full` and the `FAULT` share of those samples is not higher; (b) no injected-fault type's paired
+detection is lower than with `full` by more than 2 points; (c) clean false alarms rise by at most 0.2 points; (d) the `SUSPECT` share in real extreme weather rises by at most 2 points. A stuck thermometer at 0 C in humid air would become a `SUSPECT`
+instead of a `FAULT` until something else flags it, and we say so. Otherwise it is reported as tested and rejected. Reported whatever happens: every table, per station.
+
+**What this is not.** Injected faults, airport METAR, whole degrees, hourly. It tests one mechanism.

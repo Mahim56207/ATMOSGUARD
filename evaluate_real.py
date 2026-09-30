@@ -55,6 +55,8 @@ REAL_FRESH2_DIR = REPO / "data" / "fresh2" / "real"
 FRESH2_EVENTS_JSON = REPO / "data" / "fresh2" / "events.json"
 REAL_FRESH3_DIR = REPO / "data" / "fresh3" / "real"
 FRESH3_EVENTS_JSON = REPO / "data" / "fresh3" / "events.json"
+REAL_FRESH4_DIR = REPO / "data" / "fresh4" / "real"
+FRESH4_EVENTS_JSON = REPO / "data" / "fresh4" / "events.json"
 WARM_DAYS = 60                     # Amendment 4: days of regular reporting a station with an unlearned noise limit learns it from
 RESULTS_DIR = REPO / "results"
 TRAIN_END = pd.Timestamp("2020-01-01")          # training = everything before this
@@ -273,6 +275,7 @@ def pin_registered(settings: dict) -> dict:
     settings["limits"]["learned_step_cap"] = False              # remedy 2 (Amendment 2, rejected)
     settings["health"]["step"]["expected_aware"] = False        # remedy 3 (Amendment 3)
     settings["health"]["offset"]["enabled"] = False             # remedy 4 (Amendment 3)
+    settings["health"]["frozen"]["freezing_aware"] = False      # remedy 7 (Amendment 5)
     return settings
 
 
@@ -294,7 +297,15 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
                   mahal: Optional[MahalanobisModel] = None, phase: str = "DEV",
                   limits_alt: Optional[StationLimits] = None) -> list[tuple[str, str, Predictor]]:
     settings = pin_registered(copy.deepcopy(settings))          # `full`, the ablations and the baselines are the pipeline that was
-    if phase == "FRESH3":                                       # Amendment 4: `full` is the shipped pipeline (remedies 1 and 3 on); r6_warmup adds the warm-up limits
+    if phase == "FRESH4":                                       # Amendment 5: `full` is the pipeline as shipped; r7_freezing adds the freezing-point rule
+        shipped = copy.deepcopy(settings)
+        shipped["health"]["frozen"]["ceiling_aware"] = True
+        shipped["health"]["step"]["expected_aware"] = True
+        frz = copy.deepcopy(shipped)
+        frz["health"]["frozen"]["freezing_aware"] = True
+        cfgs = [("full", "full", pipeline_predictor(shipped, table, model, limits, sid, cadence, mahal)),
+                ("r7_freezing", "remedy", pipeline_predictor(frz, table, model, limits, sid, cadence, mahal))]
+    elif phase == "FRESH3":                                     # Amendment 4: `full` is the shipped pipeline (remedies 1 and 3 on); r6_warmup adds the warm-up limits
         shipped = copy.deepcopy(settings)
         shipped["health"]["frozen"]["ceiling_aware"] = True
         shipped["health"]["step"]["expected_aware"] = True
@@ -310,12 +321,12 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
     else:
         cfgs = [("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
     for name, frozen, step in ((("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True))
-                               if phase not in ("FRESH2", "FRESH3") else ()):
+                               if phase not in ("FRESH2", "FRESH3", "FRESH4") else ()):
         variant = copy.deepcopy(settings)                       # the two remedies of docs/HOLDOUT_POSTMORTEM.md (off in "full")
         variant["health"]["frozen"]["ceiling_aware"] = frozen
         variant["limits"]["learned_step_cap"] = step
         cfgs.append((name, "remedy", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
-    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase not in ("FRESH2", "FRESH3") else ()):
+    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase not in ("FRESH2", "FRESH3", "FRESH4") else ()):
         variant = copy.deepcopy(settings)
         variant["layers"][layer] = False
         cfgs.append((f"no_{layer}", "ablation", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
@@ -648,7 +659,7 @@ def _worker(args):
 # orchestration and report
 # ====================================================================================================
 def load_events(phase: str = "DEV") -> dict:
-    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON, "FRESH3": FRESH3_EVENTS_JSON}.get(phase, EVENTS_JSON)
+    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON, "FRESH3": FRESH3_EVENTS_JSON, "FRESH4": FRESH4_EVENTS_JSON}.get(phase, EVENTS_JSON)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -679,6 +690,10 @@ def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
         for sid in sealed:                                           # a fourth set: seven US 20-minute stations and five Australian AWS with irregular training years (Amendment 4)
             p = REAL_FRESH3_DIR / f"{sid}.csv"
             plans.append(PhasePlan("FRESH3", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
+    elif phase == "FRESH4":
+        for sid in sealed:                                           # twelve northern US stations with freezing winters (Amendment 5)
+            p = REAL_FRESH4_DIR / f"{sid}.csv"
+            plans.append(PhasePlan("FRESH4", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
     return plans
 
 
@@ -837,6 +852,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     g.add_argument("--fresh", action="store_true", help="the twelve FRESH stations (Amendment 2 in config/protocol.md)")
     g.add_argument("--fresh2", action="store_true", help="the twelve FRESH2 stations (Amendment 3 in config/protocol.md)")
     g.add_argument("--fresh3", action="store_true", help="the twelve FRESH3 stations (Amendment 4 in config/protocol.md)")
+    g.add_argument("--fresh4", action="store_true", help="the twelve FRESH4 stations (Amendment 5 in config/protocol.md)")
     ap.add_argument("--quick", action="store_true", help="one year and one fault round: for tuning loops only")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stations", nargs="*", help="only these stations")
@@ -847,7 +863,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="reproduce a holdout run that was already made (the original lock file stays in git history)")
     args = ap.parse_args(argv)
     settings = load_settings()
-    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "FRESH3" if args.fresh3 else "DEV"
+    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "FRESH3" if args.fresh3 else "FRESH4" if args.fresh4 else "DEV"
+    if args.fresh4:
+        lock = REPO / "data" / "fresh4" / ev.FRESH4_LOCK_NAME
+        if args.force_rerun_holdout and lock.exists():
+            print(f"Re-running the FRESH4 evaluation to reproduce it. The first run is recorded in {lock}.")
+        else:
+            try:
+                ev.guard_fresh4(settings, REPO, REPO / "data")
+            except ev.HoldoutError as e:
+                print(f"Cannot run the FRESH4 evaluation: {e}")
+                return 2
     if args.fresh3:
         lock = REPO / "data" / "fresh3" / ev.FRESH3_LOCK_NAME
         if args.force_rerun_holdout and lock.exists():
@@ -896,7 +922,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                                                   "HOLDOUT_SPACE": "HOLDOUT in space (sealed stations, 2020-2024)",
                                                                   "FRESH": "FRESH (twelve stations nobody had looked at, 2020-2024)",
                                                                   "FRESH2": "FRESH2 (a third set of twelve: Indian airports and Australian AWS, 2020-2024)",
-                                                                  "FRESH3": "FRESH3 (a fourth set of twelve: seven US 20-minute stations and five Australian AWS, 2020-2024)"}[ph]))
+                                                                  "FRESH3": "FRESH3 (a fourth set of twelve: seven US 20-minute stations and five Australian AWS, 2020-2024)",
+                                                                  "FRESH4": "FRESH4 (a fifth set of twelve northern US stations with freezing winters, 2020-2024)"}[ph]))
     print("\n\n".join(text))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
