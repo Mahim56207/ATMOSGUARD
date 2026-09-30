@@ -24,6 +24,8 @@ import evaluate_real as er
 FRESH2_INDIAN = ("HYD", "BLR", "CCJ", "IXM", "VGA")            # the other seven FRESH2 stations are Australian AWS at 0.1 resolution
 FRESH3_US = ("FHB", "PTT", "MDS", "LPO", "GGW", "GRC", "HUT")     # the other five FRESH3 stations are Australian AWS
 PHASE_TITLES = {
+    "FRESH4": ("FRESH4: a fifth set of twelve northern US stations with freezing winters, 2020-2024",
+               "Chosen and sealed before the Amendment 5 freezing-point remedy was tested (config/protocol.md). Hourly airport METAR, whole degrees."),
     "FRESH3": ("FRESH3: a fourth set of twelve stations, 2020-2024",
                "Chosen and sealed before the Amendment 4 remedy was tested (config/protocol.md). Seven US automated stations reporting every 20 minutes at 0.1 C and five "
                "Australian automatic stations with irregular training years. `AtmosGuard (full)` is the pipeline as shipped."),
@@ -51,6 +53,7 @@ FULL_NAMES = {"full": "AtmosGuard (full)", "no_physics": "without physics layer"
               "no_normality": "without normality layer", "no_mlmodel": "without Isolation Forest",
               "no_timing": "without timing layer", "no_limits": "without station-learned limits",
               "no_mahalanobis": "without Mahalanobis layer",
+              "r7_freezing": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
               "r6_warmup": "AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch)",
               "registered": "AtmosGuard as registered (every remedy off)",
               "r3_expected_step": "AtmosGuard + remedy 3 (expected-change-aware step rule)",
@@ -267,6 +270,34 @@ def amendment4_rows(agg: dict, stations: list[dict]) -> list[dict]:
              "adopt": "yes" if (a and b and c and d) else ("untested" if not warmed else "no")}]
 
 
+def amendment5_rows(agg: dict) -> list[dict]:
+    """The decision rule registered in Amendment 5: (a) windows with a FAULT lower than full and FAULT share not higher; (b) no fault type loses more than 2 points;
+    (c) clean false alarms rise by at most 0.2 points; (d) SUSPECT share in real weather rises by at most 2 points."""
+    cfgs = agg["configs"]
+    if "full" not in cfgs or "r7_freezing" not in cfgs:
+        return []
+    full, r7 = cfgs["full"], cfgs["r7_freezing"]
+    fe, re_ = _events_total(full), _events_total(r7)
+    share = lambda e: e["FAULT"] / e["n"] if e["n"] else 0.0
+    susp = lambda e: 100.0 * e["SUSPECT"] / e["n"] if e["n"] else 0.0
+    worst_type, worst = None, 0.0
+    for ty in er.REAL_TYPES:
+        d0, d1 = full["detection"][ty], r7["detection"][ty]
+        if d0["injected"]:
+            ch = 100.0 * (d1.get("detected_new", 0) - d0.get("detected_new", 0)) / d0["injected"]
+            if ch < worst:
+                worst_type, worst = ty, ch
+    rise = 100.0 * (r7["clean"]["alarm"] / r7["clean"]["n"] - full["clean"]["alarm"] / full["clean"]["n"])
+    a = re_["windows_with_fault"] < fe["windows_with_fault"] and share(re_) <= share(fe)
+    b, c, d = worst >= -2.0, rise <= 0.2, susp(re_) - susp(fe) <= 2.0
+    return [{"configuration": FULL_NAMES["r7_freezing"], "(a) windows with a FAULT (full / this)": f"{fe['windows_with_fault']} / {re_['windows_with_fault']} of {re_['windows']}",
+             "(a) FAULT share (full / this)": f"{100 * share(fe):.2f}% / {100 * share(re_):.2f}%",
+             "(b) worst change in paired detection": "none" if worst_type is None else f"{worst:+.1f} pp ({TYPE_NAMES[worst_type]})",
+             "(c) change in clean false alarms": f"{rise:+.2f} pp", "(d) SUSPECT share change": f"{susp(re_) - susp(fe):+.2f} pp",
+             "rule (a)": "pass" if a else "FAIL", "rule (b)": "pass" if b else "FAIL", "rule (c)": "pass" if c else "FAIL", "rule (d)": "pass" if d else "FAIL",
+             "adopt": "yes" if (a and b and c and d) else "no"}]
+
+
 def phase_tables(agg: dict, stations: Optional[list[dict]] = None) -> dict:
     cfgs = agg["configs"]
     full = cfgs["full"]
@@ -414,6 +445,11 @@ def phase_tables(agg: dict, stations: Optional[list[dict]] = None) -> dict:
                               "caption": "Rule: adopt only if (a) real extreme-weather windows with a FAULT and the FAULT share do not rise, (b) paired "
                                          "detection loses at most 2 points for any injected-fault type, (c) clean false alarms rise by at most 0.2 "
                                          "points. Compared with the frozen `full` pipeline on the same stations.", "rows": rr}
+    a5 = amendment5_rows(agg)
+    if a5:
+        result["amendment5"] = {"title": "The Amendment 5 remedy (freezing-point plateau is a soft flag), judged by the rule registered before the run",
+                                "caption": "Adopt only if (a) windows with a FAULT are fewer than with `full` and the FAULT share does not rise, (b) no fault type loses more than 2 points, "
+                                           "(c) clean false alarms rise by at most 0.2 points, (d) the SUSPECT share in real weather rises by at most 2 points.", "rows": a5}
     a4 = amendment4_rows(agg, stations or [])
     if a4:
         result["amendment4"] = {"title": "The Amendment 4 remedy (unlearned limits filled from the first regular stretch), judged by the rule registered before the run",
@@ -525,7 +561,7 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "amendment3", "amendment4", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "amendment3", "amendment4", "amendment5", "clean", "extreme_weather", "noaa", "drift"):
             if key not in ph:
                 continue
             t = ph[key]
@@ -619,7 +655,7 @@ def readme_block(summary: dict) -> str:
         cells = [ph[k]["headline"]["rows"][i]["answer"] for k in order]
         L.append(f"| **{label}** | " + " | ".join(c.replace("|", "/") for c in cells) + " |")
     L.append("")
-    L.append("Real NOAA records: 26 Indian airport stations in DEV, holdout and Fresh, then Fresh 2 (five more Indian airports, seven Australian automatic stations) and Fresh 3 (seven US automated stations reporting every 20 minutes, five Australian automatic stations); 50 stations in all. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
+    L.append("Real NOAA records: 26 Indian airport stations in DEV, holdout and Fresh, then Fresh 2 (five more Indian airports, seven Australian automatic stations) and Fresh 3 (seven US automated stations reporting every 20 minutes, five Australian automatic stations) and Fresh 4 (twelve northern US airports with freezing winters); 62 stations in all. Full tables, baselines and ablation: [`results/REPORT.md`](results/REPORT.md). "
              "Protocol written and committed before the holdout was read: [`config/protocol.md`](config/protocol.md).")
     return "\n".join(L)
 
