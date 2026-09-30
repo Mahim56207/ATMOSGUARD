@@ -38,7 +38,7 @@ def _ranked(names: Sequence[str], values: Sequence[float]) -> list[dict]:
 
 
 def explain_isolation_forest(history: Sequence[Reading], model: IsolationModel) -> dict:
-    X, ok = build_features(history[-2:])
+    X, ok = build_features(history[-2:], model.absent)
     if len(history) < 2 or not ok[-1]:
         return {"available": False, "note": "Needs two consecutive readings with all three values."}
     score = float(model.forest.decision_function(X[-1:])[0])
@@ -54,7 +54,7 @@ def explain_isolation_forest(history: Sequence[Reading], model: IsolationModel) 
 def explain_mahalanobis(history: Sequence[Reading], model: MahalanobisModel, table: Optional[NormalityTable]) -> dict:
     if model.uses_table and table is None:
         return {"available": False, "note": "This model needs the station's normality table."}
-    X, ok = mahalanobis_features(history[-2:], table)
+    X, ok = mahalanobis_features(history[-2:], table, model.absent)
     if len(history) < 2 or not ok[-1]:
         return {"available": False, "note": "Needs two consecutive readings with all three values and a normal value for this hour."}
     D = X[-1] - model.mean

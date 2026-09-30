@@ -1,0 +1,126 @@
+# The FRESH5 stations (Amendment 6 in config/protocol.md). Six Australian automatic stations whose 2016-2019 record is not equally spaced (IR1-IR6) and six with
+# an ordinary hourly record (RG1-RG6), chosen by the rule in data_tools/select_fresh5.py (seed 17) before any pipeline verdict. Source: NOAA ISD.
+years:
+  first: 2016
+  last: 2024
+stations:
+  IR1:
+    file: '94589099999'
+    name: Yamba Pilot Station
+    lat: -29.433
+    lon: 153.367
+    elevation_m: 30.0
+    climate_zone: Australia, irregular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: irregular
+  IR2:
+    file: '95960099999'
+    name: Devonport Airport
+    lat: -41.167
+    lon: 146.417
+    elevation_m: 10.0
+    climate_zone: Australia, irregular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: irregular
+  IR3:
+    file: '94655099999'
+    name: Tarcoola
+    lat: -30.717
+    lon: 134.583
+    elevation_m: 124.0
+    climate_zone: Australia, irregular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: irregular
+  IR4:
+    file: '94960099999'
+    name: Tunnak Fire Station
+    lat: -42.45
+    lon: 147.467
+    elevation_m: 462.0
+    climate_zone: Australia, irregular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: irregular
+  IR5:
+    file: '94857099999'
+    name: Geelong Racecourse
+    lat: -38.167
+    lon: 144.367
+    elevation_m: 35.0
+    climate_zone: Australia, irregular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: irregular
+  IR6:
+    file: '94854099999'
+    name: Avalon  Airport
+    lat: -38.033
+    lon: 144.467
+    elevation_m: 11.0
+    climate_zone: Australia, irregular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: irregular
+  RG1:
+    file: '94850099999'
+    name: King Island Airport
+    lat: -39.883
+    lon: 143.883
+    elevation_m: 38.0
+    climate_zone: Australia, regular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: regular
+  RG2:
+    file: '95527099999'
+    name: Moree Aero
+    lat: -29.491
+    lon: 149.846
+    elevation_m: 218.5
+    climate_zone: Australia, regular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: regular
+  RG3:
+    file: '94956099999'
+    name: Strahan Aerodrome
+    lat: -42.15
+    lon: 145.283
+    elevation_m: 22.0
+    climate_zone: Australia, regular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: regular
+  RG4:
+    file: '94943099999'
+    name: Nerriga Aws
+    lat: -35.117
+    lon: 150.083
+    elevation_m: 625.6
+    climate_zone: Australia, regular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: regular
+  RG5:
+    file: '94703099999'
+    name: Bourke Airport Aws
+    lat: -30.033
+    lon: 145.95
+    elevation_m: 108.0
+    climate_zone: Australia, regular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: regular
+  RG6:
+    file: '94983099999'
+    name: Larapuna (Eddystone Point)
+    lat: -41.0
+    lon: 148.35
+    elevation_m: 21.0
+    climate_zone: Australia, regular 2016-2019 record
+    source: synop
+    cadence_minutes: 60
+    record: regular

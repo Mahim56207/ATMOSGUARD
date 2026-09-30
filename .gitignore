@@ -26,3 +26,4 @@ models/*
 firmware/node/secrets.h
 data/uploads/
 data/peers/*
+data/crn/

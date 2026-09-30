@@ -10,6 +10,9 @@ store:
 
 models_dir: models   # one normality table + one IsolationForest per station
 
+channels:
+  absent: []         # channels this station does not have, e.g. [pressure_hpa] for a station with no barometer (never a dropout; the models see a constant zero)
+
 layers:            # every layer is toggleable so the ablation study needs no code edits
   physics: true        # L0
   health: true         # L1
@@ -100,6 +103,8 @@ limits:            # station-learned limits (atmos/limits.py). Upper quantiles o
   noise_quantile: 0.999          # largest jitter estimate: this quantile of the clean window estimates
   noise_margin: 1.1
   min_noise_samples: 200
+  gap_aware_noise: false         # remedy 8 (Amendment 6): when no noise limit can be learned because the training record is not equally spaced, learn it from windows of any spacing
+  gap_aware_max_span_minutes: 720 # the widest window (newest min_samples readings) that counts, in minutes
   learned_step_cap: false        # remedy 2 (docs/HOLDOUT_POSTMORTEM.md): the step cap becomes max(configured cap, this station's learned cap).
                                  # REJECTED by the rule registered in Amendment 2: it cost 4.2 points of clock-shift detection on the fresh stations.
   step_quantile: 0.999           # learned cap: this quantile of |change| over one reporting interval (gaps up to the gap limit included)

@@ -14,6 +14,7 @@ from typing import Optional
 
 import numpy as np
 
+from .config import absent_channels
 from .schema import CHANNELS, Reading
 
 FAULT_TYPES = ("frozen", "spike", "step", "drift", "noise", "dropout")
@@ -62,9 +63,12 @@ def _n_samples(fault_type: str, settings: dict, cadence: float) -> int:
 
 
 def make_plan(readings: list[Reading], settings: dict, seed: Optional[int] = None,
-              types: tuple[str, ...] = FAULT_TYPES) -> list[FaultSpec]:
+              types: tuple[str, ...] = FAULT_TYPES, channels: Optional[tuple[str, ...]] = None) -> list[FaultSpec]:
     """Random, non-overlapping fault placement. Same seed -> same plan (for the default six types the plan
-    is the same as before `types` existed)."""
+    is the same as before `types` existed). `channels` limits the channel a single-channel fault can hit: by default the channels the station has
+    (all three unless settings `channels.absent` says otherwise)."""
+    if channels is None:
+        channels = tuple(ch for ch in CHANNELS if ch not in absent_channels(settings))
     cfg = settings["injector"]
     rng = np.random.default_rng(settings["seed"] if seed is None else seed)
     cadence = _cadence_minutes(readings)
@@ -81,7 +85,7 @@ def make_plan(readings: list[Reading], settings: dict, seed: Optional[int] = Non
             end = start + n - 1
             if end >= len(readings) or any(start <= b + sep and end >= a - sep for a, b in taken):
                 continue
-            channel = CHANNELS[int(rng.integers(len(CHANNELS)))]
+            channel = channels[int(rng.integers(len(channels)))]
             if fault_type in EXTRA_FAULT_TYPES:
                 channel = ALL_CHANNELS_TAG
                 lag = round(settings["injector"]["clock_shift_hours"] * 60.0 / cadence)

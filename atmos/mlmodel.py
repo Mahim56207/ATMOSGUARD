@@ -15,7 +15,7 @@ import joblib
 import numpy as np
 from sklearn.ensemble import IsolationForest
 
-from .config import layer_enabled
+from .config import absent_channels, layer_enabled
 from .schema import CHANNELS, CheckResult, Reading
 
 _FLOAT32_MAX = float(np.finfo(np.float32).max)
@@ -23,16 +23,17 @@ _FLOAT32_MAX = float(np.finfo(np.float32).max)
 FEATURE_NAMES = (*CHANNELS, *(f"d_{c}_per_min" for c in CHANNELS), "hour_sin", "hour_cos")
 
 
-def build_features(readings: Sequence[Reading]) -> tuple[np.ndarray, np.ndarray]:
+def build_features(readings: Sequence[Reading], absent: Sequence[str] = ()) -> tuple[np.ndarray, np.ndarray]:
     """Return (X, usable). Row i uses readings[i-1] for the rates. Unusable rows are zeros:
-    the first reading, missing values, or a non-increasing timestamp."""
+    the first reading, missing values, or a non-increasing timestamp. A channel in `absent` (the station has no such sensor) is a constant zero,
+    and its value and rate are not required to be present."""
     X = np.zeros((len(readings), len(FEATURE_NAMES)))
     usable = np.zeros(len(readings), dtype=bool)
     for i in range(1, len(readings)):
         cur, prev = readings[i], readings[i - 1]
         dt = (cur.timestamp - prev.timestamp).total_seconds() / 60.0
-        vals = [getattr(cur, c) for c in CHANNELS]
-        pvals = [getattr(prev, c) for c in CHANNELS]
+        vals = [0.0 if c in absent else getattr(cur, c) for c in CHANNELS]
+        pvals = [0.0 if c in absent else getattr(prev, c) for c in CHANNELS]
         if dt <= 0 or None in vals or None in pvals:
             continue
         angle = 2 * math.pi * (cur.timestamp.hour + cur.timestamp.minute / 60.0) / 24.0
@@ -100,17 +101,19 @@ class _FastForest:
 
 
 class IsolationModel:
-    def __init__(self, station_id: str, forest: IsolationForest, threshold: float):
+    def __init__(self, station_id: str, forest: IsolationForest, threshold: float, absent: Sequence[str] = ()):
         self.station_id = station_id
         self.forest = forest
         self.threshold = threshold            # flag when score < threshold (lower = more unusual)
+        self.absent = tuple(absent)           # channels this station does not have (see config.absent_channels)
 
     @classmethod
     def fit(cls, readings: Sequence[Reading], settings: dict) -> "IsolationModel":
         stations = {r.station_id for r in readings}
         if len(stations) != 1:
             raise ValueError(f"model is single-station, got stations: {sorted(stations)}")
-        X, usable = build_features(readings)
+        absent = absent_channels(settings)
+        X, usable = build_features(readings, absent)
         if usable.sum() == 0:
             raise ValueError("no usable rows to train on")
         forest = IsolationForest(n_estimators=settings["mlmodel"]["n_estimators"],
@@ -118,13 +121,13 @@ class IsolationModel:
         forest.fit(X[usable])
         scores = forest.decision_function(X[usable])
         threshold = float(np.quantile(scores, settings["mlmodel"]["threshold_quantile"]))
-        return cls(stations.pop(), forest, threshold)
+        return cls(stations.pop(), forest, threshold, absent)
 
     FAST_MAX_ROWS = 4                        # a live reading scores one pair; whole series go through sklearn in one batch
 
     def score(self, readings: Sequence[Reading]) -> np.ndarray:
         """Score per reading (NaN where unusable). Lower = more unusual."""
-        X, usable = build_features(readings)
+        X, usable = build_features(readings, self.absent)
         out = np.full(len(readings), np.nan)
         if usable.any():
             if len(readings) <= self.FAST_MAX_ROWS:
@@ -143,12 +146,15 @@ class IsolationModel:
 
     def save(self, path: Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump({"station_id": self.station_id, "forest": self.forest, "threshold": self.threshold}, path)
+        d = {"station_id": self.station_id, "forest": self.forest, "threshold": self.threshold}
+        if self.absent:
+            d["absent"] = list(self.absent)                   # written only when there is one, so models of ordinary stations are byte-for-byte what they were
+        joblib.dump(d, path)
 
     @classmethod
     def load(cls, path: Path) -> "IsolationModel":
         d = joblib.load(path)
-        return cls(d["station_id"], d["forest"], d["threshold"])
+        return cls(d["station_id"], d["forest"], d["threshold"], d.get("absent", ()))
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -158,17 +164,17 @@ MAHAL_FEATURES = ("temperature_c departure", "pressure_hpa departure", "humidity
                   "temperature_c change/min", "pressure_hpa change/min", "humidity_pct change/min")
 
 
-def mahalanobis_features(readings: Sequence[Reading], table) -> tuple[np.ndarray, np.ndarray]:
+def mahalanobis_features(readings: Sequence[Reading], table, absent: Sequence[str] = ()) -> tuple[np.ndarray, np.ndarray]:
     """Row i: how far each channel is from this station's smooth expected value, and how fast each moved since the
     previous reading (per minute). Without a normality table the raw values are used instead of the departures.
     Unusable rows (first reading, missing values, non-increasing time, no expected value) are zeros."""
-    X, usable = build_features(readings)
+    X, usable = build_features(readings, absent)
     out = np.zeros((len(readings), 6))
     ok = usable.copy()
     for i in np.nonzero(usable)[0]:
         vals = X[i, :3]
         if table is not None:
-            exp = [table.smooth_expected(readings[i].timestamp, ch) for ch in CHANNELS]
+            exp = [0.0 if ch in absent else table.smooth_expected(readings[i].timestamp, ch) for ch in CHANNELS]
             if any(e is None for e in exp):
                 ok[i] = False
                 continue
@@ -184,8 +190,9 @@ class MahalanobisModel:
     Explains itself: the channel and the feature that contribute most to the distance."""
 
     def __init__(self, station_id: str, mean: np.ndarray, inv_cov: np.ndarray, threshold: float,
-                 uses_table: bool = False):
+                 uses_table: bool = False, absent: Sequence[str] = ()):
         self.station_id, self.mean, self.inv_cov, self.threshold = station_id, mean, inv_cov, threshold
+        self.absent = tuple(absent)
         self.uses_table = uses_table          # trained on departures from a normality table: it needs that table to run
 
     @classmethod
@@ -193,13 +200,14 @@ class MahalanobisModel:
         stations = {r.station_id for r in readings}
         if len(stations) != 1:
             raise ValueError(f"model is single-station, got stations: {sorted(stations)}")
-        X, ok = mahalanobis_features(readings, table)
+        absent = absent_channels(settings)
+        X, ok = mahalanobis_features(readings, table, absent)
         X = X[ok]
         if len(X) < 50:
             raise ValueError("not enough usable rows to fit the Mahalanobis model")
         mean = X.mean(axis=0)
         cov = np.cov(X, rowvar=False) + settings["mlmodel"]["mahalanobis"]["ridge"] * np.eye(6)
-        model = cls(stations.pop(), mean, np.linalg.inv(cov), 0.0, uses_table=table is not None)
+        model = cls(stations.pop(), mean, np.linalg.inv(cov), 0.0, uses_table=table is not None, absent=absent)
         d2 = model._d2(X)
         model.threshold = float(np.quantile(d2, settings["mlmodel"]["mahalanobis"]["quantile"]))
         return model
@@ -209,7 +217,7 @@ class MahalanobisModel:
         return np.einsum("ij,jk,ik->i", D, self.inv_cov, D)
 
     def distance2(self, readings: Sequence[Reading], table=None) -> np.ndarray:
-        X, ok = mahalanobis_features(readings, table)
+        X, ok = mahalanobis_features(readings, table, self.absent)
         out = np.full(len(readings), np.nan)
         if ok.any():
             out[ok] = self._d2(X[ok])
@@ -217,7 +225,7 @@ class MahalanobisModel:
 
     def explain(self, readings: Sequence[Reading], table=None) -> tuple[float, str]:
         """(squared distance of the newest reading, name of the feature contributing most)."""
-        X, ok = mahalanobis_features(readings[-2:], table)
+        X, ok = mahalanobis_features(readings[-2:], table, self.absent)
         if not ok[-1]:
             return float("nan"), ""
         D = X[-1] - self.mean
@@ -226,13 +234,16 @@ class MahalanobisModel:
 
     def save(self, path: Path) -> None:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump({"station_id": self.station_id, "mean": self.mean, "inv_cov": self.inv_cov,
-                     "threshold": self.threshold, "uses_table": self.uses_table}, path)
+        d = {"station_id": self.station_id, "mean": self.mean, "inv_cov": self.inv_cov,
+             "threshold": self.threshold, "uses_table": self.uses_table}
+        if self.absent:
+            d["absent"] = list(self.absent)
+        joblib.dump(d, path)
 
     @classmethod
     def load(cls, path: Path) -> "MahalanobisModel":
         d = joblib.load(path)
-        return cls(d["station_id"], d["mean"], d["inv_cov"], d["threshold"], d.get("uses_table", False))
+        return cls(d["station_id"], d["mean"], d["inv_cov"], d["threshold"], d.get("uses_table", False), d.get("absent", ()))
 
 
 def check_mahalanobis(history: Sequence[Reading], model: MahalanobisModel, table, settings: dict) -> list[CheckResult]:
