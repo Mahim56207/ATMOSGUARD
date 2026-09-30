@@ -71,13 +71,13 @@ with what is standard, adapted and ours: `docs/NOVELTY_AND_PRIOR_ART.md` and the
 ## What is novel (the exact sentence)
 > AtmosGuard integrates physics-based T/P/RH coherence, per-station statistical normality, station-learned health limits and unsupervised
 > multivariate ML into one explainable pipeline for a single station with no neighbours, and it treats genuine extreme weather as its own
-> escalated verdict. We do not claim any technique is new. Our contribution is the integration and the evidence: 50 real stations (31 Indian airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes),
+> escalated verdict. We do not claim any technique is new. Our contribution is the integration and the evidence: 62 real stations (31 Indian airports, 12 US northern airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes),
 > a holdout sealed in time and in space, false alarms on real cyclones reported separately, baselines and an ablation on the same data,
 > agreement with NOAA's quality flags, and the failures the real data exposed.
 
 ## What we say we cannot do (say it first)
 Detection is measured on **injected** faults (no labelled real faults were reachable). The data are airport and Australian automatic-weather-station records, not IMD AWS records (not public), hourly or
-3-hourly except seven US automated stations reporting every 20 minutes (never 1-15 minutes). With the pipeline as frozen for each set, real extreme-weather windows with a `FAULT`: 3 of 98 (eight unseen stations), 3 of 139 (twelve fresh), 4 of 134 (twelve fresh-2) and 5 of 160 (twelve fresh-3: freezing-rain temperature plateaus at 0 C, and a night-time jump);
+3-hourly except seven US automated stations reporting every 20 minutes (never 1-15 minutes). With the pipeline as frozen for each set, real extreme-weather windows with a `FAULT`: 3 of 98 (eight unseen stations), 3 of 139 (twelve fresh), 4 of 134 (twelve fresh-2) and 5 of 160 (twelve fresh-3: freezing-rain temperature plateaus at 0 C, and a night-time jump) and 0 of 180 (twelve fresh-4: northern US airports with freezing winters);
 of the five remedies tested by rules registered first, two are adopted (ceiling-aware frozen rule; expected-change-aware step rule) and three rejected (learned step cap; sustained offset; limits warm-up), and windows remain.
 On fresh-2, four Australian AWS whose training records had irregular cadence get 8-33 % false alarms because no noise limit could be learned (a refit at the current cadence is the fix: 2.6 % after refitting, post hoc); overall fresh-2
 false alarms are 9.3 %. A single station with no reference cannot see small drift or a constant offset from the start; an optional peer layer sees them with three or more neighbours within 250 km (measured on

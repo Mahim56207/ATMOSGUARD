@@ -1,0 +1,73 @@
+Re-running the FRESH4 evaluation to reproduce it. The first run is recorded in /home/user/ATMOSGUARD/data/fresh4/.fresh4_used.
+### FRESH4 (a fifth set of twelve northern US stations with freezing winters, 2020-2024)
+stations: GSH, BFF, AMW, MTP, HLG, JMS, EKO, OWD, BTV, BRD, BMI, MIE
+
+1a) Detection of injected faults, by type: the fault raised the alarm  (paired: the same sample was NOT an alarm on the un-faulted series)
+   config                           frozen       spike        step       noise     dropout clock_shift
+   full                             100.0%       96.7%       90.4%       74.8%       99.2%       79.7%
+   r7_freezing                      100.0%       96.7%       90.4%       74.8%       99.2%       79.7%
+   baseline_range                     0.0%       10.9%       12.7%        8.7%        0.0%        0.0%
+   baseline_rules                   100.0%       72.7%       82.7%       63.9%        0.0%       82.2%
+   baseline_climatology               5.8%        4.7%        4.7%        1.6%        0.0%       18.2%
+   baseline_isolation_forest          4.7%       18.1%       15.3%       19.8%        0.0%       51.7%
+   baseline_mahalanobis              60.9%       99.9%       93.0%       75.1%        0.0%       53.6%
+   (faults injected)                  1350        1350        1350        1350        1350        1113
+   full: median delay to the fault-raised alarm (min)         420           0           0         480           0        1500
+
+1b) The same, by the REGISTERED criterion in config/protocol.md: any alarm from the first faulty sample to the last plus 60 min.
+    Background false alarms also land inside long fault windows, so 1b flatters long faults (frozen 48 h, clock shift 4 days) and every system.
+   config                           frozen       spike        step       noise     dropout clock_shift
+   full                             100.0%       98.6%       91.3%       77.6%      100.0%       80.0%
+   r7_freezing                      100.0%       98.6%       91.3%       77.6%      100.0%       80.0%
+   baseline_range                     0.0%       10.9%       12.7%        8.7%        0.0%        0.0%
+   baseline_rules                   100.0%       75.1%       89.6%       76.6%        5.0%       82.7%
+   baseline_climatology               7.0%        5.0%        5.5%        2.8%        0.4%       18.8%
+   baseline_isolation_forest          7.6%       18.5%       20.8%       24.4%        0.0%       51.9%
+   baseline_mahalanobis              64.6%      100.0%       93.5%       76.2%        0.0%       54.1%
+
+2) False alarms on clean real data  (no faults injected, extreme-weather windows and NOAA-flagged values removed)
+   config                       any alarm  FAULT only   WEATHER   samples
+   full                              2.0%        0.0%      1.3%    498994
+   r7_freezing                       2.0%        0.0%      1.3%    498994
+   baseline_range                    0.0%        0.0%         -    498994
+   baseline_rules                    2.7%        2.7%         -    498994
+   baseline_climatology              0.2%        0.0%         -    498994
+   baseline_isolation_forest         0.5%        0.0%         -    498994
+   baseline_mahalanobis              0.5%        0.0%         -    498994
+
+3) Real extreme weather  (no faults injected). A FAULT here is a failure: real weather called a broken sensor.
+   config                         FAULT   SUSPECT   WEATHER    VALID    windows with a FAULT
+   full                            0.0%      6.2%      4.0%    89.7%                   0/180
+   r7_freezing                     0.0%      6.2%      4.0%    89.7%                   0/180
+   baseline_range                  0.0%      0.0%         -   100.0%                   0/180
+   baseline_rules                  4.2%      0.0%         -    95.8%                 166/180
+   baseline_climatology            0.0%      0.8%         -    99.2%                   0/180
+   baseline_isolation_forest       0.0%      2.3%         -    97.7%                   0/180
+   baseline_mahalanobis            0.0%      2.4%         -    97.6%                   0/180
+
+   full pipeline, by kind of extreme weather:
+   kind      samples    FAULT   SUSPECT   WEATHER   windows with FAULT
+   cold         3708     0.0%     11.4%      3.5%                 0/26
+   heat         5166     0.0%      3.4%      3.8%                 0/36
+   low          8258     0.0%      7.3%      4.2%                 0/58
+   sharp        5732     0.0%      3.8%      4.4%                 0/60
+
+4) Agreement with NOAA's own quality flags on the raw record  (another automated system, NOT ground truth)
+   NOAA-flagged values: 728  (erroneous: 87)
+   AtmosGuard alarmed on 8.1% of them, and on 1.1% of the erroneous ones
+   escalated at all (FAULT, SUSPECT or WEATHER) on 17.4% of the flagged values, and on 3.6% of the values NOAA did not flag
+   AtmosGuard alarmed on 2.2% of the 521418 values NOAA did not flag
+
+5) Slow drift, judged by the health score  (daily-mean Theil-Sen, autocorrelation-aware test)
+   A ramp over 45 days is added to one channel of a clean real chunk; severity = offset at the end of the ramp in
+   multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). Detected = significant with the right sign.
+   severity                 temperature                  pressure                  humidity
+             detected  day  offset/limitdetected  day  offset/limitdetected  day  offset/limit
+   none             3.3% (false claims)       0.0% (false claims)      10.0% (false claims)
+   1x limit         2.2%    95     9.1x       0.0%     -        -       4.4%    74     4.7x
+   2x limit         2.2%    95    10.2x       0.0%     -        -       7.8%    63     6.2x
+   4x limit         2.2%    95    12.4x       0.0%     -        -      15.6%    57     6.6x
+   8x limit         6.7%    58    14.6x       5.6%    52    10.5x      53.3%    48     8.3x
+   on clean data with NO drift injected: significant drift claimed on 0.4% of 19527 station-days (per channel: 0.1%); a maintenance ticket was open on 0.4% of them
+
+6) Speed (full pipeline, one reading): median 0.99 ms, worst station 95th percentile 3.22 ms

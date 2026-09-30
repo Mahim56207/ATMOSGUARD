@@ -7958,6 +7958,719 @@
      }
     ]
    }
+  },
+  "FRESH4": {
+   "title": "FRESH4: a fifth set of twelve northern US stations with freezing winters, 2020-2024",
+   "subtitle": "Chosen and sealed before the Amendment 5 freezing-point remedy was tested (config/protocol.md). Hourly airport METAR, whole degrees.",
+   "generated": "2026-09-30T19:21:14.245086Z",
+   "quick": false,
+   "stations": [
+    "GSH",
+    "BFF",
+    "AMW",
+    "MTP",
+    "HLG",
+    "JMS",
+    "EKO",
+    "OWD",
+    "BTV",
+    "BRD",
+    "BMI",
+    "MIE"
+   ],
+   "headline": {
+    "title": "Headline",
+    "caption": "Five separate numbers. They are never merged.",
+    "rows": [
+     {
+      "question": "False alarms on clean real data (nothing injected)",
+      "answer": "2.0% (1.9-2.0) of 498994 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT"
+     },
+     {
+      "question": "What happens to real extreme weather (cyclones, heat, cold, sharp fronts; nothing injected)",
+      "answer": "FAULT on 0.0% (0.0-0.0) of 22864 samples (0 of 180 windows); WEATHER on 4.0%, SUSPECT on 6.2%"
+     },
+     {
+      "question": "Injected faults whose alarm the fault raised (each type on its own; injected, not real)",
+      "answer": "frozen 100%; spike 97%; level shift 90%; noise burst 75%; dropout 99%; clock 3 h out 80%"
+     },
+     {
+      "question": "Agreement with NOAA's own quality flags (another automated system, not ground truth)",
+      "answer": "escalated (FAULT, SUSPECT or WEATHER) on 17.4% of 728 NOAA-flagged values (FAULT or SUSPECT alone: 8.1%); escalated on 3.6% of the 521418 values NOAA left alone"
+     },
+     {
+      "question": "Slow drift (health monitor, single station, no reference)",
+      "answer": "false drift claims on 0.4% of 19527 station-days; an injected ramp reaching 8x the service limit was found in 22% of trials"
+     }
+    ]
+   },
+   "detection": {
+    "title": "1. Detection of injected faults, by type (the fault raised the alarm)",
+    "caption": "Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault (paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. Ablation rows switch one layer off; baseline rows are simpler systems on the same data.",
+    "rows": [
+     {
+      "configuration": "AtmosGuard (full)",
+      "frozen": "100%",
+      "spike": "97%",
+      "level shift": "90%",
+      "noise burst": "75%",
+      "dropout": "99%",
+      "clock 3 h out": "80%"
+     },
+     {
+      "configuration": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
+      "frozen": "100%",
+      "spike": "97%",
+      "level shift": "90%",
+      "noise burst": "75%",
+      "dropout": "99%",
+      "clock 3 h out": "80%"
+     },
+     {
+      "configuration": "baseline: range check only",
+      "frozen": "0%",
+      "spike": "11%",
+      "level shift": "13%",
+      "noise burst": "9%",
+      "dropout": "0%",
+      "clock 3 h out": "0%"
+     },
+     {
+      "configuration": "baseline: textbook range + step + persistence",
+      "frozen": "100%",
+      "spike": "73%",
+      "level shift": "83%",
+      "noise burst": "64%",
+      "dropout": "0%",
+      "clock 3 h out": "82%"
+     },
+     {
+      "configuration": "baseline: climatology z-score only",
+      "frozen": "6%",
+      "spike": "5%",
+      "level shift": "5%",
+      "noise burst": "2%",
+      "dropout": "0%",
+      "clock 3 h out": "18%"
+     },
+     {
+      "configuration": "baseline: Isolation Forest only",
+      "frozen": "5%",
+      "spike": "18%",
+      "level shift": "15%",
+      "noise burst": "20%",
+      "dropout": "0%",
+      "clock 3 h out": "52%"
+     },
+     {
+      "configuration": "baseline: Mahalanobis distance only",
+      "frozen": "61%",
+      "spike": "100%",
+      "level shift": "93%",
+      "noise burst": "75%",
+      "dropout": "0%",
+      "clock 3 h out": "54%"
+     },
+     {
+      "configuration": "(faults injected)",
+      "frozen": "1350",
+      "spike": "1350",
+      "level shift": "1350",
+      "noise burst": "1350",
+      "dropout": "1350",
+      "clock 3 h out": "1113"
+     },
+     {
+      "configuration": "AtmosGuard: median minutes to the alarm",
+      "frozen": "420",
+      "spike": "0",
+      "level shift": "0",
+      "noise burst": "480",
+      "dropout": "0",
+      "clock 3 h out": "1500"
+     }
+    ]
+   },
+   "detection_named": {
+    "title": "1c. How AtmosGuard names what it detects, and the WEATHER-masking check",
+    "caption": "A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.",
+    "rows": [
+     {
+      "AtmosGuard, injected faults": "raised an alarm (FAULT or SUSPECT)",
+      "frozen": "100%",
+      "spike": "97%",
+      "level shift": "90%",
+      "noise burst": "75%",
+      "dropout": "99%",
+      "clock 3 h out": "80%"
+     },
+     {
+      "AtmosGuard, injected faults": "of which named FAULT",
+      "frozen": "100%",
+      "spike": "11%",
+      "level shift": "13%",
+      "noise burst": "9%",
+      "dropout": "99%",
+      "clock 3 h out": "0%"
+     },
+     {
+      "AtmosGuard, injected faults": "missed, but made some samples look like WEATHER",
+      "frozen": "0%",
+      "spike": "2%",
+      "level shift": "5%",
+      "noise burst": "7%",
+      "dropout": "0%",
+      "clock 3 h out": "12%"
+     }
+    ]
+   },
+   "detection_registered": {
+    "title": "1b. The same, by the criterion registered in the protocol (any alarm in the window)",
+    "caption": "Background false alarms (about 2 % of samples) also fall inside long fault windows, so this flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. Kept because it was registered before the holdout.",
+    "rows": [
+     {
+      "configuration": "AtmosGuard (full)",
+      "frozen": "100%",
+      "spike": "99%",
+      "level shift": "91%",
+      "noise burst": "78%",
+      "dropout": "100%",
+      "clock 3 h out": "80%"
+     },
+     {
+      "configuration": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
+      "frozen": "100%",
+      "spike": "99%",
+      "level shift": "91%",
+      "noise burst": "78%",
+      "dropout": "100%",
+      "clock 3 h out": "80%"
+     },
+     {
+      "configuration": "baseline: range check only",
+      "frozen": "0%",
+      "spike": "11%",
+      "level shift": "13%",
+      "noise burst": "9%",
+      "dropout": "0%",
+      "clock 3 h out": "0%"
+     },
+     {
+      "configuration": "baseline: textbook range + step + persistence",
+      "frozen": "100%",
+      "spike": "75%",
+      "level shift": "90%",
+      "noise burst": "77%",
+      "dropout": "5%",
+      "clock 3 h out": "83%"
+     },
+     {
+      "configuration": "baseline: climatology z-score only",
+      "frozen": "7%",
+      "spike": "5%",
+      "level shift": "5%",
+      "noise burst": "3%",
+      "dropout": "0%",
+      "clock 3 h out": "19%"
+     },
+     {
+      "configuration": "baseline: Isolation Forest only",
+      "frozen": "8%",
+      "spike": "19%",
+      "level shift": "21%",
+      "noise burst": "24%",
+      "dropout": "0%",
+      "clock 3 h out": "52%"
+     },
+     {
+      "configuration": "baseline: Mahalanobis distance only",
+      "frozen": "65%",
+      "spike": "100%",
+      "level shift": "93%",
+      "noise burst": "76%",
+      "dropout": "0%",
+      "clock 3 h out": "54%"
+     },
+     {
+      "configuration": "(faults injected)",
+      "frozen": "1350",
+      "spike": "1350",
+      "level shift": "1350",
+      "noise burst": "1350",
+      "dropout": "1350",
+      "clock 3 h out": "1113"
+     },
+     {
+      "configuration": "AtmosGuard: median minutes to the alarm",
+      "frozen": "420",
+      "spike": "0",
+      "level shift": "0",
+      "noise burst": "480",
+      "dropout": "0",
+      "clock 3 h out": "1440"
+     }
+    ]
+   },
+   "clean": {
+    "title": "2. False alarms on clean real data",
+    "caption": "No fault injected. Extreme-weather windows and NOAA-flagged values removed.",
+    "rows": [
+     {
+      "configuration": "AtmosGuard (full)",
+      "any alarm": "2.0%",
+      "FAULT only": "0.0%",
+      "WEATHER verdicts": "1.3%",
+      "samples": 498994
+     },
+     {
+      "configuration": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
+      "any alarm": "2.0%",
+      "FAULT only": "0.0%",
+      "WEATHER verdicts": "1.3%",
+      "samples": 498994
+     },
+     {
+      "configuration": "baseline: range check only",
+      "any alarm": "0.0%",
+      "FAULT only": "0.0%",
+      "WEATHER verdicts": "-",
+      "samples": 498994
+     },
+     {
+      "configuration": "baseline: textbook range + step + persistence",
+      "any alarm": "2.7%",
+      "FAULT only": "2.7%",
+      "WEATHER verdicts": "-",
+      "samples": 498994
+     },
+     {
+      "configuration": "baseline: climatology z-score only",
+      "any alarm": "0.2%",
+      "FAULT only": "0.0%",
+      "WEATHER verdicts": "-",
+      "samples": 498994
+     },
+     {
+      "configuration": "baseline: Isolation Forest only",
+      "any alarm": "0.5%",
+      "FAULT only": "0.0%",
+      "WEATHER verdicts": "-",
+      "samples": 498994
+     },
+     {
+      "configuration": "baseline: Mahalanobis distance only",
+      "any alarm": "0.5%",
+      "FAULT only": "0.0%",
+      "WEATHER verdicts": "-",
+      "samples": 498994
+     }
+    ]
+   },
+   "extreme_weather": {
+    "title": "3. Real extreme weather (nothing injected)",
+    "caption": "A FAULT here is a failure: real weather called a broken sensor. WEATHER is the escalated, correct verdict.",
+    "rows": [
+     {
+      "configuration": "AtmosGuard (full)",
+      "FAULT": "0.0%",
+      "SUSPECT": "6.2%",
+      "WEATHER": "4.0%",
+      "VALID": "89.7%",
+      "windows with a FAULT": "0/180"
+     },
+     {
+      "configuration": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
+      "FAULT": "0.0%",
+      "SUSPECT": "6.2%",
+      "WEATHER": "4.0%",
+      "VALID": "89.7%",
+      "windows with a FAULT": "0/180"
+     },
+     {
+      "configuration": "baseline: range check only",
+      "FAULT": "0.0%",
+      "SUSPECT": "0.0%",
+      "WEATHER": "-",
+      "VALID": "100.0%",
+      "windows with a FAULT": "0/180"
+     },
+     {
+      "configuration": "baseline: textbook range + step + persistence",
+      "FAULT": "4.2%",
+      "SUSPECT": "0.0%",
+      "WEATHER": "-",
+      "VALID": "95.8%",
+      "windows with a FAULT": "166/180"
+     },
+     {
+      "configuration": "baseline: climatology z-score only",
+      "FAULT": "0.0%",
+      "SUSPECT": "0.8%",
+      "WEATHER": "-",
+      "VALID": "99.2%",
+      "windows with a FAULT": "0/180"
+     },
+     {
+      "configuration": "baseline: Isolation Forest only",
+      "FAULT": "0.0%",
+      "SUSPECT": "2.3%",
+      "WEATHER": "-",
+      "VALID": "97.7%",
+      "windows with a FAULT": "0/180"
+     },
+     {
+      "configuration": "baseline: Mahalanobis distance only",
+      "FAULT": "0.0%",
+      "SUSPECT": "2.4%",
+      "WEATHER": "-",
+      "VALID": "97.6%",
+      "windows with a FAULT": "0/180"
+     }
+    ],
+    "by_kind": [
+     {
+      "kind of extreme weather": "cold",
+      "samples": 3708,
+      "FAULT": "0.0%",
+      "SUSPECT": "11.4%",
+      "WEATHER": "3.5%",
+      "windows with a FAULT": "0/26"
+     },
+     {
+      "kind of extreme weather": "heat",
+      "samples": 5166,
+      "FAULT": "0.0%",
+      "SUSPECT": "3.4%",
+      "WEATHER": "3.8%",
+      "windows with a FAULT": "0/36"
+     },
+     {
+      "kind of extreme weather": "low",
+      "samples": 8258,
+      "FAULT": "0.0%",
+      "SUSPECT": "7.3%",
+      "WEATHER": "4.2%",
+      "windows with a FAULT": "0/58"
+     },
+     {
+      "kind of extreme weather": "sharp",
+      "samples": 5732,
+      "FAULT": "0.0%",
+      "SUSPECT": "3.8%",
+      "WEATHER": "4.4%",
+      "windows with a FAULT": "0/60"
+     }
+    ]
+   },
+   "noaa": {
+    "title": "4. Agreement with NOAA's own quality flags",
+    "caption": "NOAA's flags come from another automated system. Agreement means consistency with existing practice, not proof of real-world accuracy.",
+    "rows": [
+     {
+      "measure": "NOAA-flagged values (suspect or erroneous)",
+      "value": 728
+     },
+     {
+      "measure": "  of which erroneous",
+      "value": 87
+     },
+     {
+      "measure": "AtmosGuard alarmed (FAULT or SUSPECT) on flagged values",
+      "value": "8.1%"
+     },
+     {
+      "measure": "AtmosGuard escalated at all (also WEATHER) on flagged values",
+      "value": "17.4%"
+     },
+     {
+      "measure": "AtmosGuard alarmed on erroneous values",
+      "value": "1.1%"
+     },
+     {
+      "measure": "values NOAA did not flag",
+      "value": 521418
+     },
+     {
+      "measure": "AtmosGuard alarmed on those (extra flags)",
+      "value": "2.2%"
+     },
+     {
+      "measure": "AtmosGuard escalated at all on those",
+      "value": "3.6%"
+     }
+    ]
+   },
+   "drift": {
+    "title": "5. Slow drift, judged by the health monitor",
+    "caption": "A ramp over 45 days is added to one channel of clean real data. Severity = offset at the end of the ramp in multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.",
+    "rows": [
+     {
+      "drift at end of ramp": "none (false claims)",
+      "temperature": "3.3% of 90 chunks",
+      "pressure": "0.0% of 90 chunks",
+      "humidity": "10.0% of 90 chunks"
+     },
+     {
+      "drift at end of ramp": "1x service limit",
+      "temperature": "2% of 90 (day 95, 9.1x at detection)",
+      "pressure": "0% of 90 (-, - at detection)",
+      "humidity": "4% of 90 (day 74, 4.7x at detection)"
+     },
+     {
+      "drift at end of ramp": "2x service limit",
+      "temperature": "2% of 90 (day 95, 10.2x at detection)",
+      "pressure": "0% of 90 (-, - at detection)",
+      "humidity": "8% of 90 (day 63, 6.2x at detection)"
+     },
+     {
+      "drift at end of ramp": "4x service limit",
+      "temperature": "2% of 90 (day 95, 12.4x at detection)",
+      "pressure": "0% of 90 (-, - at detection)",
+      "humidity": "16% of 90 (day 57, 6.6x at detection)"
+     },
+     {
+      "drift at end of ramp": "8x service limit",
+      "temperature": "7% of 90 (day 58, 14.6x at detection)",
+      "pressure": "6% of 90 (day 52, 10.5x at detection)",
+      "humidity": "53% of 90 (day 48, 8.3x at detection)"
+     }
+    ]
+   },
+   "detection_ci": {
+    "title": "1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)",
+    "caption": "Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.",
+    "rows": [
+     {
+      "fault type": "frozen",
+      "injected": 1350,
+      "raised the alarm (fault-raised)": "100.0% (99.7-100.0)",
+      "named FAULT": "99.7% (99.2-99.9)"
+     },
+     {
+      "fault type": "spike",
+      "injected": 1350,
+      "raised the alarm (fault-raised)": "96.7% (95.6-97.5)",
+      "named FAULT": "11.3% (9.8-13.1)"
+     },
+     {
+      "fault type": "level shift",
+      "injected": 1350,
+      "raised the alarm (fault-raised)": "90.4% (88.7-91.8)",
+      "named FAULT": "12.7% (11.1-14.6)"
+     },
+     {
+      "fault type": "noise burst",
+      "injected": 1350,
+      "raised the alarm (fault-raised)": "74.8% (72.4-77.1)",
+      "named FAULT": "8.8% (7.4-10.4)"
+     },
+     {
+      "fault type": "dropout",
+      "injected": 1350,
+      "raised the alarm (fault-raised)": "99.2% (98.5-99.5)",
+      "named FAULT": "99.2% (98.5-99.5)"
+     },
+     {
+      "fault type": "clock 3 h out",
+      "injected": 1113,
+      "raised the alarm (fault-raised)": "79.7% (77.2-82.0)",
+      "named FAULT": "0.3% (0.1-0.8)"
+     }
+    ]
+   },
+   "amendment5": {
+    "title": "The Amendment 5 remedy (freezing-point plateau is a soft flag), judged by the rule registered before the run",
+    "caption": "Adopt only if (a) windows with a FAULT are fewer than with `full` and the FAULT share does not rise, (b) no fault type loses more than 2 points, (c) clean false alarms rise by at most 0.2 points, (d) the SUSPECT share in real weather rises by at most 2 points.",
+    "rows": [
+     {
+      "configuration": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
+      "(a) windows with a FAULT (full / this)": "0 / 0 of 180",
+      "(a) FAULT share (full / this)": "0.00% / 0.00%",
+      "(b) worst change in paired detection": "none",
+      "(c) change in clean false alarms": "+0.00 pp",
+      "(d) SUSPECT share change": "+0.00 pp",
+      "rule (a)": "FAIL",
+      "rule (b)": "pass",
+      "rule (c)": "pass",
+      "rule (d)": "pass",
+      "adopt": "no"
+     }
+    ]
+   },
+   "tradeoff": {
+    "title": "No single simpler system is good at every fault type",
+    "caption": "Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.",
+    "rows": [
+     {
+      "system": "AtmosGuard (full)",
+      "weakest injected-fault type (fault raised the alarm)": "noise burst: 75%",
+      "false alarms on clean data": "2.0%",
+      "real extreme weather, windows with a FAULT": "0/180"
+     },
+     {
+      "system": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
+      "weakest injected-fault type (fault raised the alarm)": "noise burst: 75%",
+      "false alarms on clean data": "2.0%",
+      "real extreme weather, windows with a FAULT": "0/180"
+     },
+     {
+      "system": "baseline: range check only",
+      "weakest injected-fault type (fault raised the alarm)": "frozen: 0%",
+      "false alarms on clean data": "0.0%",
+      "real extreme weather, windows with a FAULT": "0/180"
+     },
+     {
+      "system": "baseline: textbook range + step + persistence",
+      "weakest injected-fault type (fault raised the alarm)": "dropout: 0%",
+      "false alarms on clean data": "2.7%",
+      "real extreme weather, windows with a FAULT": "166/180"
+     },
+     {
+      "system": "baseline: climatology z-score only",
+      "weakest injected-fault type (fault raised the alarm)": "dropout: 0%",
+      "false alarms on clean data": "0.2%",
+      "real extreme weather, windows with a FAULT": "0/180"
+     },
+     {
+      "system": "baseline: Isolation Forest only",
+      "weakest injected-fault type (fault raised the alarm)": "dropout: 0%",
+      "false alarms on clean data": "0.5%",
+      "real extreme weather, windows with a FAULT": "0/180"
+     },
+     {
+      "system": "baseline: Mahalanobis distance only",
+      "weakest injected-fault type (fault raised the alarm)": "dropout: 0%",
+      "false alarms on clean data": "0.5%",
+      "real extreme weather, windows with a FAULT": "0/180"
+     }
+    ]
+   },
+   "by_station": {
+    "title": "By station (full pipeline)",
+    "caption": "Each station judged on its own record.",
+    "rows": [
+     {
+      "station": "GSH",
+      "cadence (min)": 60,
+      "clean any alarm": "1.6%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/12",
+      "extreme weather WEATHER": "3.3%",
+      "injected faults detected": "92%"
+     },
+     {
+      "station": "BFF",
+      "cadence (min)": 60,
+      "clean any alarm": "2.2%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/17",
+      "extreme weather WEATHER": "5.8%",
+      "injected faults detected": "85%"
+     },
+     {
+      "station": "AMW",
+      "cadence (min)": 60,
+      "clean any alarm": "2.3%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/15",
+      "extreme weather WEATHER": "4.9%",
+      "injected faults detected": "93%"
+     },
+     {
+      "station": "MTP",
+      "cadence (min)": 60,
+      "clean any alarm": "1.3%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/13",
+      "extreme weather WEATHER": "3.9%",
+      "injected faults detected": "90%"
+     },
+     {
+      "station": "HLG",
+      "cadence (min)": 60,
+      "clean any alarm": "2.2%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/16",
+      "extreme weather WEATHER": "1.2%",
+      "injected faults detected": "92%"
+     },
+     {
+      "station": "JMS",
+      "cadence (min)": 60,
+      "clean any alarm": "2.4%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/16",
+      "extreme weather WEATHER": "6.4%",
+      "injected faults detected": "92%"
+     },
+     {
+      "station": "EKO",
+      "cadence (min)": 60,
+      "clean any alarm": "2.2%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/14",
+      "extreme weather WEATHER": "4.7%",
+      "injected faults detected": "89%"
+     },
+     {
+      "station": "OWD",
+      "cadence (min)": 60,
+      "clean any alarm": "1.7%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/14",
+      "extreme weather WEATHER": "3.8%",
+      "injected faults detected": "91%"
+     },
+     {
+      "station": "BTV",
+      "cadence (min)": 60,
+      "clean any alarm": "1.6%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/13",
+      "extreme weather WEATHER": "3.8%",
+      "injected faults detected": "91%"
+     },
+     {
+      "station": "BRD",
+      "cadence (min)": 60,
+      "clean any alarm": "1.9%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/18",
+      "extreme weather WEATHER": "5.7%",
+      "injected faults detected": "89%"
+     },
+     {
+      "station": "BMI",
+      "cadence (min)": 60,
+      "clean any alarm": "1.9%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/15",
+      "extreme weather WEATHER": "2.0%",
+      "injected faults detected": "90%"
+     },
+     {
+      "station": "MIE",
+      "cadence (min)": 60,
+      "clean any alarm": "2.2%",
+      "clean FAULT": "0.0%",
+      "extreme weather FAULT": "0.0%",
+      "windows with a FAULT": "0/17",
+      "extreme weather WEATHER": "2.4%",
+      "injected faults detected": "92%"
+     }
+    ]
+   }
   }
  },
  "sensitivity": {

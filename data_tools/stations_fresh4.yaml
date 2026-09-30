@@ -1,0 +1,19 @@
+# The FRESH4 stations (Amendment 5): twelve northern US airport stations, hourly routine METAR (reported at :53 or similar, so `any_minute`), whole degrees, winters with freezing
+# rain and wet snow. Chosen to test a freezing-point remedy on stations nobody has looked at. Selection rule fixed before any verdict: a seeded random sample (seed 11) of 40 US
+# stations north of 40 N with K-prefixed ICAO codes and data in 2016 and 2024, not used in any earlier set; kept if at least 60 % of expected hourly reports carry temperature,
+# dew point and pressure in both the training years (2016-2019) and the test years (2020-2024) and the median gap is 50-70 minutes; stations carrying a duplicate report stream
+# (coverage above 120 %) were dropped; the first twelve in list order were taken. Source: NOAA ISD.
+years: {first: 2016, last: 2024}
+stations:
+  GSH: {file: '72438814829', name: Goshen Municipal Airport, lat: 41.527, lon: -85.787, elevation_m: 251.2, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  BFF: {file: '72566024028', name: Western Ne Regional/Heilig Field Ap, lat: 41.875, lon: -103.601, elevation_m: 1206.0, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  AMW: {file: '72547294989', name: Ames Municipal Airport, lat: 41.99, lon: -93.619, elevation_m: 281.5, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  MTP: {file: '72501454780', name: Montauk Airport, lat: 41.073, lon: -71.924, elevation_m: 2.0, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  HLG: {file: '72427514894', name: Wheeling Ohio County Arpt, lat: 40.17, lon: -80.644, elevation_m: 364.3, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  JMS: {file: '72753514919', name: Jamestown Regional Airport, lat: 46.926, lon: -98.67, elevation_m: 455.7, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  EKO: {file: '72582524121', name: Elko Regional Airport, lat: 40.824, lon: -115.786, elevation_m: 1540.5, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  OWD: {file: '72509854704', name: Norwood Memorial Airport, lat: 42.191, lon: -71.173, elevation_m: 13.0, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  BTV: {file: '72617014742', name: Burlington International Airport, lat: 44.468, lon: -73.15, elevation_m: 101.1, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  BRD: {file: '72655594938', name: Brainerd Lakes Rgnl Arpt, lat: 46.402, lon: -94.127, elevation_m: 372.5, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  BMI: {file: '72439754831', name: Central Illinois Regional Airport, lat: 40.483, lon: -88.95, elevation_m: 263.7, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}
+  MIE: {file: '72533694895', name: Delaware Co-Johnson Fd Apt, lat: 40.235, lon: -85.394, elevation_m: 285.2, climate_zone: 'northern US, freezing winters', source: metar, cadence_minutes: 60, any_minute: true}

@@ -20,7 +20,8 @@ OUT_PDF = REPO / "docs" / "AtmosGuard_one_page.pdf"
 PHASES = (("DEV", "DEV", "6 stations, 2020-21, tuned here"), ("HOLDOUT_TIME", "Holdout in time", "same 6, 2022-24"),
           ("HOLDOUT_SPACE", "Holdout in space", "8 unseen stations"), ("FRESH", "Fresh stations", "12 more, sealed first"),
           ("FRESH2", "Fresh 2", "12 more: 5 airports, 7 AWS"),
-          ("FRESH3", "Fresh 3", "12 more: 7 US 20-min, 5 AWS"))
+          ("FRESH3", "Fresh 3", "12 more: 7 US 20-min, 5 AWS"),
+          ("FRESH4", "Fresh 4", "12 more: northern US, freezing winters"))
 REPO_URL = "github.com/Mahim56207/ATMOSGUARD"
 
 
@@ -108,7 +109,7 @@ footer {{ margin-top:auto; border-top:1px solid var(--line); padding-top:1.6mm; 
   <section>
     <h2>How we know (no new algorithm claimed)</h2>
     <ul>
-      <li>50 real stations (NOAA ISD, 2016-24): 31 Indian airports, 12 Australian automatic weather stations, 7 US automated stations reporting every 20 minutes; cyclones, heat and cold waves, outflows.</li>
+      <li>62 real stations (NOAA ISD, 2016-24): 31 Indian airports, 12 US northern airports, 12 Australian automatic weather stations, 7 US automated stations reporting every 20 minutes; cyclones, heat and cold waves, outflows.</li>
       <li>Protocol committed first; holdout sealed in time and space, run once, lock file.</li>
       <li>The holdout showed failures: we registered a rule, sealed 12 more stations, ran once: one remedy adopted, one rejected.</li>
       <li>Baselines and an ablation on the same data; NOAA's own flags; one command per result.</li>

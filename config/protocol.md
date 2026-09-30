@@ -331,3 +331,46 @@ that the FRESH2 false-alarm finding is a property of the irregular training reco
 - Alice Springs, sharp-change and low-pressure windows around 3-4 August 2020: at night the temperature goes from 5.9 C to 18.4 C in one hour (+12.5 C, then +15 C over two hours by the next reading) with pressure smooth and humidity falling from 31 % to 23 %.
   Either a real warm downslope wind or a sensor step; the data cannot say which. The pipeline called it a single-channel jump against the 10 C step cap. It is the same cause, a fixed step cap meeting a fast real (or ambiguous) change, that Amendment 3's
   remedy addresses; here the daily cycle explains none of it, because it happened in the middle of the night.
+
+## Amendment 5 (written before the FRESH4 stations were evaluated)
+FRESH3 showed a failure of a new kind: at Fitch H Beach and La Porte, in the January 2024 US cold outbreak, temperature sat at exactly 0 C (or -1 C) for 520-560 minutes in humid air (freezing rain and wet snow hold the air at
+the freezing point), and the frozen rule called it a stuck sensor (`FAULT`) in three real extreme-weather windows. This amendment tests a remedy on twelve stations nobody has looked at. `evaluate_real.py --fresh4` refuses to run
+unless this amendment is in the committed protocol (guard `evaluate.guard_fresh4`, lock `data/fresh4/.fresh4_used`); `replay.py` and `/datasets` refuse `data/fresh4/`.
+
+**The stations** (`data_tools/stations_fresh4.yaml`, files committed with this amendment): twelve northern US airport stations (Goshen IN, Scottsbluff NE, Ames IA, Montauk NY, Wheeling WV, Jamestown ND, Elko NV, Norwood MA, Burlington VT,
+Brainerd MN, Bloomington-Normal IL, Muncie IN), hourly routine METAR (reported at :53 or similar; `any_minute`, duplicates dropped as before), whole degrees. Rule fixed before any verdict: a seeded random sample (seed 11) of 40 US stations
+north of 40 N with K-prefixed ICAO codes and data in 2016 and 2024, not used in any earlier set, kept if at least 60 % of expected hourly reports carry temperature, dew point and pressure in both the training and the test years and the median gap is
+50-70 minutes; stations with a duplicate report stream (coverage above 120 %) were dropped; the first twelve in list order were taken.
+
+**The remedy (`health.frozen.freezing_aware`, remedy 7).** A frozen temperature or humidity is a `SOFT` flag at most when, over the whole window, the temperature stayed within 1.0 C of 0 C while humidity was at least 85 %. A frozen barometer is never
+softened. Same pattern as remedy 1 (saturation). Off by default and forced off in every earlier configuration.
+
+**Configurations** (phase `FRESH4`): `full` (the pipeline as shipped), `r7_freezing`, and the five baselines.
+
+**Decision rule, registered now.** Adopted only if, pooled over the twelve stations: (a) real extreme-weather windows with a `FAULT` are fewer than with `full` and the `FAULT` share of those samples is not higher; (b) no injected-fault type's paired
+detection is lower than with `full` by more than 2 points; (c) clean false alarms rise by at most 0.2 points; (d) the `SUSPECT` share in real extreme weather rises by at most 2 points. A stuck thermometer at 0 C in humid air would become a `SUSPECT`
+instead of a `FAULT` until something else flags it, and we say so. Otherwise it is reported as tested and rejected. Reported whatever happens: every table, per station.
+
+**What this is not.** Injected faults, airport METAR, whole degrees, hourly. It tests one mechanism.
+
+## Amendment 5: outcome (written after `fresh4_run1` finished; nothing was changed to make it come out this way)
+`results/fresh4_run1.*` was produced by the run behind the guard (lock `data/fresh4/.fresh4_used`, protocol commit `7fcbf32`, 12 stations, about 25 minutes on 4 workers). The first process died before writing any output and before anything was looked at;
+it was started again with `--force-rerun-holdout`, which the guard allows because the evaluation is deterministic (see the determinism checks in `results/RUNS.md`). Nothing was seen between the two.
+
+**The decision rule, applied by `make_summary.py` (`amendment5_rows`):**
+
+| | (a) windows with a FAULT (full / this, of 180) | (a) FAULT share | (b) worst change in paired detection | (c) change in clean false alarms | (d) SUSPECT share | adopt |
+|---|---|---|---|---|---|---|
+| remedy 7, freezing-point plateau is a soft flag | 0 / 0 | 0.00 % / 0.00 % | none | +0.00 pp | +0.00 pp | **no** (rule a) |
+
+**Decision.** By the rule registered first the remedy is **not adopted**, and the reason is not that it did harm: it changed nothing. On these twelve stations (Indiana to North Dakota to Nevada, winters 2020-2024) the pipeline as shipped
+raised **no `FAULT` in any of the 180 real extreme-weather windows** (cold windows 0 of 26), so there was no stuck-thermometer-at-zero case for the remedy to rescue, and rule (a) asks for strictly fewer. Every number in every table is identical
+between `full` and `r7_freezing`. We read this as: the FRESH3 failure (three windows at two stations of 103, both on the Great Lakes in one January 2024 outbreak, with 20-minute reports that hold the same whole reading for hours) is real but rare, and this
+set did not reproduce it; it neither confirms nor refutes the remedy. The flag stays in the code, off, with its tests; the limit stays listed as open: *a stretch of air held at the freezing point by freezing rain can still be read as a stuck
+thermometer*. We did not widen the test until it passed.
+
+**What FRESH4 shows about the shipped pipeline (reported whatever the decision):** clean false alarms 2.0 % of 498,994 samples (FAULT 0.0 %; per station 1.3 % to 2.4 %); real extreme weather `FAULT` 0.0 %, `SUSPECT` 6.2 %, `WEATHER` 4.0 % of the samples in the 180 windows
+(cold 11.4 % `SUSPECT`, the highest kind); injected faults raised the alarm (paired): frozen 100 %, spike 96.7 %, level shift 90.4 %, noise burst 74.8 %, dropout 99.2 %, clock 79.7 %; NOAA-flagged values escalated 17.4 %, alarmed on 8.1 %
+(on 1.1 % of the 87 NOAA-erroneous ones: a small count, and NOAA flags are not truth); the textbook range + step + persistence baseline raised a `FAULT` in 166 of 180 real windows against 0 for the pipeline. This is the **fifth** unseen set. Its clean false-alarm rate (2.0 %) sits in the band of the earlier sets on hourly and 20-minute stations (1.9 % DEV, 2.5 % holdout in space, 2.5 % FRESH, 2.9 % holdout in time; FRESH2 was 9.3 % because of its irregular training records); noise-burst (74.8 %) and clock-shift (79.7 %) detection on
+hourly whole-degree stations are the weakest rows again and are stated as such. Slow-drift detection is also weak on these winter stations (temperature 2.2 % to 6.7 % at 1x to 8x the service limit, humidity 4 % to 53 %); that test is not part of any decision rule.
+On clean data with no drift injected, 0.4 % of 19,527 station-days claimed significant drift.
