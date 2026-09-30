@@ -44,7 +44,7 @@ frozen barometer; that was a real bug real data found and we fixed it.
 
 ## Novelty
 **Is this just Isolation Forest plus rules, like the other teams?** The techniques are standard and we say so
-(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (50 real stations (31 Indian airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes), a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, run once with the
+(`docs/NOVELTY_AND_PRIOR_ART.md`). The difference is the evidence (62 real stations (31 Indian airports, 12 US northern airports, 12 Australian automatic weather stations and 7 US automated stations reporting every 20 minutes), a holdout sealed in time and space, twelve fresh stations tested against a rule registered first, run once with the
 protocol committed first, baselines and an ablation on the same data, false alarms on real cyclones) and honest engineering results
 (learned limits, the graded frozen flag, the isolated-trend drift rule, the quiet-channel fix). In the ablation the Isolation Forest earns
 almost nothing; the Mahalanobis layer does the work, and we kept the forest because the problem statement lists it.
@@ -74,6 +74,8 @@ The tables, the rule and the three windows that still get a FAULT are all in the
 first (Amendment 3): judge only the part of a change that the station's own daily cycle does not explain. It was tested once on a third set of twelve stations nobody had looked at
 (five Indian airports and seven Australian automatic weather stations). By the rule it is adopted: windows with a `FAULT` 4 to 1 of 134, nothing else moves. A second Amendment 3 remedy
 (a sustained one-channel offset) missed its target (+1 point of level-shift detection against +5 required, clean false alarms +0.48 points) and is rejected.
+
+**Freezing rain held a thermometer at 0 C and you called it a stuck sensor. Did you fix it?** No, and we say so. It happened in 3 of 103 real-weather windows at two Great Lakes stations in January 2024. We registered a remedy (a frozen temperature near 0 C in humid air is a soft flag, never a frozen barometer) and tested it on twelve northern US airports nobody had looked at. Those stations raised no FAULT in any of 180 real extreme-weather windows, so the remedy changed no number and the rule written first (strictly fewer windows with a FAULT) says not adopted. It is still an open limit.
 
 **Did you test anything faster than hourly?** Yes, in the fourth sealed set: seven US automated stations that report every 20 minutes at 0.1 C. With the pipeline as shipped and no station-specific tuning: 2.7 % false alarms on clean data, 94-100 % of injected faults detected by type, real extreme weather with a FAULT in 3 of 103 windows (all freezing-rain plateaus at 0 C). It is 20 minutes, not the 1-15 minutes of a typical AWS, and we say so.
 

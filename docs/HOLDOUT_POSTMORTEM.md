@@ -57,3 +57,8 @@ Twelve more stations (seven US automated stations reporting every 20 minutes at 
 false alarms from 45.4 % to 1.8 % and cost 6 points of noise-burst detection, so by the rule registered first it is **rejected** (kept as an operator's option, `refit.py --complete`). The fourth set also produced five more real-weather windows with a `FAULT`
 (5 of 160): temperature pinned at 0 C for about nine hours in freezing rain (Fitch H Beach and La Porte, January 2024), and a +12.5 C night-time jump at Alice Springs. The freezing-point plateau is the same kind of cause as the saturated humidity of the first
 post-mortem, and would need its own registered remedy and another unseen set. Details: Amendment 4 and its outcome in `config/protocol.md`.
+
+## And a fifth set (Amendment 5)
+A freezing-point remedy (a frozen temperature or humidity near 0 C in humid air is a soft flag) was registered and tested on twelve northern US airport stations nobody had looked at. The pipeline as shipped raised **no `FAULT` in any of their 180
+real extreme-weather windows** (cold windows 0 of 26), clean false alarms were 2.0 % and the remedy changed no number at all, so rule (a), which needs strictly fewer windows with a `FAULT`, failed and the remedy is **not adopted**. The FRESH3 case is real but rare (two stations
+in one January 2024 outbreak) and this set did not reproduce it; the test neither confirms nor refutes the remedy, and the limit stays open. Details: Amendment 5 and its outcome in `config/protocol.md`.

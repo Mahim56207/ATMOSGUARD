@@ -352,3 +352,25 @@ detection is lower than with `full` by more than 2 points; (c) clean false alarm
 instead of a `FAULT` until something else flags it, and we say so. Otherwise it is reported as tested and rejected. Reported whatever happens: every table, per station.
 
 **What this is not.** Injected faults, airport METAR, whole degrees, hourly. It tests one mechanism.
+
+## Amendment 5: outcome (written after `fresh4_run1` finished; nothing was changed to make it come out this way)
+`results/fresh4_run1.*` was produced by the run behind the guard (lock `data/fresh4/.fresh4_used`, protocol commit `7fcbf32`, 12 stations, about 25 minutes on 4 workers). The first process died before writing any output and before anything was looked at;
+it was started again with `--force-rerun-holdout`, which the guard allows because the evaluation is deterministic (see the determinism checks in `results/RUNS.md`). Nothing was seen between the two.
+
+**The decision rule, applied by `make_summary.py` (`amendment5_rows`):**
+
+| | (a) windows with a FAULT (full / this, of 180) | (a) FAULT share | (b) worst change in paired detection | (c) change in clean false alarms | (d) SUSPECT share | adopt |
+|---|---|---|---|---|---|---|
+| remedy 7, freezing-point plateau is a soft flag | 0 / 0 | 0.00 % / 0.00 % | none | +0.00 pp | +0.00 pp | **no** (rule a) |
+
+**Decision.** By the rule registered first the remedy is **not adopted**, and the reason is not that it did harm: it changed nothing. On these twelve stations (Indiana to North Dakota to Nevada, winters 2020-2024) the pipeline as shipped
+raised **no `FAULT` in any of the 180 real extreme-weather windows** (cold windows 0 of 26), so there was no stuck-thermometer-at-zero case for the remedy to rescue, and rule (a) asks for strictly fewer. Every number in every table is identical
+between `full` and `r7_freezing`. We read this as: the FRESH3 failure (three windows at two stations of 103, both on the Great Lakes in one January 2024 outbreak, with 20-minute reports that hold the same whole reading for hours) is real but rare, and this
+set did not reproduce it; it neither confirms nor refutes the remedy. The flag stays in the code, off, with its tests; the limit stays listed as open: *a stretch of air held at the freezing point by freezing rain can still be read as a stuck
+thermometer*. We did not widen the test until it passed.
+
+**What FRESH4 shows about the shipped pipeline (reported whatever the decision):** clean false alarms 2.0 % of 498,994 samples (FAULT 0.0 %; per station 1.3 % to 2.4 %); real extreme weather `FAULT` 0.0 %, `SUSPECT` 6.2 %, `WEATHER` 4.0 % of the samples in the 180 windows
+(cold 11.4 % `SUSPECT`, the highest kind); injected faults raised the alarm (paired): frozen 100 %, spike 96.7 %, level shift 90.4 %, noise burst 74.8 %, dropout 99.2 %, clock 79.7 %; NOAA-flagged values escalated 17.4 %, alarmed on 8.1 %
+(on 1.1 % of the 87 NOAA-erroneous ones: a small count, and NOAA flags are not truth); the textbook range + step + persistence baseline raised a `FAULT` in 166 of 180 real windows against 0 for the pipeline. This is the **fifth** unseen set. Its clean false-alarm rate (2.0 %) sits in the band of the earlier sets on hourly and 20-minute stations (1.9 % DEV, 2.5 % holdout in space, 2.5 % FRESH, 2.9 % holdout in time; FRESH2 was 9.3 % because of its irregular training records); noise-burst (74.8 %) and clock-shift (79.7 %) detection on
+hourly whole-degree stations are the weakest rows again and are stated as such. Slow-drift detection is also weak on these winter stations (temperature 2.2 % to 6.7 % at 1x to 8x the service limit, humidity 4 % to 53 %); that test is not part of any decision rule.
+On clean data with no drift injected, 0.4 % of 19,527 station-days claimed significant drift.

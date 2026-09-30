@@ -1858,6 +1858,182 @@ Each station judged on its own record.
 | LRM | 60 | 49.3% | 0.0% | 0.0% | 0/8 | 0.8% | 86% |
 | BRM | 60 | 42.7% | 0.0% | 0.0% | 0/9 | 2.9% | 85% |
 
+## FRESH4: a fifth set of twelve northern US stations with freezing winters, 2020-2024
+
+*Chosen and sealed before the Amendment 5 freezing-point remedy was tested (config/protocol.md). Hourly airport METAR, whole degrees.*  Stations: GSH, BFF, AMW, MTP, HLG, JMS, EKO, OWD, BTV, BRD, BMI, MIE.
+
+### Headline
+
+Five separate numbers. They are never merged.
+
+| question | answer |
+|---|---|
+| False alarms on clean real data (nothing injected) | 2.0% (1.9-2.0) of 498994 samples got FAULT or SUSPECT; 0.0% (0.0-0.0) got FAULT |
+| What happens to real extreme weather (cyclones, heat, cold, sharp fronts; nothing injected) | FAULT on 0.0% (0.0-0.0) of 22864 samples (0 of 180 windows); WEATHER on 4.0%, SUSPECT on 6.2% |
+| Injected faults whose alarm the fault raised (each type on its own; injected, not real) | frozen 100%; spike 97%; level shift 90%; noise burst 75%; dropout 99%; clock 3 h out 80% |
+| Agreement with NOAA's own quality flags (another automated system, not ground truth) | escalated (FAULT, SUSPECT or WEATHER) on 17.4% of 728 NOAA-flagged values (FAULT or SUSPECT alone: 8.1%); escalated on 3.6% of the 521418 values NOAA left alone |
+| Slow drift (health monitor, single station, no reference) | false drift claims on 0.4% of 19527 station-days; an injected ramp reaching 8x the service limit was found in 22% of trials |
+
+### 1. Detection of injected faults, by type (the fault raised the alarm)
+
+Alarm = FAULT or SUSPECT on a sample that was NOT an alarm on the same series without the fault (paired), from the first faulty sample to the last plus 60 minutes. The faults are injected, not real. Ablation rows switch one layer off; baseline rows are simpler systems on the same data.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 97% | 90% | 75% | 99% | 80% |
+| AtmosGuard + remedy 7 (freezing-point plateau is a soft flag) | 100% | 97% | 90% | 75% | 99% | 80% |
+| baseline: range check only | 0% | 11% | 13% | 9% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 73% | 83% | 64% | 0% | 82% |
+| baseline: climatology z-score only | 6% | 5% | 5% | 2% | 0% | 18% |
+| baseline: Isolation Forest only | 5% | 18% | 15% | 20% | 0% | 52% |
+| baseline: Mahalanobis distance only | 61% | 100% | 93% | 75% | 0% | 54% |
+| (faults injected) | 1350 | 1350 | 1350 | 1350 | 1350 | 1113 |
+| AtmosGuard: median minutes to the alarm | 420 | 0 | 0 | 480 | 0 | 1500 |
+
+### 1d. How sure are the detection numbers? (AtmosGuard full, paired criterion, Wilson 95 % interval)
+
+Faults are injected at random places; each row's interval says how much the percentage could move with another draw of the same size. Faults of one type overlap little but are not fully independent, so read the interval as a guide, not a guarantee.
+
+| fault type | injected | raised the alarm (fault-raised) | named FAULT |
+|---|---|---|---|
+| frozen | 1350 | 100.0% (99.7-100.0) | 99.7% (99.2-99.9) |
+| spike | 1350 | 96.7% (95.6-97.5) | 11.3% (9.8-13.1) |
+| level shift | 1350 | 90.4% (88.7-91.8) | 12.7% (11.1-14.6) |
+| noise burst | 1350 | 74.8% (72.4-77.1) | 8.8% (7.4-10.4) |
+| dropout | 1350 | 99.2% (98.5-99.5) | 99.2% (98.5-99.5) |
+| clock 3 h out | 1113 | 79.7% (77.2-82.0) | 0.3% (0.1-0.8) |
+
+### 1c. How AtmosGuard names what it detects, and the WEATHER-masking check
+
+A FAULT verdict names the problem; SUSPECT asks for review. The last row is the risk of the coherent-level WEATHER route: a fault that was not alarmed but made samples look like real weather.
+
+| AtmosGuard, injected faults | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| raised an alarm (FAULT or SUSPECT) | 100% | 97% | 90% | 75% | 99% | 80% |
+| of which named FAULT | 100% | 11% | 13% | 9% | 99% | 0% |
+| missed, but made some samples look like WEATHER | 0% | 2% | 5% | 7% | 0% | 12% |
+
+### 1b. The same, by the criterion registered in the protocol (any alarm in the window)
+
+Background false alarms (about 2 % of samples) also fall inside long fault windows, so this flatters long faults (frozen 48 h, clock shift 4 days) and every system, baselines included. Kept because it was registered before the holdout.
+
+| configuration | frozen | spike | level shift | noise burst | dropout | clock 3 h out |
+|---|---|---|---|---|---|---|
+| AtmosGuard (full) | 100% | 99% | 91% | 78% | 100% | 80% |
+| AtmosGuard + remedy 7 (freezing-point plateau is a soft flag) | 100% | 99% | 91% | 78% | 100% | 80% |
+| baseline: range check only | 0% | 11% | 13% | 9% | 0% | 0% |
+| baseline: textbook range + step + persistence | 100% | 75% | 90% | 77% | 5% | 83% |
+| baseline: climatology z-score only | 7% | 5% | 5% | 3% | 0% | 19% |
+| baseline: Isolation Forest only | 8% | 19% | 21% | 24% | 0% | 52% |
+| baseline: Mahalanobis distance only | 65% | 100% | 93% | 76% | 0% | 54% |
+| (faults injected) | 1350 | 1350 | 1350 | 1350 | 1350 | 1113 |
+| AtmosGuard: median minutes to the alarm | 420 | 0 | 0 | 480 | 0 | 1440 |
+
+### No single simpler system is good at every fault type
+
+Each system's weakest fault type from table 1, beside its false-alarm rate and its record on real extreme weather. A system that is best at one fault type is blind to another; the layers exist for coverage, and the WEATHER verdict exists so that coverage does not cost real storms.
+
+| system | weakest injected-fault type (fault raised the alarm) | false alarms on clean data | real extreme weather, windows with a FAULT |
+|---|---|---|---|
+| AtmosGuard (full) | noise burst: 75% | 2.0% | 0/180 |
+| AtmosGuard + remedy 7 (freezing-point plateau is a soft flag) | noise burst: 75% | 2.0% | 0/180 |
+| baseline: range check only | frozen: 0% | 0.0% | 0/180 |
+| baseline: textbook range + step + persistence | dropout: 0% | 2.7% | 166/180 |
+| baseline: climatology z-score only | dropout: 0% | 0.2% | 0/180 |
+| baseline: Isolation Forest only | dropout: 0% | 0.5% | 0/180 |
+| baseline: Mahalanobis distance only | dropout: 0% | 0.5% | 0/180 |
+
+### The Amendment 5 remedy (freezing-point plateau is a soft flag), judged by the rule registered before the run
+
+Adopt only if (a) windows with a FAULT are fewer than with `full` and the FAULT share does not rise, (b) no fault type loses more than 2 points, (c) clean false alarms rise by at most 0.2 points, (d) the SUSPECT share in real weather rises by at most 2 points.
+
+| configuration | (a) windows with a FAULT (full / this) | (a) FAULT share (full / this) | (b) worst change in paired detection | (c) change in clean false alarms | (d) SUSPECT share change | rule (a) | rule (b) | rule (c) | rule (d) | adopt |
+|---|---|---|---|---|---|---|---|---|---|---|
+| AtmosGuard + remedy 7 (freezing-point plateau is a soft flag) | 0 / 0 of 180 | 0.00% / 0.00% | none | +0.00 pp | +0.00 pp | FAIL | pass | pass | pass | no |
+
+### 2. False alarms on clean real data
+
+No fault injected. Extreme-weather windows and NOAA-flagged values removed.
+
+| configuration | any alarm | FAULT only | WEATHER verdicts | samples |
+|---|---|---|---|---|
+| AtmosGuard (full) | 2.0% | 0.0% | 1.3% | 498994 |
+| AtmosGuard + remedy 7 (freezing-point plateau is a soft flag) | 2.0% | 0.0% | 1.3% | 498994 |
+| baseline: range check only | 0.0% | 0.0% | - | 498994 |
+| baseline: textbook range + step + persistence | 2.7% | 2.7% | - | 498994 |
+| baseline: climatology z-score only | 0.2% | 0.0% | - | 498994 |
+| baseline: Isolation Forest only | 0.5% | 0.0% | - | 498994 |
+| baseline: Mahalanobis distance only | 0.5% | 0.0% | - | 498994 |
+
+### 3. Real extreme weather (nothing injected)
+
+A FAULT here is a failure: real weather called a broken sensor. WEATHER is the escalated, correct verdict.
+
+| configuration | FAULT | SUSPECT | WEATHER | VALID | windows with a FAULT |
+|---|---|---|---|---|---|
+| AtmosGuard (full) | 0.0% | 6.2% | 4.0% | 89.7% | 0/180 |
+| AtmosGuard + remedy 7 (freezing-point plateau is a soft flag) | 0.0% | 6.2% | 4.0% | 89.7% | 0/180 |
+| baseline: range check only | 0.0% | 0.0% | - | 100.0% | 0/180 |
+| baseline: textbook range + step + persistence | 4.2% | 0.0% | - | 95.8% | 166/180 |
+| baseline: climatology z-score only | 0.0% | 0.8% | - | 99.2% | 0/180 |
+| baseline: Isolation Forest only | 0.0% | 2.3% | - | 97.7% | 0/180 |
+| baseline: Mahalanobis distance only | 0.0% | 2.4% | - | 97.6% | 0/180 |
+
+Full pipeline, by kind of extreme weather:
+
+| kind of extreme weather | samples | FAULT | SUSPECT | WEATHER | windows with a FAULT |
+|---|---|---|---|---|---|
+| cold | 3708 | 0.0% | 11.4% | 3.5% | 0/26 |
+| heat | 5166 | 0.0% | 3.4% | 3.8% | 0/36 |
+| low | 8258 | 0.0% | 7.3% | 4.2% | 0/58 |
+| sharp | 5732 | 0.0% | 3.8% | 4.4% | 0/60 |
+
+### 4. Agreement with NOAA's own quality flags
+
+NOAA's flags come from another automated system. Agreement means consistency with existing practice, not proof of real-world accuracy.
+
+| measure | value |
+|---|---|
+| NOAA-flagged values (suspect or erroneous) | 728 |
+|   of which erroneous | 87 |
+| AtmosGuard alarmed (FAULT or SUSPECT) on flagged values | 8.1% |
+| AtmosGuard escalated at all (also WEATHER) on flagged values | 17.4% |
+| AtmosGuard alarmed on erroneous values | 1.1% |
+| values NOAA did not flag | 521418 |
+| AtmosGuard alarmed on those (extra flags) | 2.2% |
+| AtmosGuard escalated at all on those | 3.6% |
+
+### 5. Slow drift, judged by the health monitor
+
+A ramp over 45 days is added to one channel of clean real data. Severity = offset at the end of the ramp in multiples of the service limit (T 0.5 C, P 1 hPa, RH 3 %). One station, no reference: small drifts cannot be told from weather.
+
+| drift at end of ramp | temperature | pressure | humidity |
+|---|---|---|---|
+| none (false claims) | 3.3% of 90 chunks | 0.0% of 90 chunks | 10.0% of 90 chunks |
+| 1x service limit | 2% of 90 (day 95, 9.1x at detection) | 0% of 90 (-, - at detection) | 4% of 90 (day 74, 4.7x at detection) |
+| 2x service limit | 2% of 90 (day 95, 10.2x at detection) | 0% of 90 (-, - at detection) | 8% of 90 (day 63, 6.2x at detection) |
+| 4x service limit | 2% of 90 (day 95, 12.4x at detection) | 0% of 90 (-, - at detection) | 16% of 90 (day 57, 6.6x at detection) |
+| 8x service limit | 7% of 90 (day 58, 14.6x at detection) | 6% of 90 (day 52, 10.5x at detection) | 53% of 90 (day 48, 8.3x at detection) |
+
+### By station (full pipeline)
+
+Each station judged on its own record.
+
+| station | cadence (min) | clean any alarm | clean FAULT | extreme weather FAULT | windows with a FAULT | extreme weather WEATHER | injected faults detected |
+|---|---|---|---|---|---|---|---|
+| GSH | 60 | 1.6% | 0.0% | 0.0% | 0/12 | 3.3% | 92% |
+| BFF | 60 | 2.2% | 0.0% | 0.0% | 0/17 | 5.8% | 85% |
+| AMW | 60 | 2.3% | 0.0% | 0.0% | 0/15 | 4.9% | 93% |
+| MTP | 60 | 1.3% | 0.0% | 0.0% | 0/13 | 3.9% | 90% |
+| HLG | 60 | 2.2% | 0.0% | 0.0% | 0/16 | 1.2% | 92% |
+| JMS | 60 | 2.4% | 0.0% | 0.0% | 0/16 | 6.4% | 92% |
+| EKO | 60 | 2.2% | 0.0% | 0.0% | 0/14 | 4.7% | 89% |
+| OWD | 60 | 1.7% | 0.0% | 0.0% | 0/14 | 3.8% | 91% |
+| BTV | 60 | 1.6% | 0.0% | 0.0% | 0/13 | 3.8% | 91% |
+| BRD | 60 | 1.9% | 0.0% | 0.0% | 0/18 | 5.7% | 89% |
+| BMI | 60 | 1.9% | 0.0% | 0.0% | 0/15 | 2.0% | 90% |
+| MIE | 60 | 2.2% | 0.0% | 0.0% | 0/17 | 2.4% | 92% |
+
 ## How big must a fault be? (DEV, injected)
 
 How big must a fault be? Spikes, level shifts and noise bursts of 0.25 to 4 times the configured size, injected into clean real data of the six DEV stations (the tuning set, so an envelope study and not a held-out result). A detection is an alarm the fault itself raised. The 1x row is a separate random draw (two faults of each type per series, one round), so it is close to but not identical with the main table.
