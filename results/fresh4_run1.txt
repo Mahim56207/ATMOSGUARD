@@ -1,0 +1,1 @@
+Re-running the FRESH4 evaluation to reproduce it. The first run is recorded in /home/user/ATMOSGUARD/data/fresh4/.fresh4_used.
