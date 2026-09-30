@@ -332,7 +332,7 @@ def create_app(store: Optional[Store] = None, settings: Optional[dict] = None,
         """CSV files under the data folder that /replay may play (never data/holdout or data/fresh)."""
         root = replay_module.data_root(settings)
         files = sorted(str(p.relative_to(root.parent)) for p in root.rglob("*.csv")
-                       if not {"holdout", "fresh", "fresh2", "fresh3", "fresh4"} & set(p.relative_to(root).parts))
+                       if not {"holdout", "fresh", "fresh2", "fresh3", "fresh4", "fresh5"} & set(p.relative_to(root).parts))
         return {"datasets": files}
 
     @app.get("/metrics")

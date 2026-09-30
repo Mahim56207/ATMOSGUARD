@@ -299,7 +299,7 @@ def test_fresh4_guard_needs_amendment_5(cfg, repo, tmp_path):
 
 def test_replay_refuses_the_fresh_folder_like_the_holdout(cfg, tmp_path):
     import replay
-    for sealed in ("holdout", "fresh", "fresh2", "fresh3", "fresh4"):
+    for sealed in ("holdout", "fresh", "fresh2", "fresh3", "fresh4", "fresh5"):
         with pytest.raises(ValueError, match="Replay will not read it"):
             replay.check_path(tmp_path / "data" / sealed / "x.csv", cfg)
     replay.check_path(tmp_path / "data" / "fresh" / "x.csv", cfg, allow_holdout=True)      # the evaluation, behind its guard

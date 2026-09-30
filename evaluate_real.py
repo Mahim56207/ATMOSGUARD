@@ -57,6 +57,8 @@ REAL_FRESH3_DIR = REPO / "data" / "fresh3" / "real"
 FRESH3_EVENTS_JSON = REPO / "data" / "fresh3" / "events.json"
 REAL_FRESH4_DIR = REPO / "data" / "fresh4" / "real"
 FRESH4_EVENTS_JSON = REPO / "data" / "fresh4" / "events.json"
+REAL_FRESH5_DIR = REPO / "data" / "fresh5" / "real"
+FRESH5_EVENTS_JSON = REPO / "data" / "fresh5" / "events.json"
 WARM_DAYS = 60                     # Amendment 4: days of regular reporting a station with an unlearned noise limit learns it from
 RESULTS_DIR = REPO / "results"
 TRAIN_END = pd.Timestamp("2020-01-01")          # training = everything before this
@@ -298,7 +300,13 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
                   mahal: Optional[MahalanobisModel] = None, phase: str = "DEV",
                   limits_alt: Optional[StationLimits] = None) -> list[tuple[str, str, Predictor]]:
     settings = pin_registered(copy.deepcopy(settings))          # `full`, the ablations and the baselines are the pipeline that was
-    if phase == "FRESH4":                                       # Amendment 5: `full` is the pipeline as shipped; r7_freezing adds the freezing-point rule
+    if phase == "FRESH5":                                       # Amendment 6: `full` is the pipeline as shipped; r8_gapaware learns an unlearned noise limit from windows of any spacing
+        shipped = copy.deepcopy(settings)
+        shipped["health"]["frozen"]["ceiling_aware"] = True
+        shipped["health"]["step"]["expected_aware"] = True
+        cfgs = [("full", "full", pipeline_predictor(shipped, table, model, limits, sid, cadence, mahal)),
+                ("r8_gapaware", "remedy", pipeline_predictor(shipped, table, model, limits_alt or limits, sid, cadence, mahal))]
+    elif phase == "FRESH4":                                       # Amendment 5: `full` is the pipeline as shipped; r7_freezing adds the freezing-point rule
         shipped = copy.deepcopy(settings)
         shipped["health"]["frozen"]["ceiling_aware"] = True
         shipped["health"]["step"]["expected_aware"] = True
@@ -322,12 +330,12 @@ def build_configs(settings: dict, table: NormalityTable, model: IsolationModel, 
     else:
         cfgs = [("full", "full", pipeline_predictor(settings, table, model, limits, sid, cadence, mahal))]
     for name, frozen, step in ((("remedy_frozen", True, False), ("remedy_step", False, True), ("remedies", True, True))
-                               if phase not in ("FRESH2", "FRESH3", "FRESH4") else ()):
+                               if phase not in ("FRESH2", "FRESH3", "FRESH4", "FRESH5") else ()):
         variant = copy.deepcopy(settings)                       # the two remedies of docs/HOLDOUT_POSTMORTEM.md (off in "full")
         variant["health"]["frozen"]["ceiling_aware"] = frozen
         variant["limits"]["learned_step_cap"] = step
         cfgs.append((name, "remedy", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
-    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase not in ("FRESH2", "FRESH3", "FRESH4") else ()):
+    for layer in (("physics", "health", "normality", "mlmodel", "mahalanobis", "timing", "limits") if phase not in ("FRESH2", "FRESH3", "FRESH4", "FRESH5") else ()):
         variant = copy.deepcopy(settings)
         variant["layers"][layer] = False
         cfgs.append((f"no_{layer}", "ablation", pipeline_predictor(variant, table, model, limits, sid, cadence, mahal)))
@@ -597,6 +605,13 @@ def evaluate_station(plan: PhasePlan, settings: dict, quick: bool, events_all: l
     # ---- Amendment 4: a station whose training record left a noise limit unlearned learns it from its first regular stretch, and every configuration is judged after it
     warm_info, limits_warm = None, None
     lo, hi = plan.period
+    if plan.name == "FRESH5":                                   # Amendment 6: the same limits, but an unlearned noise limit is learned from windows of any spacing
+        s_gap = copy.deepcopy(s)
+        s_gap["limits"]["gap_aware_noise"] = True
+        limits_warm = fit_limits(train, s_gap, cadence)
+        warm_info = {"gap_aware": True, "noise_learned": {ch: c.noise_std is not None for ch, c in limits_warm.channels.items()},
+                     "noise_limit_before": {ch: c.noise_std for ch, c in limits.channels.items()},
+                     "noise_limit_after": {ch: c.noise_std for ch, c in limits_warm.channels.items()}}
     if plan.name == "FRESH3" and any(c.noise_std is None for c in limits.channels.values()):
         ws = warm_stretch(df_eval_src, lo, hi)
         if ws is not None:
@@ -660,7 +675,7 @@ def _worker(args):
 # orchestration and report
 # ====================================================================================================
 def load_events(phase: str = "DEV") -> dict:
-    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON, "FRESH3": FRESH3_EVENTS_JSON, "FRESH4": FRESH4_EVENTS_JSON}.get(phase, EVENTS_JSON)
+    path = {"FRESH": FRESH_EVENTS_JSON, "FRESH2": FRESH2_EVENTS_JSON, "FRESH3": FRESH3_EVENTS_JSON, "FRESH4": FRESH4_EVENTS_JSON, "FRESH5": FRESH5_EVENTS_JSON}.get(phase, EVENTS_JSON)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -691,6 +706,10 @@ def make_plans(phase: str, meta: dict) -> list[PhasePlan]:
         for sid in sealed:                                           # a fourth set: seven US 20-minute stations and five Australian AWS with irregular training years (Amendment 4)
             p = REAL_FRESH3_DIR / f"{sid}.csv"
             plans.append(PhasePlan("FRESH3", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
+    elif phase == "FRESH5":
+        for sid in sealed:                                           # six Australian stations with an irregular 2016-2019 record and six with an ordinary one (Amendment 6)
+            p = REAL_FRESH5_DIR / f"{sid}.csv"
+            plans.append(PhasePlan("FRESH5", sid, p, p, (TRAIN_END, pd.Timestamp("2025-01-01")), True))
     elif phase == "FRESH4":
         for sid in sealed:                                           # twelve northern US stations with freezing winters (Amendment 5)
             p = REAL_FRESH4_DIR / f"{sid}.csv"
@@ -854,6 +873,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     g.add_argument("--fresh2", action="store_true", help="the twelve FRESH2 stations (Amendment 3 in config/protocol.md)")
     g.add_argument("--fresh3", action="store_true", help="the twelve FRESH3 stations (Amendment 4 in config/protocol.md)")
     g.add_argument("--fresh4", action="store_true", help="the twelve FRESH4 stations (Amendment 5 in config/protocol.md)")
+    g.add_argument("--fresh5", action="store_true", help="the twelve FRESH5 stations (Amendment 6 in config/protocol.md)")
     ap.add_argument("--quick", action="store_true", help="one year and one fault round: for tuning loops only")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stations", nargs="*", help="only these stations")
@@ -864,7 +884,17 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="reproduce a holdout run that was already made (the original lock file stays in git history)")
     args = ap.parse_args(argv)
     settings = load_settings()
-    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "FRESH3" if args.fresh3 else "FRESH4" if args.fresh4 else "DEV"
+    phase = "HOLDOUT" if args.holdout else "FRESH" if args.fresh else "FRESH2" if args.fresh2 else "FRESH3" if args.fresh3 else "FRESH4" if args.fresh4 else "FRESH5" if args.fresh5 else "DEV"
+    if args.fresh5:
+        lock = REPO / "data" / "fresh5" / ev.FRESH5_LOCK_NAME
+        if args.force_rerun_holdout and lock.exists():
+            print(f"Re-running the FRESH5 evaluation to reproduce it. The first run is recorded in {lock}.")
+        else:
+            try:
+                ev.guard_fresh5(settings, REPO, REPO / "data")
+            except ev.HoldoutError as e:
+                print(f"Cannot run the FRESH5 evaluation: {e}")
+                return 2
     if args.fresh4:
         lock = REPO / "data" / "fresh4" / ev.FRESH4_LOCK_NAME
         if args.force_rerun_holdout and lock.exists():
@@ -924,7 +954,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                                                                   "FRESH": "FRESH (twelve stations nobody had looked at, 2020-2024)",
                                                                   "FRESH2": "FRESH2 (a third set of twelve: Indian airports and Australian AWS, 2020-2024)",
                                                                   "FRESH3": "FRESH3 (a fourth set of twelve: seven US 20-minute stations and five Australian AWS, 2020-2024)",
-                                                                  "FRESH4": "FRESH4 (a fifth set of twelve northern US stations with freezing winters, 2020-2024)"}[ph]))
+                                                                  "FRESH4": "FRESH4 (a fifth set of twelve northern US stations with freezing winters, 2020-2024)",
+                                                                  "FRESH5": "FRESH5 (a sixth set of twelve Australian stations: six with an irregular 2016-2019 record, six with an ordinary one, 2020-2024)"}[ph]))
     print("\n\n".join(text))
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

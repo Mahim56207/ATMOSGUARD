@@ -23,7 +23,13 @@ import evaluate_real as er
 
 FRESH2_INDIAN = ("HYD", "BLR", "CCJ", "IXM", "VGA")            # the other seven FRESH2 stations are Australian AWS at 0.1 resolution
 FRESH3_US = ("FHB", "PTT", "MDS", "LPO", "GGW", "GRC", "HUT")     # the other five FRESH3 stations are Australian AWS
+FRESH5_IRREGULAR = ("IR1", "IR2", "IR3", "IR4", "IR5", "IR6")      # the other six FRESH5 stations (RG1-RG6) have an ordinary hourly record
 PHASE_TITLES = {
+    "FRESH5": ("FRESH5: a sixth set of twelve Australian automatic stations, 2020-2024",
+               "Chosen and sealed before the Amendment 6 remedy was tested (config/protocol.md). Six stations whose 2016-2019 record is not equally spaced (IR1-IR6) and six with an "
+               "ordinary hourly record (RG1-RG6). `AtmosGuard (full)` is the pipeline as shipped."),
+    "FRESH5_IRR": ("FRESH5, the six stations with an irregular 2016-2019 record", "Reports alternate 1 h and 2 h apart before 2020, hourly after."),
+    "FRESH5_REG": ("FRESH5, the six control stations with an ordinary hourly record", "Hourly in both periods: the remedy must change nothing here."),
     "FRESH4": ("FRESH4: a fifth set of twelve northern US stations with freezing winters, 2020-2024",
                "Chosen and sealed before the Amendment 5 freezing-point remedy was tested (config/protocol.md). Hourly airport METAR, whole degrees."),
     "FRESH3": ("FRESH3: a fourth set of twelve stations, 2020-2024",
@@ -53,6 +59,7 @@ FULL_NAMES = {"full": "AtmosGuard (full)", "no_physics": "without physics layer"
               "no_normality": "without normality layer", "no_mlmodel": "without Isolation Forest",
               "no_timing": "without timing layer", "no_limits": "without station-learned limits",
               "no_mahalanobis": "without Mahalanobis layer",
+              "r8_gapaware": "AtmosGuard + remedy 8 (unlearned noise limit learned from windows of any spacing)",
               "r7_freezing": "AtmosGuard + remedy 7 (freezing-point plateau is a soft flag)",
               "r6_warmup": "AtmosGuard + remedy 6 (unlearned limits filled from the first regular stretch)",
               "registered": "AtmosGuard as registered (every remedy off)",
@@ -298,6 +305,57 @@ def amendment5_rows(agg: dict) -> list[dict]:
              "adopt": "yes" if (a and b and c and d) else "no"}]
 
 
+A6_MAX_FALSE_ALARM_PCT = 5.0          # Amendment 6 (a): clean false alarms at the irregular stations with the remedy are at most this ...
+A6_MIN_FALL_PP = 10.0                 # ... and at least this far below `full`
+A6_PARITY_PP = 15.0                   # (b): detection of every fault type at the irregular stations is at least the control stations' (under `full`) minus this
+A6_SUSPECT_RISE_PP = 2.0
+
+
+def amendment6_rows(irr: dict, reg: dict) -> list[dict]:
+    """The decision rule registered in Amendment 6, on the pooled FRESH5 numbers of the six irregular-record stations (`irr`) and the six control stations (`reg`):
+    (a) clean false alarms with the remedy <= 5 % and >= 10 points below `full`; (b) for every fault type, paired detection with the remedy at the irregular stations >= the control
+    stations' detection under `full` minus 15 points; (c) windows with a FAULT not more than `full`, FAULT share not higher; (d) SUSPECT share rises by at most 2 points;
+    (e) at the control stations the remedy changes nothing (every count identical to `full`). Also reported, not gated: the Amendment 4 rule (b), per-type change against `full`."""
+    if "full" not in irr["configs"] or "r8_gapaware" not in irr["configs"] or "full" not in reg["configs"]:
+        return []
+    f_i, r_i, f_r, r_r = irr["configs"]["full"], irr["configs"]["r8_gapaware"], reg["configs"]["full"], reg["configs"].get("r8_gapaware")
+    fa = lambda c: 100.0 * c["clean"]["alarm"] / c["clean"]["n"] if c["clean"]["n"] else 0.0
+    share = lambda e: e["FAULT"] / e["n"] if e["n"] else 0.0
+    susp = lambda e: 100.0 * e["SUSPECT"] / e["n"] if e["n"] else 0.0
+    fe, re_ = _events_total(f_i), _events_total(r_i)
+    a = fa(r_i) <= A6_MAX_FALSE_ALARM_PCT and fa(f_i) - fa(r_i) >= A6_MIN_FALL_PP
+    parity, worst_gap, worst_type = True, 0.0, None
+    cells = {}
+    for ty in er.REAL_TYPES:
+        d_ctl, d_irr, d_full = f_r["detection"][ty], r_i["detection"][ty], f_i["detection"][ty]
+        if not d_ctl["injected"] or not d_irr["injected"]:
+            continue
+        ctl = 100.0 * d_ctl.get("detected_new", 0) / d_ctl["injected"]
+        irr_pct = 100.0 * d_irr.get("detected_new", 0) / d_irr["injected"]
+        full_pct = 100.0 * d_full.get("detected_new", 0) / d_full["injected"]
+        cells[ty] = (irr_pct, ctl, full_pct)
+        gap = irr_pct - ctl
+        if gap < worst_gap:
+            worst_gap, worst_type = gap, ty
+        parity &= gap >= -A6_PARITY_PP
+    c = re_["windows_with_fault"] <= fe["windows_with_fault"] and share(re_) <= share(fe)
+    d = susp(re_) - susp(fe) <= A6_SUSPECT_RISE_PP
+    e = r_r is not None and all(f_r[k] == r_r[k] for k in ("clean", "events", "detection"))
+    strict_worst, strict_type = 0.0, None
+    for ty, (irr_pct, _, full_pct) in cells.items():
+        if irr_pct - full_pct < strict_worst:
+            strict_worst, strict_type = irr_pct - full_pct, ty
+    return [{"configuration": FULL_NAMES["r8_gapaware"],
+             "(a) clean false alarms at the irregular stations (full / this)": f"{fa(f_i):.1f}% / {fa(r_i):.1f}%",
+             "(b) worst gap to the control stations' detection": "none" if worst_type is None else f"{worst_gap:+.1f} pp ({TYPE_NAMES[worst_type]})",
+             "(c) windows with a FAULT (full / this)": f"{fe['windows_with_fault']} / {re_['windows_with_fault']} of {re_['windows']}",
+             "(d) SUSPECT share in real weather (change)": f"{susp(re_) - susp(fe):+.2f} pp",
+             "(e) control stations identical to full": "yes" if e else "NO",
+             "for the record: Amendment 4 rule (b), worst change against full": "none" if strict_type is None else f"{strict_worst:+.1f} pp ({TYPE_NAMES[strict_type]})",
+             "rule (a)": "pass" if a else "FAIL", "rule (b)": "pass" if parity else "FAIL", "rule (c)": "pass" if c else "FAIL", "rule (d)": "pass" if d else "FAIL",
+             "rule (e)": "pass" if e else "FAIL", "adopt": "yes" if (a and parity and c and d and e) else "no"}]
+
+
 def phase_tables(agg: dict, stations: Optional[list[dict]] = None) -> dict:
     cfgs = agg["configs"]
     full = cfgs["full"]
@@ -513,9 +571,12 @@ def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optiona
         for r in res["stations"]:
             if r["phase"] == "FRESH3":
                 rows_all.append({**r, "phase": "FRESH3_US" if r["station"] in FRESH3_US else "FRESH3_AUS"})
+            if r["phase"] == "FRESH5":
+                rows_all.append({**r, "phase": "FRESH5_IRR" if r["station"] in FRESH5_IRREGULAR else "FRESH5_REG"})
             if r["phase"] == "FRESH2":                      # the same stations again, as two groups, so the airport and AWS records can be read apart
                 rows_all.append({**r, "phase": "FRESH2_INDIA" if r["station"] in FRESH2_INDIAN else "FRESH2_AWS"})
         res = {**res, "stations": rows_all}
+        a6 = amendment6_rows(er.aggregate(rows_all, "FRESH5_IRR"), er.aggregate(rows_all, "FRESH5_REG")) if any(r["phase"] == "FRESH5" for r in rows_all) else []
         for ph in dict.fromkeys(r["phase"] for r in res["stations"]):
             agg = er.aggregate(res["stations"], ph)
             title, sub = PHASE_TITLES[ph]
@@ -523,6 +584,11 @@ def build_summary(results: dict[str, dict], scale: Optional[dict], cold: Optiona
                           "quick": res.get("quick", False), **phase_tables(agg, res['stations']),
                           "by_station": {"title": "By station (full pipeline)", "caption": "Each station judged on its own record.",
                                          "rows": station_rows(res["stations"], ph)}}
+            if ph == "FRESH5" and a6:
+                phases[ph]["amendment6"] = {"title": "The Amendment 6 remedy (unlearned noise limit learned from windows of any spacing), judged by the rule registered before the run",
+                                            "caption": "Adopt only if (a) clean false alarms at the six irregular-record stations are at most 5 % and at least 10 points below `full`, (b) for every fault type "
+                                                       "their paired detection is at least the six control stations' detection (under `full`) minus 15 points, (c) windows with a FAULT do not rise, "
+                                                       "(d) the SUSPECT share in real weather rises by at most 2 points, (e) at the control stations nothing changes.", "rows": a6}
     out = {"note": "Real NOAA ISD records (airport METAR and SYNOP from airports and automatic weather stations), 2016-2024. RH is derived from dew point. Injected faults are "
                    "injected. NOAA agreement is not ground truth. See docs/WHAT_WE_DO_NOT_CLAIM.md.",
            "phases": phases}
@@ -561,7 +627,7 @@ def to_markdown(summary: dict) -> str:
     for ph in summary["phases"].values():
         L += [f"## {ph['title']}", "", f"*{ph['subtitle']}*  Stations: {', '.join(ph['stations'])}."
               + ("  **Quick run (one year, one fault round): tuning loop only.**" if ph.get("quick") else ""), ""]
-        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "amendment3", "amendment4", "amendment5", "clean", "extreme_weather", "noaa", "drift"):
+        for key in ("headline", "detection", "detection_ci", "detection_named", "detection_registered", "tradeoff", "remedies", "amendment3", "amendment4", "amendment5", "amendment6", "clean", "extreme_weather", "noaa", "drift"):
             if key not in ph:
                 continue
             t = ph[key]

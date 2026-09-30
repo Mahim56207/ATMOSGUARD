@@ -4,6 +4,7 @@ import math
 from datetime import timedelta
 
 import numpy as np
+import pytest
 
 from atmos.config import load_settings
 from atmos.limits import fit_limits, noise_estimates, noise_estimates_gap_aware
@@ -151,3 +152,78 @@ def test_models_of_a_station_without_a_barometer_keep_that_after_saving(tmp_path
     mahal.save(tmp_path / "m.joblib")
     assert IsolationModel.load(tmp_path / "f.joblib").absent == ("pressure_hpa",)
     assert MahalanobisModel.load(tmp_path / "m.joblib").absent == ("pressure_hpa",)
+
+
+# ---- FRESH5: the configurations, the guard and the decision rule --------------------------------------------------------------
+def _cfg(alarm=20, clean_n=1000, windows_with_fault=3, fault_n=20, suspect=80, det=None, kind="full"):
+    det = det or {}
+    detection = {t: {"detected_new": det.get(t, 90), "injected": 100, "detected": det.get(t, 90)}
+                 for t in ("frozen", "spike", "step", "noise", "dropout", "clock_shift")}
+    return {"kind": kind, "clean": {"n": clean_n, "alarm": alarm, "fault": 0, "weather": 0},
+            "events": {"low_pressure": {"n": 1000, "FAULT": fault_n, "SUSPECT": suspect, "WEATHER": 100, "VALID": 1000 - fault_n - suspect - 100,
+                                        "windows": 100, "windows_with_fault": windows_with_fault}}, "detection": detection}
+
+
+def _a6(irr_full, irr_r8, reg_full=None, reg_r8=None):
+    reg_full = reg_full or _cfg()
+    return ({"configs": {"full": irr_full, "r8_gapaware": irr_r8}},
+            {"configs": {"full": reg_full, "r8_gapaware": reg_r8 if reg_r8 is not None else copy.deepcopy(reg_full)}})
+
+
+def test_fresh5_configs_are_full_and_the_remedy_and_the_baselines():
+    import evaluate_real as er
+    from atmos.mlmodel import MahalanobisModel
+    from tests.test_limits import rounded_series
+    s = er.real_settings(load_settings())
+    train = rounded_series(seed=5)
+    table, model = NormalityTable.fit(train, s), IsolationModel.fit(train, s)
+    lim, mahal = fit_limits(train, s, 60), MahalanobisModel.fit(train, s, table)
+    names = [n for n, _, _ in er.build_configs(s, table, model, lim, train, "S1", 60.0, mahal, "FRESH5")]
+    assert names[:2] == ["full", "r8_gapaware"] and "baseline_rules" in names
+    assert er.pin_registered(copy.deepcopy(s))["limits"]["gap_aware_noise"] is False
+
+
+def test_fresh5_guard_needs_amendment_6(tmp_path):
+    import subprocess
+    import evaluate as ev
+    repo = tmp_path / "repo"
+    (repo / "config").mkdir(parents=True)
+    (repo / "config/protocol.md").write_text("# Protocol\nDone.\n")
+    for cmd in (["init", "-q"], ["add", "."], ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "p"]):
+        subprocess.run(["git", "-C", str(repo), *cmd], check=True)
+    with pytest.raises(ev.HoldoutError, match="Amendment 6"):
+        ev.guard_fresh5(SETTINGS, repo, tmp_path / "data")
+    (repo / "config/protocol.md").write_text("# Protocol\nDone.\n\n## Amendment 6\nThe sixth set.\n")
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "amendment"], check=True)
+    ev.guard_fresh5(SETTINGS, repo, tmp_path / "data")
+    assert (tmp_path / "data/fresh5/.fresh5_used").exists()
+
+
+def test_rule_adopts_when_the_irregular_stations_become_like_the_controls():
+    import make_summary as ms
+    irr, reg = _a6(_cfg(alarm=450, det={"spike": 50, "noise": 95}), _cfg(alarm=20, det={"noise": 80, "spike": 90}, kind="remedy"))
+    row = ms.amendment6_rows(irr, reg)[0]
+    assert row["adopt"] == "yes" and row["rule (e)"] == "pass"
+    assert "-15.0" not in row["(b) worst gap to the control stations' detection"]
+
+
+def test_rule_fails_on_residual_false_alarms_lost_detection_more_fault_windows_or_a_changed_control():
+    import make_summary as ms
+    full = _cfg(alarm=450)
+    good = dict(alarm=20, kind="remedy")
+    assert ms.amendment6_rows(*_a6(full, _cfg(**{**good, "alarm": 60})))[0]["rule (a)"] == "FAIL"               # 6 %: above the 5 % ceiling
+    assert ms.amendment6_rows(*_a6(_cfg(alarm=90), _cfg(**{**good, "alarm": 40})))[0]["rule (a)"] == "FAIL"      # only 5 points down
+    assert ms.amendment6_rows(*_a6(full, _cfg(**good, det={"noise": 60})))[0]["rule (b)"] == "FAIL"               # 30 points below the controls
+    assert ms.amendment6_rows(*_a6(full, _cfg(**good, windows_with_fault=4)))[0]["rule (c)"] == "FAIL"
+    assert ms.amendment6_rows(*_a6(full, _cfg(**good, suspect=120)))[0]["rule (d)"] == "FAIL"                     # SUSPECT +4 points
+    irr, reg = _a6(full, _cfg(**good), reg_r8=_cfg(alarm=21, kind="remedy"))
+    assert ms.amendment6_rows(irr, reg)[0]["rule (e)"] == "FAIL"                                                  # the control changed
+    assert ms.amendment6_rows(irr, reg)[0]["adopt"] == "no"
+
+
+def test_the_strict_amendment_4_reading_is_reported_but_does_not_decide():
+    import make_summary as ms
+    irr, reg = _a6(_cfg(alarm=450, det={"noise": 99}), _cfg(alarm=20, det={"noise": 80}, kind="remedy"), reg_full=_cfg(det={"noise": 75}))
+    row = ms.amendment6_rows(irr, reg)[0]
+    assert row["adopt"] == "yes"
+    assert "-19.0 pp (noise burst)" in row["for the record: Amendment 4 rule (b), worst change against full"]

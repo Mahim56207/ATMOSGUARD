@@ -44,7 +44,7 @@ def check_path(path: Path, settings: dict, must_be_in_data_dir: bool = False, al
     p = Path(path)
     p = (p if p.is_absolute() else Path.cwd() / p).resolve()
     root = data_root(settings)
-    for sealed in ("holdout", "fresh", "fresh2", "fresh3", "fresh4"):                 # each is read once, by an evaluation run behind its own guard
+    for sealed in ("holdout", "fresh", "fresh2", "fresh3", "fresh4", "fresh5"):                 # each is read once, by an evaluation run behind its own guard
         if not allow_holdout and (p == root / sealed or (root / sealed) in p.parents):
             raise ValueError(f"data/{sealed}/ is read once, by the evaluation, behind its guard. Replay will not read it.")
     if must_be_in_data_dir and root not in p.parents:

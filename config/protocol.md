@@ -374,3 +374,35 @@ thermometer*. We did not widen the test until it passed.
 (on 1.1 % of the 87 NOAA-erroneous ones: a small count, and NOAA flags are not truth); the textbook range + step + persistence baseline raised a `FAULT` in 166 of 180 real windows against 0 for the pipeline. This is the **fifth** unseen set. Its clean false-alarm rate (2.0 %) sits in the band of the earlier sets on hourly and 20-minute stations (1.9 % DEV, 2.5 % holdout in space, 2.5 % FRESH, 2.9 % holdout in time; FRESH2 was 9.3 % because of its irregular training records); noise-burst (74.8 %) and clock-shift (79.7 %) detection on
 hourly whole-degree stations are the weakest rows again and are stated as such. Slow-drift detection is also weak on these winter stations (temperature 2.2 % to 6.7 % at 1x to 8x the service limit, humidity 4 % to 53 %); that test is not part of any decision rule.
 On clean data with no drift injected, 0.4 % of 19,527 station-days claimed significant drift.
+
+## Amendment 6 (written before the FRESH5 stations were evaluated)
+Amendments 3 and 4 found that Australian automatic stations whose 2016-2019 record is not equally spaced (16 reports a day, alternating 1 h and 2 h apart, then hourly from 2020) leave the noise limit unlearned, and the fixed floor then
+alarms on 26-61 % of clean samples (FRESH3: 45.4 % pooled over five stations). Amendment 4 tested one remedy, a warm-up from the first regular 60 days of the judged period, and rejected it by its rule: false alarms fell to 1.8 %, and noise-burst
+detection fell 6 points against the 2 allowed. We said then that the loss was partly illusory, because at 45 % background false alarms the floor "detects" a noise burst by firing on nearly everything, and that the rule judged a remedy against a
+reference that is itself broken. This amendment tests a different remedy on stations nobody has looked at, and registers a rule that measures what we care about: **do the irregular-record stations end up behaving like stations with an ordinary
+record?** `evaluate_real.py --fresh5` refuses to run unless this amendment is in the committed protocol (guard `evaluate.guard_fresh5`, lock `data/fresh5/.fresh5_used`); `replay.py` and `/datasets` refuse `data/fresh5/`.
+
+**The remedy (`limits.gap_aware_noise`, remedy 8).** When no noise limit can be learned because the training record has no run of equally spaced readings, learn it from windows of the newest 7 readings whatever their spacing (no gap inside above three times
+the cadence, at most 12 hours wide), each scored by the RMS of the normalised second difference `[(v2-v1)/h2 - (v1-v0)/h1] / sqrt(1/h1^2 + (1/h1+1/h2)^2 + 1/h2^2)`, which has the noise's own variance for any gaps and equals the present
+estimate when the readings are equally spaced. The quantile, margin and floor are unchanged. It is a fallback: a record that already gives a learned limit is not touched, so every other station is bit-identical (tested). Off by default and forced off in every
+earlier configuration. It needs no operator, no waiting period and no data from after the training years.
+
+**What was looked at before this amendment, and what it means for the evidence.** The idea was developed on stations that were already used (the four FRESH2 and five FRESH3 irregular-record stations; they are not evidence any more). On those nine,
+limits learned from the irregular years with the gap-aware estimator land within about 10-40 % of the limit a regular stretch gives (Alice Springs temperature 3.33 against 3.38, pressure 0.99 against 1.10, humidity 14.8 against 16.6), a noise check built on them fires on
+0.01-0.1 % of the later hourly windows, and a two-station end-to-end check gave 61 % to 0.9 % (Alice Springs) and 27 % to 0.9 % (Weipa) clean false alarms. Nothing was tuned on FRESH5.
+
+**The stations** (`data_tools/stations_fresh5.yaml`, files committed with this amendment, chosen by `data_tools/select_fresh5.py`, seed 17, before any pipeline verdict): twelve Australian Bureau of Meteorology automatic stations (hourly SYNOP at 0.1 C and 0.1 hPa), in no earlier
+set. **Six have an irregular 2016-2019 record** (IR1-IR6: Yamba, Devonport, Tarcoola, Tunnak, Geelong Racecourse, Avalon) and **six an ordinary hourly record in both periods** (RG1-RG6: King Island, Moree, Strahan, Nerriga, Bourke, Eddystone Point), the controls. The rule:
+from NOAA's file listing, stations with USAF 94xxxx or 95xxxx, a file for each of 2016-2019 and 2022, in no earlier catalog, with a 2022 file of 2.0-3.6 MB; irregular pool = the 2017 file is 52-80 % of the 2022 file's size, regular pool = 93-110 %; a seeded shuffle of each pool;
+taken in that order when, in 2016-2019, at most 65 % of the gaps between consecutive reports are exactly 60 min and at least 90 % are 60 or 120 min with at least 4,500 complete reports a year (irregular), or at least 90 % of the gaps are 60 min with at least 7,400 a year (regular), and in 2020-2024
+at least 7,400 complete reports a year and all three channels on at least 90 % of the reports; the first six of each kind to pass. Many candidates failed the gate (most stayed irregular after 2020) and are not in the set.
+
+**Configurations** (phase `FRESH5`): `full` (the pipeline as shipped), `r8_gapaware` (the same with remedy 8 on), and the five baselines. The phase is reported as a whole, and as the six irregular-record stations (`FRESH5_IRR`) and the six controls (`FRESH5_REG`).
+
+**Decision rule, registered now.** Remedy 8 is adopted only if: **(a)** clean false alarms at the six irregular-record stations are at most 5 % with the remedy and at least 10 points below `full`; **(b)** for each of the six injected-fault types, paired detection
+with the remedy at the irregular-record stations is at least the control stations' detection under `full` minus 15 points (the irregular stations end up behaving like ordinary ones); **(c)** real extreme-weather windows with a `FAULT` at the irregular-record stations are not
+more than under `full` and their `FAULT` share is not higher; **(d)** the `SUSPECT` share in real weather there rises by at most 2 points; **(e)** at the six control stations every count (clean, real weather, detection) is identical to `full`. Otherwise it is reported as tested and rejected.
+**Also reported, not part of the rule:** the Amendment 4 reading (per-type change in paired detection against `full` at the irregular stations, which allowed 2 points). We expect it to fail for noise bursts again, for the reason given above, and we say so before the run.
+Reported whatever happens: every table, per station.
+
+**What this is not.** Injected faults, hourly data, one country, one instrument family, stations chosen by how they report. It says nothing about irregular records with a different pattern, and nothing about a station that stays irregular after the training years.
