@@ -25,6 +25,14 @@ python evaluate_csv.py path/to/aws.csv --station MYAWS --train-fraction 0.6 --qu
 - If the numbers are worse than ours, that is useful, and `docs/FAILURE_MODES.md` lists what to check first (reporting resolution, cadence, humidity saturation, an unflagged fault inside the training years).
 - Put the file in `data/uploads/` only if it may be shared; `data/uploads/` is git-ignored, so it stays on your machine.
 
+## If they cannot send the file: send the code instead
+Many organisations will not release raw AWS records but will run a program on them. [`IMD_RUN_IT_YOURSELF.md`](IMD_RUN_IT_YOURSELF.md) is a one-page version of this request for that case: they run one command on their own machine and send back only counts and rates (no readings, no timestamps).
+Offer it in the same email: "If the files cannot leave IMD, we can send the code and you run it yourselves; what comes back is a small JSON of counts and rates."
+
+## If the file is not in our layout
+IMD downloads and logger exports come in many layouts. `python -m data_tools.adapt_csv raw_file --out data/uploads/aws.csv --tz IST` converts almost any of them (column names, units, separate date and time columns, Excel serial dates, local time to UTC, missing-value codes,
+several stations in one file) and prints every decision it makes; `--inspect` shows them without writing anything.
+
 ## If nobody replies in time
 Say so plainly: "records of IMD AWS stations are not public and we did not obtain one; we tested on airport METAR and on Australian Bureau of Meteorology automatic weather stations
 (hourly SYNOP at 0.1 resolution), and `evaluate_csv.py` will run the same evaluation on an IMD file in one command."

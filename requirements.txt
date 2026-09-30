@@ -12,3 +12,5 @@ streamlit==1.64.0
 plotly==7.1.0
 pandas==3.0.6
 matplotlib==3.11.2
+
+# optional: openpyxl (reads .xlsx in data_tools/adapt_csv.py; everything else needs only the packages above)

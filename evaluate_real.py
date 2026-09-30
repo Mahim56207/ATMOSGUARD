@@ -251,9 +251,9 @@ def baseline_iforest(model: IsolationModel) -> Predictor:
     return predict
 
 
-def baseline_mahalanobis(train: list[Reading], quantile: float = 0.995) -> Predictor:
+def baseline_mahalanobis(train: list[Reading], quantile: float = 0.995, absent: Sequence[str] = ()) -> Predictor:
     """The other common approach in this problem's public repos: Mahalanobis distance of (values, changes)."""
-    X, ok = build_features(train)
+    X, ok = build_features(train, absent)
     X = X[ok][:, :6]
     mu = X.mean(axis=0)
     cov = np.cov(X, rowvar=False) + 1e-6 * np.eye(6)
@@ -265,7 +265,7 @@ def baseline_mahalanobis(train: list[Reading], quantile: float = 0.995) -> Predi
     limit = float(np.quantile(d2(X), quantile))
 
     def predict(readings: list[Reading]) -> list[Pred]:
-        A, usable = build_features(readings)
+        A, usable = build_features(readings, absent)
         dist = d2(A[:, :6])
         return [Pred("SUSPECT" if (u and d > limit) else "VALID") for u, d in zip(usable, dist)]
     return predict

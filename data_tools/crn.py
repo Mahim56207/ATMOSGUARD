@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import sys
 import time
 import urllib.error
@@ -56,6 +57,9 @@ def _code(series: pd.Series, index: int) -> pd.Series:
 
 def reduce_frame(raw: pd.DataFrame) -> pd.DataFrame:
     """One ISD frame of a CRN station-year to the compact 5-minute frame (see OUT_COLUMNS)."""
+    for col in USE_COLUMNS:                                     # some station-years lack a group altogether (older files carry no CH1, say)
+        if col not in raw.columns:
+            raw[col] = np.nan
     raw = raw[raw["REPORT_TYPE"] == "CRN05"].copy()
     ts = pd.to_datetime(raw["DATE"], errors="coerce")
     out = pd.DataFrame({"timestamp": ts})
@@ -69,7 +73,7 @@ def reduce_frame(raw: pd.DataFrame) -> pd.DataFrame:
     out["rh"] = _num(ch, 4, 0.1, missing=9999)
     out["rh_q"] = _code(ch, 5)
     for i in (1, 2, 3):
-        g = raw[f"CF{i}"].fillna("").astype(str) if f"CF{i}" in raw else pd.Series("", index=raw.index)
+        g = raw[f"CF{i}"].fillna("").astype(str)
         out[f"f{i}"] = _num(g, 0, 1.0, missing=9999)
     out = out.dropna(subset=["timestamp"]).drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
     return out[OUT_COLUMNS]
@@ -118,9 +122,56 @@ def crn_candidates(inventory_csv: Path, history_csv: Path, first_year: int, last
     return ok.merge(hist[["USAF", "WBAN", "STATION NAME", "CTRY", "STATE", "LAT", "LON", "ELEV(M)"]], on=["USAF", "WBAN"], how="left")
 
 
+DEV_STATIONS = ("03047", "03048", "03054", "03055", "03060", "03062", "03063", "03067")      # WBAN numbers; the labelling rules in evaluate_crn.py were settled on these
+SEALED_SEED = 23
+SEALED_N = 24
+
+
+def station_ids(directory: Path) -> list[str]:
+    """WBAN numbers that have a file for every year 2016-2024 in `directory`."""
+    years: dict[str, set[int]] = {}
+    for p in directory.glob("999999*_*.csv.gz"):
+        wban, year = p.name[6:].split(".")[0].split("_")
+        years.setdefault(wban, set()).add(int(year))
+    return sorted(w for w, ys in years.items() if ys >= set(range(2016, 2025)))
+
+
+def gate(directory: Path, wban: str) -> tuple[bool, dict]:
+    """A station enters the sealed pool when, in every year 2016-2024, each of the three thermometers and the humidity probe has at least 95 % of the 5-minute samples present."""
+    worst = {"t1": 1.0, "t2": 1.0, "t3": 1.0, "rh": 1.0}
+    for y in range(2016, 2025):
+        d = pd.read_csv(directory / f"999999{wban}_{y}.csv.gz", usecols=["timestamp", "t1", "t2", "t3", "rh"])
+        expected = (366 if y % 4 == 0 else 365) * 288
+        for c in worst:
+            worst[c] = min(worst[c], float(d[c].notna().sum()) / expected)
+    return all(v >= 0.95 for v in worst.values()), {k: round(v, 3) for k, v in worst.items()}
+
+
+def build_manifest(directory: Path, seed: int = SEALED_SEED, n: int = SEALED_N) -> dict:
+    """The development stations (fixed above) and a seeded random sample of `n` of the other stations that pass the gate, with the sha256 of every compact file so anyone can
+    download the same records again and check them."""
+    import hashlib
+    import random
+    ids = station_ids(directory)
+    passing = {w: g for w in ids for ok, g in [gate(directory, w)] if ok}
+    pool = sorted(w for w in passing if w not in DEV_STATIONS)
+    random.Random(seed).shuffle(pool)
+    sealed = sorted(pool[:n])
+    files = {}
+    for w in (*DEV_STATIONS, *sealed):
+        for y in range(2016, 2025):
+            p = directory / f"999999{w}_{y}.csv.gz"
+            if p.exists():
+                files[p.name] = hashlib.sha256(p.read_bytes()).hexdigest()
+    return {"seed": seed, "gate": "every year 2016-2024: t1, t2, t3 and rh present on at least 95 % of 5-minute samples", "stations_with_all_years": len(ids),
+            "stations_passing_the_gate": len(passing), "dev_stations": list(DEV_STATIONS), "sealed_stations": sealed, "sha256": files}
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    m = sub.add_parser("manifest", help="choose the sealed stations (seeded) and write manifest.json with file hashes")
+    m.add_argument("--dir", type=Path, default=REPO / "data" / "crn")
     f = sub.add_parser("fetch")
     f.add_argument("--ids", nargs="*", help="WBAN numbers (USAF is 999999), e.g. 03072")
     f.add_argument("--stations", type=int, default=0, help="take this many stations from NOAA's inventory (all if 0 and no --ids)")
@@ -130,6 +181,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     f.add_argument("--history", type=Path, default=Path("/tmp/isd-history.csv"))
     f.add_argument("--workers", type=int, default=6)
     a = ap.parse_args(argv)
+    if a.cmd == "manifest":
+        man = build_manifest(a.dir)
+        (a.dir / "manifest.json").write_text(json.dumps(man, indent=1), encoding="utf-8")
+        print(f"{man['stations_with_all_years']} stations have all nine years, {man['stations_passing_the_gate']} pass the gate; sealed: {', '.join(man['sealed_stations'])}")
+        return 0
     if a.ids:
         ids = [f"999999{w}" for w in a.ids]
     else:
